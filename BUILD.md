@@ -1,5 +1,7 @@
 # AgentToolbox — Codex Build Brief
 
+**Setup snapshot verified October 5, 2026; re-check before any deployment:** the private GitHub repository is `agenttoolbox2026/AgentToolbox`, default branch `main`. The connected GitHub identity has admin/push access. The connected Cloudflare account has no Worker scripts and no D1 databases yet. Its `workers.dev` subdomain is `agenttoolbox2026` (`agenttoolbox.workers.dev` was unavailable). R2 is not enabled and is out of scope for the first experiment. Cloudflare account-level two-factor enforcement currently appears off; the founder should enable MFA before production or mainnet payment handling. The Cloudflare API connection is available; do not waste time repeating OAuth if it remains connected. Verify access with a read-only call before use.
+
 You are the founding software engineer helping AgentToolbox find a product that AI agents repeatedly use and pay for. The company is in product discovery. The retry gate below is the current first experiment, not a validated direction.
 
 ## How to read this brief
@@ -43,7 +45,7 @@ Do not add browser-purchasing recovery, action verification, checkout checks, cr
 Before changing files:
 
 1. Inspect the repository, `AGENTS.md`, existing product code, Git state, Cloudflare configuration, deployment setup, and available tests. Preserve existing work. Do not assume a blank project or replace an existing architecture.
-2. Re-check GitHub and Cloudflare access at build time. The founder has an existing private GitHub repository, `agenttoolbox2026/AgentToolbox`; use it if it is still the intended repository rather than creating a duplicate. The connected GitHub identity previously had admin access. **Verify live access and the default branch instead of relying on this note.** Confirm Cloudflare authentication and account/Workers access. If an account is not connected, report the single next action needed and continue independent local work; do not spend repeated turns retrying authentication.
+2. Re-check GitHub and Cloudflare access at build time. Use the existing private `agenttoolbox2026/AgentToolbox` repository if it is still the intended repository; do not create a duplicate. Verify the default branch and current access. Confirm the Cloudflare connection and the `agenttoolbox2026` Workers subdomain with a read-only check. If the Cloudflare API connection is unavailable but local deployment is needed, check Wrangler auth once; if not authenticated, report the single next action and continue independent local work rather than retrying OAuth.
 3. Report the current state and any blockers that require the founder (account access, domain choice, wallet/network confirmation, billing, or a product decision). Do not create paid resources, enable paid add-ons, or incur material Cloudflare charges without the founder's approval.
 4. Write a short implementation plan that separates the minimum experiment from later infrastructure.
 5. Check x402 and Cloudflare feasibility early. Verify current official docs and write concise findings to `docs/x402-findings.md`. Determine whether the chosen flow can actually authorize before work and settle only after the result. Standard middleware that settles automatically may not satisfy this requirement.
