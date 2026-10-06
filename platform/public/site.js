@@ -2,9 +2,8 @@ for(const button of document.querySelectorAll('[data-copy]'))button.addEventList
  try{await navigator.clipboard.writeText(document.getElementById(button.dataset.copy).textContent);button.textContent='Copied';setTimeout(()=>{button.textContent='Copy JSON';},1800);}catch{button.textContent='Select text to copy';}
 });
 const counter=document.getElementById('paid-counter'),status=document.getElementById('counter-status');
-const feedbackForm=document.getElementById('feedback-form');
-if(feedbackForm){
- const button=document.getElementById('feedback-submit'),status=document.getElementById('feedback-status');button.hidden=false;
+for(const feedbackForm of document.querySelectorAll('.feedback-form')){
+ const button=feedbackForm.querySelector('button[type="submit"]'),status=feedbackForm.querySelector('[role="status"]');button.hidden=false;
  let lastBody=null,key=null;
  feedbackForm.addEventListener('submit',async event=>{
   event.preventDefault();if(button.disabled)return;

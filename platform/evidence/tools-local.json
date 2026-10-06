@@ -1,0 +1,46 @@
+{
+  "origin": "http://127.0.0.1:8790",
+  "checked_at": "2026-10-06T21:03:06.423Z",
+  "tools": [
+    {
+      "id": "docs-pack",
+      "minimum": "10000",
+      "unsigned_shapes_402": 3,
+      "review_page": true,
+      "invalid_quote_rejected": true
+    },
+    {
+      "id": "quote-proof",
+      "minimum": "10000",
+      "unsigned_shapes_402": 3,
+      "review_page": true,
+      "invalid_quote_rejected": true
+    },
+    {
+      "id": "contract-cases",
+      "minimum": "10000",
+      "unsigned_shapes_402": 3,
+      "review_page": true,
+      "invalid_quote_rejected": true
+    },
+    {
+      "id": "mcp-wirecheck",
+      "minimum": "10000",
+      "unsigned_shapes_402": 3,
+      "review_page": true,
+      "invalid_quote_rejected": true
+    }
+  ],
+  "mcp_catalog_count": 4,
+  "preparation": {
+    "stable_preview": true,
+    "quote_saved": true,
+    "chosen_atomic": "10001",
+    "capability_required": true,
+    "settlements": 0
+  },
+  "real_signatures": 0,
+  "settlements": 0,
+  "purchases": 0,
+  "public_review_writes": 0
+}

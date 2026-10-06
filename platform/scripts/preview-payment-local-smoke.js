@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {encodePaymentSignatureHeader} from '@x402/core/http';
+import {writeFileSync} from 'node:fs';
+const origin=process.argv[2]??'http://127.0.0.1:8788';if(!['127.0.0.1','localhost'].includes(new URL(origin).hostname))throw new Error('Local-only mock payment test.');
+const path='/v1/products/local-payment-fixture',headers={'Content-Type':'application/json','X-AgentToolbox-Sample':'synthetic'},secret='atbp_'+Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
+const post=(suffix,body,extra={})=>fetch(origin+path+suffix,{method:'POST',headers:{...headers,...extra},body:JSON.stringify(body)});
+const cap={'X-Preparation-Capability':secret},commitment=Buffer.from(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(secret))).toString('hex');
+const p=await post('/prepare',{version:'1.0.0',input:{n:3},request_id:'request_'+crypto.randomUUID().replaceAll('-',''),prepare_secret_hash:commitment},cap);assert.equal(p.status,200);const prepared=await p.json();
+const q=await post('/quote',{version:'1.0.0',prepared_id:prepared.prepared_id,payment_amount_atomic:'1001'},cap);assert.equal(q.status,200);const quote=await q.json(),terms=quote.payment.accepts[0],now=Math.floor(Date.now()/1000);
+const payload={x402Version:2,accepted:terms,payload:{signature:'0x'+'0'.repeat(130),authorization:{from:'0x'+'2'.repeat(40),to:terms.payTo,value:terms.amount,nonce:'0x'+Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('hex'),validAfter:String(now-1),validBefore:String(now+300)}}};
+const body={version:'1.0.0',prepared_id:prepared.prepared_id,quote_id:quote.quote_id,payment_amount_atomic:'1001',max_charge_usdc_atomic:'1001'},paidHeaders={...cap,'PAYMENT-SIGNATURE':encodePaymentSignatureHeader(payload),'Idempotency-Key':'mock_'+crypto.randomUUID().replaceAll('-','')};
+const response=await post('/invoke',body,paidHeaders);assert.equal(response.status,200,JSON.stringify(await response.clone().json()));const result=await response.json();assert.equal(result.output.n,3);assert.equal(result.payment.amount_settled_atomic,'1001');assert.deepEqual(await(await post('/invoke',body,paidHeaders)).json(),result);
+const duplicate=await post('/invoke',body,{...paidHeaders,'Idempotency-Key':'other_'+crypto.randomUUID().replaceAll('-','')});assert.equal(duplicate.status,409);
+const report={origin,checked_at:new Date().toISOString(),runtime:'local Workerd/D1',prepared_result:true,atomic_claim:true,affected_rows_verified:true,settled_mock_replay:true,duplicate_claim_rejected:true,external_facilitator_calls:0,live_signatures:0,real_transfers:0};if(process.argv[3])writeFileSync(process.argv[3],JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));

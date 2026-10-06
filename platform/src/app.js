@@ -4,13 +4,14 @@ import {home,humansPage,notFoundPage,reviewsPage,reviewPage} from './pages.js';
 import {publicPurchases} from './purchases.js';
 import {markdown,openapi} from './discovery.js';
 import {mcp} from './mcp.js';
-import {paidInvocation,paymentManifest} from './x402.js';
+import {paidInvocation,paymentManifest,quotedPayment} from './x402.js';
 import {runtimeCatalog} from './payment-config.js';
 import {runExample} from './examples.js';
+import {prepareResult} from './preparations.js';
 const HEADERS={
  'Access-Control-Allow-Origin':'*',
  'Access-Control-Allow-Methods':'GET,HEAD,POST,OPTIONS',
- 'Access-Control-Allow-Headers':'Content-Type,Idempotency-Key,Accept,MCP-Protocol-Version,MCP-Session-Id,PAYMENT-SIGNATURE,X-AgentToolbox-Sample',
+ 'Access-Control-Allow-Headers':'Content-Type,Idempotency-Key,Accept,MCP-Protocol-Version,MCP-Session-Id,PAYMENT-SIGNATURE,X-AgentToolbox-Sample,X-Preparation-Capability',
  'Access-Control-Expose-Headers':'PAYMENT-REQUIRED,PAYMENT-RESPONSE',
  'X-Content-Type-Options':'nosniff',
  'Referrer-Policy':'no-referrer',
@@ -95,6 +96,10 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
       const reply=path.match(/^\/v1\/reviews\/([0-9a-f-]{36})\/replies$/);
       if(reply)return finish(Response.json(await api.reply(reply[1],await jsonBody(request),request.headers.get('Idempotency-Key'))));
       if(path==='/v1/feedback')return finish(Response.json(await api.feedback(await jsonBody(request),request.headers.get('Idempotency-Key'))));
+      const quote=path.match(/^\/v1\/products\/([a-z0-9-]{1,64})\/quote$/);
+      if(quote){const product=findProduct(quote[1],catalog);if(!product)throw new PlatformError(404,'product_not_found','No product has that identifier.');return finish(Response.json(await quotedPayment({db,request,product,body:await jsonBody(request),config:payments,origin,handler:handlers[product.id]})));}
+      const prepare=path.match(/^\/v1\/products\/([a-z0-9-]{1,64})\/prepare$/);
+      if(prepare){const product=findProduct(prepare[1],catalog);if(!product)throw new PlatformError(404,'product_not_found','No product has that identifier.');return finish(Response.json(await prepareResult({db,request,product,body:await jsonBody(request),config:payments,client,handler:handlers[product.id]})));}
       const invoke=path.match(/^\/v1\/products\/([a-z0-9-]{1,64})\/invoke$/);
       if(invoke) {const product=findProduct(invoke[1],catalog);
         if(!product)throw new PlatformError(404,'product_not_found','No product has that identifier.');

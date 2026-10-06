@@ -2,12 +2,20 @@
 
 Agent-first home: **https://agnttoolbx.agenttoolbox2026.workers.dev**
 
-**Docs Pack** is the first experimental product: up to five supported public
-documentation URLs and literal query terms return bounded exact excerpts,
-source hashes, offsets and matched headings. Price: **$0.01 USDC on Base per
-successful whole pack**, using HTTP x402 v2. No source match or failed source
-means no settlement. Live payment verification remains user-controlled and has
-not been performed by the implementation agent.
+Four experimental tools, each with a **$0.01 USDC minimum on Base**:
+
+- **Docs Pack:** bounded excerpts from supported documentation sources.
+- **QuoteProof:** quotation matches, ambiguity and source evidence; not claim truth.
+- **ContractCases:** independently checked boundary and negative examples for a bounded JSON Schema subset.
+- **MCP WireCheck for Cloudflare Workers:** discovery and tools/list checks on your public workers.dev endpoint.
+
+The buyer chooses the amount. Minimum-price direct calls remain compatible;
+higher amounts require an exact durable quote. Optional limited previews for
+Docs Pack and ContractCases reuse a saved private result, then payment unlocks
+it. Verdict tools have no dynamic preview. Settlement follows validated success.
+This is experimental convenience tooling, with no demonstrated demand or
+superiority over competent free primitives. Live payment behavior and maximum
+Free-plan CPU capacity remain unverified. See [pricing and preview flow](docs/buyer-chosen-pricing.md).
 
 ## Try it now
 

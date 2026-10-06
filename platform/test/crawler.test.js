@@ -55,13 +55,13 @@ test('requests carrying a payment header still validate JSON and product inputs 
 });
 test('manifest version 1, v2 challenge, catalog price and concrete OpenAPI metadata use the same live terms',async()=>{
  for(const [amount,receiver] of [[10000,payTo],[25000,'0x3333333333333333333333333333333333333333']]){
-  const catalog=products.map(p=>p.id==='docs-pack'?{...p,pricing:{...p.pricing,amount_atomic:amount,max_charge_atomic:amount}}:p),payments={...config,payTo:receiver},s=setup({catalog,payments});
+  const catalog=products.map(p=>p.id==='docs-pack'?{...p,pricing:{...p.pricing,minimum_amount_atomic:String(amount)}}:p),payments={...config,payTo:receiver},s=setup({catalog,payments});
   try{
    const manifest=await(await s.request('/.well-known/x402')).json();assert.equal(manifest.version,1);assert.deepEqual(manifest.resources,[origin+path]);assert.equal(manifest.payment.x402Version,2);
    const response=await s.app(new Request('https://attacker.example.invalid'+path+'?bad=query',{method:'POST'}));assert.equal(response.status,402);const challenge=decodePaymentRequiredHeader(response.headers.get('PAYMENT-REQUIRED'));assert.equal(challenge.resource.url,origin+path);
    assert.deepEqual(challenge.accepts,manifest.payment.routes[0].accepts);assert.equal(challenge.accepts[0].amount,String(amount));assert.equal(challenge.accepts[0].payTo,receiver);
-   const registry=await(await s.request('/v1/products')).json(),price=registry.products[0].pricing;assert.equal(price.amount_atomic,amount);assert.equal(price.pay_to,receiver);assert.equal(price.network,challenge.accepts[0].network);assert.equal(price.asset,challenge.accepts[0].asset);assert.equal(price.payments_configured,true);
-   const api=await(await s.request('/openapi.json')).json();assert.equal(api.paths[path].post['x-payment-info'].price.amount,amount===10000?'0.01':'0.025');
+   const registry=await(await s.request('/v1/products')).json(),price=registry.products[0].pricing;assert.equal(price.minimum_amount_atomic,String(amount));assert.equal(price.pay_to,receiver);assert.equal(price.network,challenge.accepts[0].network);assert.equal(price.asset,challenge.accepts[0].asset);assert.equal(price.payments_configured,true);
+   const api=await(await s.request('/openapi.json')).json();assert.equal(api.paths[path].post['x-payment-info'].price.minimum,amount===10000?'0.01':'0.025');
    const bazaar=challenge.extensions.bazaar;assert.deepEqual(bazaar.info.input.body.input,catalog[0].example_input);assert.equal(bazaar.info.input.bodyType,'json');
    const validate=new Ajv2020({strict:false,validateFormats:false}).compile(bazaar.schema);assert.equal(validate(bazaar.info),true,JSON.stringify(validate.errors));
    assert(!JSON.stringify({manifest,challenge,api,registry}).includes(config.private_test_secret));assert.equal(manifest.payment.routes[0].live_payment_verified,false);

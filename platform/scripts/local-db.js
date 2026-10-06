@@ -11,6 +11,6 @@ export function database(path=':memory:'){
  return {sqlite,async batch(statements){sqlite.exec('BEGIN');try{const results=await Promise.all(statements.map(s=>s.all()));sqlite.exec('COMMIT');return results;}catch(e){sqlite.exec('ROLLBACK');throw e;}},prepare(sql){return {bind(...args){return {
   first:async()=>sqlite.prepare(sql).get(...args)??null,
   all:async()=>({results:sqlite.prepare(sql).all(...args)}),
-  run:async()=>({meta:{changes:Number(sqlite.prepare(sql).run(...args).changes)}})
+  run:async()=>{const before=sqlite.prepare('SELECT total_changes() n').get().n;sqlite.prepare(sql).run(...args);return {meta:{changes:sqlite.prepare('SELECT total_changes() n').get().n-before}};}
  };}};},close:()=>sqlite.close()};
 }

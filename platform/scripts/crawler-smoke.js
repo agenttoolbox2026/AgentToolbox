@@ -20,7 +20,7 @@ assert.equal(challenge.resource.url,origin+path);
 const bazaar=challenge.extensions.bazaar,validate=new Ajv2020({strict:false,validateFormats:false}).compile(bazaar.schema);
 assert.equal(validate(bazaar.info),true,JSON.stringify(validate.errors));
 const catalog=await(await get('/v1/products')).json(),pricing=catalog.products[0].pricing;
-assert.equal(String(pricing.amount_atomic),challenge.accepts[0].amount);assert.equal(pricing.pay_to,challenge.accepts[0].payTo);assert.equal(pricing.asset,challenge.accepts[0].asset);assert.equal(pricing.network,challenge.accepts[0].network);assert.equal(pricing.payments_configured,true);
+assert.equal(String(pricing.minimum_amount_atomic),challenge.accepts[0].amount);assert.equal(pricing.pay_to,challenge.accepts[0].payTo);assert.equal(pricing.asset,challenge.accepts[0].asset);assert.equal(pricing.network,challenge.accepts[0].network);assert.equal(pricing.payments_configured,true);
 const api=await(await get('/openapi.json')).json();assert(api.paths[path].post['x-payment-info']);
 for(const [route,init,status] of [[path,{method:'POST',body:'x'.repeat(16385)},413],[path,{method:'GET'},404],[path,{method:'HEAD'},404],['/v1/products/missing/invoke',{method:'POST'},404],['/admin',{method:'GET'},404],['/admin.js',{method:'GET'},404]]){
  const response=await fetch(origin+route,{...init,headers,signal:AbortSignal.timeout(15000)});

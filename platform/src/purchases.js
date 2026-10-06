@@ -5,7 +5,7 @@ export async function publicPurchases(db){
 }
 export async function expirePaidResults(db,now=new Date()){
  // Retain financial tombstones/receipts; remove only bounded public-document output.
- const paid=await db.prepare('UPDATE platform_payments SET result_json=NULL WHERE result_expires_at<? AND result_json IS NOT NULL').bind(now.toISOString()).run();
+ const paid=await db.prepare("UPDATE platform_payments SET result_json=NULL WHERE result_expires_at<? AND result_json IS NOT NULL AND state IN ('settled','failed')").bind(now.toISOString()).run();
  await db.prepare('UPDATE platform_examples SET result_json=NULL WHERE result_expires_at<? AND result_json IS NOT NULL').bind(now.toISOString()).run();
  return paid;
 }

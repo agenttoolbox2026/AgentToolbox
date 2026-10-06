@@ -1,12 +1,13 @@
 import {HTTPFacilitatorClient,x402ResourceServer} from '@x402/core/server';
 import {ExactEvmScheme} from '@x402/evm/exact/server';
 import {decodePaymentSignatureHeader,encodePaymentRequiredHeader,encodePaymentResponseHeader} from '@x402/core/http';
-import {PlatformError,invokeSchema} from './service.js';
+import {PlatformError,invokeSchema,quoteSchema} from './service.js';
 import {z} from 'zod';
-import {BASE_NETWORK,BASE_USDC,FACILITATOR,paymentRequirements} from './payment-config.js';
+import {BASE_NETWORK,BASE_USDC,FACILITATOR,paymentRequirements,minimumAmount,MAX_UINT256} from './payment-config.js';
 export {BASE_NETWORK,BASE_USDC,FACILITATOR} from './payment-config.js';
 import {hash,telemetry} from './telemetry.js';
 import {expirePaidResults} from './purchases.js';
+import {createQuote,loadQuote,minimumPolicy,capabilityHash} from './preparations.js';
 export function canonical(value) {
  if(Array.isArray(value))return '['+value.map(canonical).join(',')+']';
  if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';
@@ -16,25 +17,25 @@ export function invocationJsonSchema(product){
  const schema=z.toJSONSchema(invokeSchema);
  schema.properties.version={type:'string',const:product.version};
  if(product.input_schema)schema.properties.input=product.input_schema;
- schema.properties.max_charge_usdc_atomic.minimum=product.pricing.amount_atomic;
+ schema.properties.payment_amount_atomic.description+=' Product minimum: '+minimumAmount(product)+'. Must equal the exact quoted/signed amount.';
  return schema;
 }
 export function paymentChallenge(product,requirements,origin){
- const input={type:'http',method:'POST',bodyType:'json',body:{version:product.version,input:product.example_input??{},max_charge_usdc_atomic:product.pricing.amount_atomic}};
+ const input={type:'http',method:'POST',bodyType:'json',body:{version:product.version,input:product.example_input??{},payment_amount_atomic:requirements.amount,max_charge_usdc_atomic:requirements.amount}};
  const inputSchema={type:'object',properties:{type:{const:'http'},method:{const:'POST'},bodyType:{const:'json'},body:invocationJsonSchema(product)},required:['type','method','bodyType','body'],additionalProperties:false};
  const outputSchema={type:'object',properties:{type:{const:'json'},example:product.output_schema??{type:'object'}},required:['type'],additionalProperties:false};
  return {x402Version:2,error:'PAYMENT-SIGNATURE header is required',
   resource:{url:new URL('/v1/products/'+product.id+'/invoke',origin).href,description:product.summary??'Validated product outcome',mimeType:'application/json',serviceName:'AgentToolbox'},
-  accepts:[requirements],extensions:{bazaar:{info:{input,output:{type:'json'}},schema:{type:'object',properties:{input:inputSchema,output:outputSchema},required:['input'],additionalProperties:false}}}};
+  accepts:[requirements],...(requirements.amount===minimumAmount(product)?{extensions:{bazaar:{info:{input,output:{type:'json'}},schema:{type:'object',properties:{input:inputSchema,output:outputSchema},required:['input'],additionalProperties:false}}}}:{} )};
 }
 export function paymentManifest({catalog,handlers,config,origin}){
  const routes=[];
- for(const product of catalog){const terms=handlers[product.id]?paymentRequirements(product,config):null;if(terms)routes.push({resource:new URL('/v1/products/'+product.id+'/invoke',origin).href,product_id:product.id,version:product.version,method:'POST',accepts:[terms],live_payment_verified:product.pricing.live_payment_verified===true});}
+ for(const product of catalog){const terms=handlers[product.id]?paymentRequirements(product,config):null;if(terms)routes.push({resource:new URL('/v1/products/'+product.id+'/invoke',origin).href,product_id:product.id,version:product.version,method:'POST',accepts:[terms],quote_url:new URL('/v1/products/'+product.id+'/quote',origin).href,prepare_url:handlers[product.id].preview?new URL('/v1/products/'+product.id+'/prepare',origin).href:null,pricing:{model:'buyer_chosen_per_success',minimum_amount_atomic:terms.amount,decimals:6,business_maximum:null,protocol_maximum_atomic:MAX_UINT256},live_payment_verified:product.pricing.live_payment_verified===true});}
  // x402scan discovery version 1 is separate from x402 payment protocol version 2.
- return {version:1,resources:routes.map(route=>route.resource),payment:{x402Version:2,facilitator:FACILITATOR,configured:routes.length>0,routes},instructions:'Inspect the contract and preserve the Idempotency-Key/body/authorization. Settlement occurs only after validated success. Live payment behavior is not yet independently verified.'};
+ return {version:1,resources:routes.map(route=>route.resource),payment:{x402Version:2,facilitator:FACILITATOR,configured:routes.length>0,routes},instructions:'Choose an explicit amount at or above the minimum; POST /v1/products/{id}/quote for exact requirements. Manifest challenges quote the minimum only. Preserve the Idempotency-Key/body/authorization. Settlement occurs only after validated success. Live payment behavior is not yet independently verified.'};
 }
 export async function sdkAdapter({payTo,amount,network=BASE_NETWORK,asset=BASE_USDC,facilitatorClient}){
- const expected=paymentRequirements({status:'active',pricing:{payments_enabled:true,amount_atomic:amount}},{enabled:true,receiverConfirmed:true,network,asset,payTo});
+ const expected=paymentRequirements({status:'active',pricing:{payments_enabled:true,minimum_amount_atomic:typeof amount==='number'&&Number.isSafeInteger(amount)?String(amount):amount}},{enabled:true,receiverConfirmed:true,network,asset,payTo});
  if(!expected)throw new PlatformError(503,'payment_configuration_error','Unsupported payment configuration.');
  const client=facilitatorClient??new HTTPFacilitatorClient({url:FACILITATOR,timeoutMs:10000});
  const server=new x402ResourceServer(client).register(expected.network,new ExactEvmScheme());
@@ -69,11 +70,15 @@ function validatePayload(payload,requirements,nowSeconds,existing=false){
   throw new PlatformError(400,'invalid_authorization','Authorization recipient, amount or validity window is invalid.');
  return a;
 }
+export async function quotedPayment(options){
+ const {terms,...quote}=await createQuote(options);
+ return {api_version:'1',...quote,payment:paymentChallenge(options.product,terms,options.origin),payment_effect:'none',instructions:'Include quote_id and this exact payment_amount_atomic in invoke. Preserve body, capability, key and original authorization for retries. A quote does not settle or release a result.'};
+}
 export async function paidInvocation({request,body,key,product,handler,db,config,origin,adapterFactory=sdkAdapter,now=()=>new Date()}){
  if(request.method!=='POST'||new URL(request.url).pathname!=='/v1/products/'+product.id+'/invoke')
   throw new PlatformError(405,'method_not_allowed','Paid products use their exact POST invocation path.');
  if(product.status!=='active'&&product.status!=='validation')throw new PlatformError(410,'product_retired','Retired products cannot charge.');
- const terms=paymentRequirements(product,config);
+ let terms=paymentRequirements(product,config);
  if(!terms)throw new PlatformError(503,'payment_not_ready','Paid execution is not enabled or receiver/network/asset verification is incomplete.');
  if(!handler)throw new PlatformError(503,'product_unavailable','No paid execution contract is available.');
  const signature=request.headers.get('PAYMENT-SIGNATURE');
@@ -86,22 +91,14 @@ export async function paidInvocation({request,body,key,product,handler,db,config
    {status:402,headers:{'PAYMENT-REQUIRED':encodePaymentRequiredHeader(challenge),'Cache-Control':'no-store'}});
  }
  if(signature.length>12288)throw new PlatformError(413,'payment_header_too_large','Payment header exceeds its bound.');
- const parsed=invokeSchema.safeParse(body);if(!parsed.success)throw new PlatformError(400,'invalid_input','Request does not match the published invocation schema.');body=parsed.data;
- if(body.version!==product.version)throw new PlatformError(409,'version_mismatch','Inspect the current product version.');
- if(body.max_charge_usdc_atomic<product.pricing.amount_atomic)throw new PlatformError(400,'charge_cap_exceeded','The product price exceeds the caller charge cap.');
  if(!/^[A-Za-z0-9_-]{32,128}$/.test(key??''))throw new PlatformError(400,'idempotency_key_required','A stable Idempotency-Key is required.');
- const input=handler.input.safeParse(body.input);if(!input.success)throw new PlatformError(400,'invalid_input','Input does not match the product schema.');
- const adapter=await adapterFactory({payTo:terms.payTo,amount:Number(terms.amount),network:terms.network,asset:terms.asset});
- if(canonical(adapter.requirements)!==canonical(terms))throw new PlatformError(503,'payment_configuration_error','Payment requirements differ from published terms.');
  let payload;try{payload=decodePaymentSignatureHeader(signature);}catch{throw new PlatformError(400,'invalid_payment','Malformed payment header.');}
- const keyHash=await hash(key);
+ const keyHash=await hash(key),requestHash=await hash(canonical(body)),paymentDigest=await hash(canonical(payload));
  await expirePaidResults(db,now());
- const previous=await db.prepare('SELECT * FROM platform_payments WHERE product_id=? AND version=? AND key_hash=?').bind(product.id,product.version,keyHash).first();
- const authorization=validatePayload(payload,adapter.requirements,Math.floor(now().getTime()/1000),!!previous);
- const fingerprint=await hash(canonical({method:'POST',path:new URL(request.url).pathname,product:product.id,version:product.version,body:{...body,input:input.data},requirements:adapter.requirements,facilitator:FACILITATOR}));
- const paymentDigest=await hash(canonical(payload));
- const replay=row=>{
-  if(row.fingerprint!==fingerprint||row.payment_digest!==paymentDigest)throw new PlatformError(409,'payment_replay_conflict','This operation is bound to another request or authorization. Do not create a replacement charge.');
+ const previous=await db.prepare('SELECT * FROM platform_payments WHERE product_id=? AND version=? AND key_hash=?').bind(product.id,body?.version??'',keyHash).first();
+ const replay=async(row,fingerprint)=>{
+  if((row.request_hash?row.request_hash!==requestHash:row.fingerprint!==fingerprint)||row.payment_digest!==paymentDigest)throw new PlatformError(409,'payment_replay_conflict','This operation is bound to another request or authorization. Do not create a replacement charge.');
+  if(row.prepared_id){const prepared=await db.prepare('SELECT capability_hash FROM platform_preparations WHERE prepared_id=?').bind(row.prepared_id).first();if(!prepared||prepared.capability_hash!==await capabilityHash(request))throw new PlatformError(403,'preparation_capability_invalid','Original preparation capability required.');}
   if(row.state==='settled'){
    if(!row.result_json)throw new PlatformError(410,'paid_result_expired','The 24-hour result retention window expired. This purchase will not execute or charge again.',{operation_id:row.operation_id});
    return Response.json(JSON.parse(row.result_json),{headers:{'PAYMENT-RESPONSE':encodePaymentResponseHeader(JSON.parse(row.settlement_json))}});
@@ -109,16 +106,47 @@ export async function paidInvocation({request,body,key,product,handler,db,config
   if(row.state==='failed')throw new PlatformError(422,'outcome_not_met','This operation did not meet its success criterion. No settlement was requested.');
   throw new PlatformError(503,'settlement_unresolved','The operation is in progress or requires reconciliation. Reuse this request; do not issue a new authorization.',{operation_id:row.operation_id});
  };
- if(previous)return replay(previous);
+ // Frozen replay is checked before current schema, price or quote expiry. No facilitator call.
+ if(previous?.request_hash)return replay(previous);
+ if(previous){
+  // Historical rows already froze these server-owned fields. Legacy products
+  // used this exact v2 timeout/asset policy; never reconstruct from accepted.
+  const frozen={scheme:'exact',network:previous.network,asset:BASE_USDC,amount:previous.amount_atomic,payTo:previous.receiver,maxTimeoutSeconds:300,extra:{name:'USD Coin',version:'2',assetTransferMethod:'eip3009'}};
+  // Address case was included in the historical fingerprint. Both forms below
+  // come from server state/config; the client cannot supply settlement terms.
+  for(const receiver of [...new Set([previous.receiver,config.payTo])]){
+   if(receiver?.toLowerCase()!==previous.receiver.toLowerCase())continue;
+   frozen.payTo=receiver;
+   const legacy=await hash(canonical({method:'POST',path:new URL(request.url).pathname,product:product.id,version:previous.version,body,requirements:frozen,facilitator:FACILITATOR}));
+   if(legacy===previous.fingerprint)return replay(previous,legacy);
+  }
+  throw new PlatformError(409,'payment_replay_conflict','Original legacy request cannot be matched. No replacement charge; reconcile this operation.');
+ }
+ const parsed=invokeSchema.safeParse(body);if(!parsed.success)throw new PlatformError(400,'invalid_input','Request does not match the published invocation schema.');body=parsed.data;
+ if(body.version!==product.version)throw new PlatformError(409,'version_mismatch','Inspect the current product version.');
+ const chosenTerms=paymentRequirements(product,config,body.payment_amount_atomic??minimumAmount(product));
+ if(!chosenTerms)throw new PlatformError(400,'amount_below_minimum','Chosen amount must meet the product minimum.',{minimum_amount_atomic:minimumAmount(product)});
+ terms=chosenTerms;let input,prepared;
+ if(body.quote_id){({terms,input,prepared}=await loadQuote({db,request,body,product,handler,config,now:now()}));}
+ else{
+  if(body.prepared_id||terms.amount!==minimumAmount(product))throw new PlatformError(400,'quote_required','Prepared results and above-minimum amounts require a fresh durable quote.');
+  const checked=handler.input.safeParse(body.input);if(!checked.success)throw new PlatformError(400,'invalid_input','Input does not match the product schema.');input=checked.data;
+ }
+ if(BigInt(body.max_charge_usdc_atomic)<BigInt(terms.amount))throw new PlatformError(400,'charge_cap_exceeded','The product price exceeds the caller charge cap.');
+ const adapter=await adapterFactory({payTo:terms.payTo,amount:terms.amount,network:terms.network,asset:terms.asset});
+ if(canonical(adapter.requirements)!==canonical(terms))throw new PlatformError(503,'payment_configuration_error','Payment requirements differ from published terms.');
+ const authorization=validatePayload(payload,adapter.requirements,Math.floor(now().getTime()/1000),!!previous);
+ const fingerprint=await hash(canonical({method:'POST',path:new URL(request.url).pathname,product:product.id,version:product.version,body:{...body,...(input?{input}:{})},requirements:adapter.requirements,facilitator:FACILITATOR}));
+ if(previous)return replay(previous,fingerprint);
  const verified=await adapter.verify(payload);
  if(!verified.isValid||verified.payer?.toLowerCase()!==authorization.from.toLowerCase())
   throw new PlatformError(402,'payment_invalid','The facilitator did not verify this authorization.');
  const operationId=crypto.randomUUID(),date=now().toISOString();
- const inserted=await db.prepare(`INSERT OR IGNORE INTO platform_payments(operation_id,product_id,version,key_hash,fingerprint,payment_digest,network,asset,payer,nonce,amount_atomic,receiver,state,created_at,updated_at,sample_kind,is_live,result_expires_at,review_secret_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'executing',?,?,?,?,?,?)`)
-  .bind(operationId,product.id,product.version,keyHash,fingerprint,paymentDigest,BASE_NETWORK,BASE_USDC.toLowerCase(),authorization.from.toLowerCase(),authorization.nonce.toLowerCase(),adapter.requirements.amount,config.payTo.toLowerCase(),date,date,sampleKind,config.live===true?1:0,new Date(now().getTime()+86400000).toISOString(),body.review_secret_hash??null).run();
+ let inserted;try{inserted=await db.prepare(`INSERT OR IGNORE INTO platform_payments(operation_id,product_id,version,key_hash,fingerprint,payment_digest,network,asset,payer,nonce,amount_atomic,receiver,state,created_at,updated_at,sample_kind,is_live,result_expires_at,review_secret_hash,request_hash,requirements_json,minimum_policy,quote_id,prepared_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'executing',?,?,?,?,?,?,?,?,?,?,?)`)
+  .bind(operationId,product.id,product.version,keyHash,fingerprint,paymentDigest,BASE_NETWORK,BASE_USDC.toLowerCase(),authorization.from.toLowerCase(),authorization.nonce.toLowerCase(),adapter.requirements.amount,config.payTo.toLowerCase(),date,date,sampleKind,config.live===true?1:0,new Date(now().getTime()+86400000).toISOString(),body.review_secret_hash??null,requestHash,canonical(terms),minimumPolicy(product),body.quote_id??null,body.prepared_id??null).run();}catch(e){if(/quote_already_claimed|prepared_already_claimed/.test(String(e)))throw new PlatformError(409,'quote_already_claimed','This quote or prepared result is already purchased. Reuse the original paid request.');throw e;}
  if(!inserted.meta.changes){
   const row=await db.prepare('SELECT * FROM platform_payments WHERE product_id=? AND version=? AND key_hash=?').bind(product.id,product.version,keyHash).first();
-  if(row)return replay(row);
+  if(row)return replay(row,fingerprint);
   throw new PlatformError(409,'authorization_already_used','This authorization is already bound to another operation.');
  }
  await metrics.record('payment_verified',product);
@@ -126,7 +154,7 @@ export async function paidInvocation({request,body,key,product,handler,db,config
   .bind(crypto.randomUUID(),operationId,product.id,product.version,event,BASE_NETWORK,BASE_USDC,amount,transaction,sampleKind,now().toISOString()).run();
  let output;const executionStarted=Date.now();
  try{
-  const result=await handler.run(input.data),checked=handler.output.safeParse(result);
+  const result=prepared?JSON.parse(prepared.result_json):await handler.run(input),checked=handler.output.safeParse(result);
   if(!checked.success||!await handler.success(checked.data))throw new Error('criterion');
   output={api_version:'1',operation_id:operationId,product_id:product.id,version:product.version,execution:'completed',evidence:'server_validated',output:checked.data};
   if(new TextEncoder().encode(JSON.stringify(output)).length>16384)throw new Error('output_bound');
@@ -137,7 +165,10 @@ export async function paidInvocation({request,body,key,product,handler,db,config
   throw new PlatformError(422,'outcome_not_met','The disclosed outcome was not met. No settlement was requested.',reason?{reason}:{});
  }
  // Durable output and intent must succeed before the only settlement call.
- await db.prepare("UPDATE platform_payments SET state='outcome_ready',result_json=?,updated_at=? WHERE operation_id=?").bind(JSON.stringify(output),now().toISOString(),operationId).run();
+ const durable=await db.prepare("UPDATE platform_payments SET state='outcome_ready',result_json=?,updated_at=? WHERE operation_id=? AND state='executing'").bind(JSON.stringify(output),now().toISOString(),operationId).run();
+ // D1 changes includes trigger writes (activity and purchase records). The
+ // primary-key predicate updates at most one payment; require positive changes.
+ if(!Number.isInteger(durable.meta.changes)||durable.meta.changes<1)throw new PlatformError(503,'settlement_unresolved','Result was not durably saved; no settlement requested.');
  await ledger('outcome_validated');await metrics.record('execution_success',product,Date.now()-executionStarted);
  const claim=await db.prepare("UPDATE platform_payments SET state='settling',updated_at=? WHERE operation_id=? AND state='outcome_ready'").bind(now().toISOString(),operationId).run();
  if(!claim.meta.changes)throw new PlatformError(503,'settlement_unresolved','Settlement state changed; reconciliation is required.');
@@ -161,7 +192,7 @@ export async function paidInvocation({request,body,key,product,handler,db,config
  await ledger('settlement_reported',adapter.requirements.amount,receipt.transaction);
  const completed=await db.prepare("UPDATE platform_payments SET state='settled',result_json=?,settlement_json=?,updated_at=? WHERE operation_id=? AND state='settling'")
   .bind(JSON.stringify(output),JSON.stringify(receipt),now().toISOString(),operationId).run();
- if(completed.meta.changes!==1)throw new PlatformError(503,'settlement_unresolved','Payment state needs reconciliation. Do not submit another authorization.',{operation_id:operationId});
+ if(!Number.isInteger(completed.meta.changes)||completed.meta.changes<1)throw new PlatformError(503,'settlement_unresolved','Payment state needs reconciliation. Do not submit another authorization.',{operation_id:operationId});
  await metrics.record('payment_settled',product);
  return Response.json(output,{headers:{'PAYMENT-RESPONSE':encodePaymentResponseHeader(receipt)}});
 }

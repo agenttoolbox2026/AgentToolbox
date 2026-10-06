@@ -1,13 +1,17 @@
 import { z } from 'zod';
 import { products, findProduct, catalogResult } from './registry.js';
 import { hash, telemetry } from './telemetry.js';
+import {isAtomicAmount,minimumAmount,MAX_UINT256} from './payment-config.js';
 import {submitFeedback} from './feedback.js';
 import {listReviews,readReview,listReplies,submitReview,submitReply} from './reviews.js';
 export class PlatformError extends Error {
   constructor(status,code,message,details={}) { super(message); this.status=status;this.code=code;this.details=details; }
 }
 export const searchSchema=z.strictObject({q:z.string().max(120).default(''),status:z.enum(['active','validation','retired','all']).default('active')});
-export const invokeSchema=z.strictObject({version:z.string().regex(/^\d+\.\d+\.\d+$/),input:z.record(z.string(),z.unknown()),max_charge_usdc_atomic:z.number().int().min(0).max(1000000000),agent_id:z.uuid().optional(),review_secret_hash:z.string().regex(/^[0-9a-f]{64}$/).describe('Optional SHA-256 hex of caller-kept atbr_ secret (32 random bytes). Bound to this paid request; never send the raw secret here.').optional()});
+export const atomicAmountSchema=z.string().regex(/^(0|[1-9][0-9]{0,77})$/).refine(isAtomicAmount).describe('Canonical decimal USDC atomic-unit string (6 decimals). Protocol uint256 maximum '+MAX_UINT256+'. No business maximum.');
+export const prepareSchema=z.strictObject({version:z.string().regex(/^\d+\.\d+\.\d+$/),input:z.record(z.string(),z.unknown()),request_id:z.string().regex(/^[A-Za-z0-9_-]{32,128}$/),prepare_secret_hash:z.string().regex(/^[0-9a-f]{64}$/)});
+export const quoteSchema=z.strictObject({version:z.string().regex(/^\d+\.\d+\.\d+$/),payment_amount_atomic:atomicAmountSchema,input:z.record(z.string(),z.unknown()).optional(),prepared_id:z.uuid().optional()}).refine(v=>!!v.input!==!!v.prepared_id);
+export const invokeSchema=z.strictObject({version:z.string().regex(/^\d+\.\d+\.\d+$/),input:z.record(z.string(),z.unknown()).optional(),prepared_id:z.uuid().optional(),quote_id:z.uuid().optional(),payment_amount_atomic:atomicAmountSchema.optional(),max_charge_usdc_atomic:z.union([atomicAmountSchema,z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)]).describe('Caller spending cap. Canonical decimal string recommended; safe integer numbers accepted for compatibility. Does not select an amount.'),agent_id:z.uuid().optional(),review_secret_hash:z.string().regex(/^[0-9a-f]{64}$/).describe('Optional SHA-256 hex of caller-kept atbr_ secret (32 random bytes). Bound to this paid request; never send the raw secret here.').optional()}).refine(v=>!!v.input!==!!v.prepared_id);
 export const outcomeSchema=z.strictObject({outcome:z.enum(['success','failure','unverifiable'])});
 export function service({db,catalog=products,handlers={},channel='http',sampleKind='unclassified',feedbackAllowed=async()=>true,now=()=>new Date()}) {
   const metrics=telemetry(db,{channel,sampleKind,now});
@@ -30,7 +34,7 @@ export function service({db,catalog=products,handlers={},channel='http',sampleKi
       if(!['active','validation'].includes(p.status)) throw new PlatformError(503,'product_unavailable','This product cannot be invoked.');
       if(body.version!==p.version) throw new PlatformError(409,'version_mismatch','Inspect the current product contract before invoking.',{current_version:p.version});
       if(!handlers[id]) throw new PlatformError(503,'product_unavailable','No executable product handler is installed.');
-      if(p.pricing.payments_enabled || p.pricing.amount_atomic>0) throw new PlatformError(402,'paid_http_required','Use the product HTTP endpoint with an x402-capable client.',{path:p.invocation?.path??'/v1/products/'+p.id+'/invoke',amount_atomic:p.pricing.amount_atomic,network:p.pricing.network});
+      if(p.pricing.payments_enabled || minimumAmount(p)!==null) throw new PlatformError(402,'paid_http_required','Use the product HTTP endpoint with an x402-capable client.',{path:p.invocation?.path??'/v1/products/'+p.id+'/invoke',minimum_amount_atomic:minimumAmount(p),quote_path:'/v1/products/'+p.id+'/quote',network:p.pricing.network});
       if(!/^[A-Za-z0-9_-]{32,128}$/.test(key??'')) throw new PlatformError(400,'idempotency_key_required','Send an Idempotency-Key of 32–128 letters, digits, underscores or hyphens.');
       const handler=handlers[id], parsed=handler.input.safeParse(body.input);
       if(!parsed.success) throw new PlatformError(400,'invalid_input','Input does not match the product schema.');
