@@ -3,6 +3,9 @@ import {Readable} from 'node:stream';
 import {readFileSync,mkdirSync} from 'node:fs';
 import {database} from './local-db.js';
 import {createPlatform} from '../src/app.js';
+import {createQuoteProof} from '../src/quote-proof.js';
+import {createContractCases} from '../src/contract-cases.js';
+import {createMcpWireCheck} from '../src/mcp-wirecheck.js';
 import {createDocsPack} from '../src/docs-pack.js';
 export async function start({port=8787,persist=false,handlers}={}){
  if(persist)mkdirSync('.data',{recursive:true});
@@ -17,7 +20,7 @@ export async function start({port=8787,persist=false,handlers}={}){
  server.requestTimeout=10000;server.headersTimeout=5000;
  await new Promise(resolve=>server.listen(port,'127.0.0.1',resolve));
  const origin='http://127.0.0.1:'+server.address().port;
- app=createPlatform({db,origin,handlers:handlers??{'docs-pack':createDocsPack()},assets:{fetch:async r=>{
+ app=createPlatform({db,origin,handlers:handlers??{'docs-pack':createDocsPack(),'quote-proof':createQuoteProof(),'contract-cases':createContractCases(),'mcp-wirecheck':createMcpWireCheck()},assets:{fetch:async r=>{
   const path=new URL(r.url).pathname;const files={'/agenttoolbox-icon.png':'image/png','/style.css':'text/css','/site.js':'text/javascript'};
   if(!files[path])return new Response(null,{status:404});
   return new Response(readFileSync(new URL('../public'+path,import.meta.url)),{headers:{'Content-Type':files[path]}});

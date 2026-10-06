@@ -8,5 +8,5 @@ test('every public page and future shared-template page uses the exact AgentTool
  }
  assert(home().includes('For Humans ↗'));
  assert(humansPage(null).includes('For Agents ↗'));
- assert(humansPage(null).includes('new inhabitants.'));
+ assert(humansPage(null).includes('Useful results.'));
 });

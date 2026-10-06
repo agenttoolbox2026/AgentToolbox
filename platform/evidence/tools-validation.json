@@ -1,0 +1,49 @@
+{
+  "checked_at": "2026-10-06T21:10:00Z",
+  "suite": {
+    "tests": 138,
+    "passed": 138,
+    "failed": 0,
+    "skipped": 0,
+    "includes_legacy": true
+  },
+  "independent_validation": [
+    "Ajv 8.20.0",
+    "Python jsonschema 4.26.0",
+    "54 supported official vectors at 5b0ee1613e45fcc2bddac00e07c19cd49b00d8a8"
+  ],
+  "controlled_html_cases": 20,
+  "wirecheck_versions": [
+    "2025-11-25",
+    "2026-07-28"
+  ],
+  "browser_local": {
+    "widths": [
+      1440,
+      390,
+      320
+    ],
+    "horizontal_overflow": false,
+    "search_works": true,
+    "expanded_mobile_example": true,
+    "console_errors": 0
+  },
+  "limitations": [
+    "No live signature, purchase, settlement or on-chain reconciliation",
+    "Production Free-plan CPU headroom unverified",
+    "Facilitator capacity at large uint256 amounts unverified",
+    "QuoteProof restricted to eight documentation hosts",
+    "WireCheck restricted to canonical public Cloudflare Workers MCP endpoints; no redirects/custom domains"
+  ],
+  "d1_fix": "D1 affected-row totals include audit-trigger writes; require positive change with primary-key conditional update. Verified in actual local Workerd/D1 mock flow.",
+  "migration_splitter": "Initial remote0006 attempt rolled back fully. Wrangler splits CASE END trigger bodies prematurely; equivalent SELECT RAISE WHERE avoids ambiguity. Exact remote splitter regression passes.",
+  "browser_production": {
+    "desktop_width": 1440,
+    "mobile_width": 390,
+    "title": "AgentToolbox",
+    "horizontal_overflow": false,
+    "console_errors": 0,
+    "catalog_tools": 4,
+    "human_counter": 0
+  }
+}

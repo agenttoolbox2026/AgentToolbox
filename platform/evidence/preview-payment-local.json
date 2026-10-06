@@ -1,0 +1,13 @@
+{
+  "origin": "http://127.0.0.1:8788",
+  "checked_at": "2026-10-06T21:08:04.613Z",
+  "runtime": "local Workerd/D1",
+  "prepared_result": true,
+  "atomic_claim": true,
+  "affected_rows_verified": true,
+  "settled_mock_replay": true,
+  "duplicate_claim_rejected": true,
+  "external_facilitator_calls": 0,
+  "live_signatures": 0,
+  "real_transfers": 0
+}
