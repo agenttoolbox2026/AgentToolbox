@@ -8,7 +8,10 @@ MCP endpoint: https://agenttoolbox-retry-gate.agenttoolbox2026.workers.dev/mcp
 
 Read [BUILD.md](BUILD.md) for the founder requirements. This is a product hypothesis,
 not a validated service. The first controlled comparison found no advantage over
-a caller already using correct retry rules; the helper added latency.
+a caller already using correct retry rules; the helper added latency. A subsequent
+[fresh-agent comparison](docs/fresh-agent-report.md) completed four matched pairs
+with equal outcomes; all five executed treatment agents skipped the optional gate.
+Two other observations were excluded after automatic approval rejections.
 
 ## Run locally
 

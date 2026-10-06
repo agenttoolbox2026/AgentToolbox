@@ -35,7 +35,18 @@ Payment intent, willingness to pay and settlement remain untested. Cost-to-serve
 is unknown until actual hosting/facilitator billing is measured; local latency is
 only a cost proxy. Operator effort is optional self-report, not observed labor.
 
-## Next external trial (proposed, not run)
+## Fresh-agent controlled follow-up (completed)
+
+The [October 6 UTC fresh-agent study](fresh-agent-report.md) dispatched 12 contexts
+against a fixed real repository snapshot with matched synthetic fault schedules.
+Ten executed; four complete pairs were equal in correctness, stopping and upstream
+calls. All five executed treatment agents chose not to call the optional gate.
+Two observations were excluded after automatic approval rejections. Actual token
+counts are unavailable. This supplies no measured incremental gate benefit or
+gate-call overhead, and does not justify product expansion. The frozen private
+local audit bundle contains the runnable protocol and detailed logs.
+
+## Next organic external trial (proposed, not run)
 
 After public setup/access verification, invite one fresh agent to one real task
 and expose only the MCP description. Compare its existing retry approach on a
