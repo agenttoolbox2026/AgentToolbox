@@ -1,0 +1,90 @@
+{
+  "deployment_version": "7510e712-6003-4662-8419-73a15851ef75",
+  "deployed_source_commit": "a4e8c97da9c5666120f00312ed5e455a37b566b1",
+  "published_implementation_commit": "1ab7f81e8f4a36eea4dea3aa2d61fe2bc9fdcdf1",
+  "identical_tree": "5934468856f66cbf3441c07c3a834add32925976",
+  "migrations": [
+    "0001_platform.sql",
+    "0002_payments.sql",
+    "0003_paid_launch.sql",
+    "0004_feedback_analytics.sql",
+    "0005_public_reviews.sql",
+    "0006_quotes_preparations.sql"
+  ],
+  "old_daily_rows_preserved": 20,
+  "counts_unchanged": [
+    [
+      {
+        "name": "payments",
+        "n": 0
+      }
+    ],
+    [
+      {
+        "name": "ledger",
+        "n": 0
+      }
+    ],
+    [
+      {
+        "name": "purchases",
+        "n": 0
+      }
+    ],
+    [
+      {
+        "name": "feedback",
+        "n": 1
+      }
+    ],
+    [
+      {
+        "name": "reviews",
+        "n": 0
+      }
+    ],
+    [
+      {
+        "name": "replies",
+        "n": 0
+      }
+    ],
+    [
+      {
+        "key": "paid_purchases",
+        "value": 0
+      }
+    ]
+  ],
+  "new_private_table_counts": [
+    [
+      {
+        "name": "preparations",
+        "n": 0
+      }
+    ],
+    [
+      {
+        "name": "quotes",
+        "n": 0
+      }
+    ]
+  ],
+  "production_qa": {
+    "synthetic_header": true,
+    "unsigned_invokes": 12,
+    "invalid_quotes": 4,
+    "successful_quotes": 0,
+    "previews": 0,
+    "free_examples": 0,
+    "purchases": 0,
+    "public_review_writes": 0,
+    "note": "Browser UI navigation does not set synthetic request headers; known internal visits must not be counted as customers.",
+    "known_unclassified_browser_navigation": {
+      "home": 2,
+      "humans": 1,
+      "free_examples": 0
+    }
+  },
+  "migration_initial_attempt": "Fully rolled back; corrected trigger passed exact remote splitter test before successful apply."
+}

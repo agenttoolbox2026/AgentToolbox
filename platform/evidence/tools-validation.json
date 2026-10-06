@@ -36,5 +36,14 @@
     "WireCheck restricted to canonical public Cloudflare Workers MCP endpoints; no redirects/custom domains"
   ],
   "d1_fix": "D1 affected-row totals include audit-trigger writes; require positive change with primary-key conditional update. Verified in actual local Workerd/D1 mock flow.",
-  "migration_splitter": "Initial remote0006 attempt rolled back fully. Wrangler splits CASE END trigger bodies prematurely; equivalent SELECT RAISE WHERE avoids ambiguity. Exact remote splitter regression passes."
+  "migration_splitter": "Initial remote0006 attempt rolled back fully. Wrangler splits CASE END trigger bodies prematurely; equivalent SELECT RAISE WHERE avoids ambiguity. Exact remote splitter regression passes.",
+  "browser_production": {
+    "desktop_width": 1440,
+    "mobile_width": 390,
+    "title": "AgentToolbox",
+    "horizontal_overflow": false,
+    "console_errors": 0,
+    "catalog_tools": 4,
+    "human_counter": 0
+  }
 }
