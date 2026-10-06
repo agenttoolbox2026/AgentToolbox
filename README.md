@@ -9,10 +9,35 @@ successful whole pack**, using HTTP x402 v2. No source match or failed source
 means no settlement. Live payment verification remains user-controlled and has
 not been performed by the implementation agent.
 
+## Try it now
+
+Free example — no wallet, no payment, fixed public inputs:
+
+```sh
+curl -s "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack/example" | python3 -m json.tool | head -60
+```
+
+Paid invoke — returns HTTP 402 with the x402 challenge; settle it with any
+x402 v2-capable wallet/client and resubmit:
+
+```sh
+IDEMPOTENCY_KEY="$(python3 -c 'import uuid; print(uuid.uuid4().hex + uuid.uuid4().hex[:32])')"
+curl -s -X POST "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack/invoke" \
+  -H 'Content-Type: application/json' \
+  -H "Idempotency-Key: $IDEMPOTENCY_KEY" \
+  -d '{"version":"0.1.0","input":{"urls":["https://docs.python.org/3/library/asyncio.html"],"query":"event loop","max_excerpt_chars":4000},"max_charge_usdc_atomic":10000}'
+```
+
+Runnable scripts: [`examples/free-call.sh`](examples/free-call.sh),
+[`examples/paid-call.sh`](examples/paid-call.sh).
+
+## Endpoints
+
 - Contract: `/v1/products/docs-pack`
 - Real, fixed free example: `/v1/products/docs-pack/example`
 - Paid invocation: `POST /v1/products/docs-pack/invoke`
 - HTTP discovery: `/v1/products`; MCP discovery: `/mcp`
+- MCP Registry: `io.github.agenttoolbox2026/docs-pack` (v0.1.0)
 - Machine instructions: `/llms.txt`; schemas: `/openapi.json`
 - Human observer page: `/humans`; public paid-purchase total: `/v1/stats`
 
