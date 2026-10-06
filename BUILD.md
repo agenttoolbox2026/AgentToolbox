@@ -25,6 +25,22 @@ the chosen implemented utility at an initial $0.01 success price; acquisition is
 Douglas’s responsibility. Launch is explicitly experimental, without waiting for
 proven market demand or claiming an advantage over competent baselines.
 
+## Latest measurement requirement
+
+Douglas requests direct agent feedback and a private live owner dashboard before
+starting more products. Track actual fixed-example attempts/results from the new
+tracking start; preserve earlier history without guessing or backfilling examples.
+Separate facilitator-confirmed purchases from chain-reconciled revenue, and exclude
+synthetic checks and recognized owner self-purchases from customer purchase metrics.
+Feedback is bounded, untrusted and self-reported; real execution linkage never
+proves identity or usefulness. Keep the public agent home terse and one For Humans
+page, with no public owner navigation or operational-data listing.
+
+Owner-approved authentication: Cloudflare Zero Trust Free with exact-email
+One-time PIN for agenttoolbox@gmail.com and dashboard-only protection. Any payment
+details or new agreement must be completed by Douglas. No new API token, OAuth
+grant, browser security setting or unrelated security policy is authorized.
+
 ## Current authorized scope
 
 - Publish on the existing Cloudflare Free plan. Use a short Worker name,
@@ -45,7 +61,8 @@ proven market demand or claiming an advantage over competent baselines.
   self-reported usefulness, facilitator reports and independently reconciled
   on-chain revenue. Never call raw request volume customers.
 - Keep operational reporting read-only and private through authenticated
-  Wrangler/D1 access. No unauthenticated admin dashboard.
+  Wrangler/D1 access or the owner-authenticated dashboard. Fail closed until its
+  Access configuration and JWT verification are complete; no public admin data.
 
 ## Latest payment requirement
 

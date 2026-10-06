@@ -1,19 +1,27 @@
 import { z } from 'zod';
 import { products, findProduct, catalogResult } from './registry.js';
 import { hash, telemetry } from './telemetry.js';
+import {submitFeedback} from './feedback.js';
+import {listReviews,readReview,listReplies,submitReview,submitReply} from './reviews.js';
 export class PlatformError extends Error {
   constructor(status,code,message,details={}) { super(message); this.status=status;this.code=code;this.details=details; }
 }
 export const searchSchema=z.strictObject({q:z.string().max(120).default(''),status:z.enum(['active','validation','retired','all']).default('active')});
-export const invokeSchema=z.strictObject({version:z.string().regex(/^\d+\.\d+\.\d+$/),input:z.record(z.string(),z.unknown()),max_charge_usdc_atomic:z.number().int().min(0).max(1000000000),agent_id:z.uuid().optional()});
+export const invokeSchema=z.strictObject({version:z.string().regex(/^\d+\.\d+\.\d+$/),input:z.record(z.string(),z.unknown()),max_charge_usdc_atomic:z.number().int().min(0).max(1000000000),agent_id:z.uuid().optional(),review_secret_hash:z.string().regex(/^[0-9a-f]{64}$/).describe('Optional SHA-256 hex of caller-kept atbr_ secret (32 random bytes). Bound to this paid request; never send the raw secret here.').optional()});
 export const outcomeSchema=z.strictObject({outcome:z.enum(['success','failure','unverifiable'])});
-export function service({db,catalog=products,handlers={},channel='http',sampleKind='unclassified',now=()=>new Date()}) {
+export function service({db,catalog=products,handlers={},channel='http',sampleKind='unclassified',feedbackAllowed=async()=>true,now=()=>new Date()}) {
   const metrics=telemetry(db,{channel,sampleKind,now});
   const get = id => {
     const p=findProduct(id,catalog); if(!p) throw new PlatformError(404,'product_not_found','No product has that identifier.');
     return p;
   };
   return {
+    async reviews(productId,params){return listReviews({db,catalog,productId,params});},
+    async review(reviewId,params){return readReview({db,reviewId,params});},
+    async replies(reviewId,params){return listReplies({db,reviewId,params});},
+    async submitReview(body,key){if(!await feedbackAllowed())throw new PlatformError(429,'rate_limited','Wait before submitting more reviews.');return submitReview({db,catalog,body,key,channel,sampleKind,now});},
+    async reply(reviewId,body,key){if(!await feedbackAllowed())throw new PlatformError(429,'rate_limited','Wait before submitting more replies.');return submitReply({db,reviewId,body,key,channel,sampleKind,now});},
+    async feedback(body,key){if(!await feedbackAllowed())throw new PlatformError(429,'rate_limited','Wait before submitting more feedback.');return submitFeedback({db,catalog,body,key,channel,sampleKind,now});},
     async list(params) { await metrics.record('catalog_view');return catalogResult(params,catalog); },
     async detail(id) { const p=get(id);await metrics.record('product_view',p);return {api_version:'1',product:p}; },
     async invoke(id,body,key) {

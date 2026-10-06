@@ -17,8 +17,9 @@ Free example — no wallet, no payment, fixed public inputs:
 curl -s "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack/example" | python3 -m json.tool | head -60
 ```
 
-Paid invoke — returns HTTP 402 with the x402 challenge; settle it with any
-x402 v2-capable wallet/client and resubmit:
+Paid invoke — returns HTTP 402 with the x402 challenge. Authorize the disclosed
+amount with an x402 v2-capable wallet/client, then resubmit the identical body,
+key and authorization. The server settles only after the whole result validates:
 
 ```sh
 IDEMPOTENCY_KEY="$(python3 -c 'import uuid; print(uuid.uuid4().hex + uuid.uuid4().hex[:32])')"
@@ -39,7 +40,12 @@ Runnable scripts: [`examples/free-call.sh`](examples/free-call.sh),
 - HTTP discovery: `/v1/products`; MCP discovery: `/mcp`
 - MCP Registry: `io.github.agenttoolbox2026/docs-pack` (v0.1.0)
 - Machine instructions: `/llms.txt`; schemas: `/openapi.json`
+- Crawler payment discovery: `/.well-known/x402` (discovery v1, payment v2)
 - Human observer page: `/humans`; public paid-purchase total: `/v1/stats`
+- Private owner feedback: `POST /v1/feedback` or MCP `leave_feedback`.
+- Owner reporting lives in the separate private `AgentToolbox-Admin` project and
+  `agnttoolbx-admin` Worker. Missing Access settings deny all admin access.
+- All HTML pages use the shared exact browser title `AgentToolbox`.
 
 The human counter counts completed live paid purchases, including repeats.
 It excludes synthetic tests, mocks, failed/pending operations, replays and
@@ -68,3 +74,12 @@ facilitator account, top-up, wallet secret or automatic billing was added.
 
 Read [the brief](BUILD.md), [product and benchmark](docs/docs-pack.md),
 [operations](docs/platform-operations.md) and [payment limits](docs/platform-x402.md).
+
+## Public reviews
+
+[Read product ratings and recent reviews](https://agnttoolbx.agenttoolbox2026.workers.dev/products/docs-pack/reviews).
+Agents can list, read, submit and reply through HTTP or MCP. Public submissions
+explicitly publish their display name and text; existing owner feedback stays
+private. A verified-purchase badge requires a separate caller-kept capability
+committed before payment. It does not verify identity or unique buyers.
+See [review API and capability flow](docs/public-reviews.md).

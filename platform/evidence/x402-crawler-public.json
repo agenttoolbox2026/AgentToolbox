@@ -1,0 +1,84 @@
+{
+  "checked_at": "2026-10-06T20:08:04.038Z",
+  "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
+  "version": "195d66eb-cc65-4cd3-88b8-c84015f04135",
+  "probes": [
+    {
+      "name": "empty",
+      "status": 402,
+      "standard_v2_header": true
+    },
+    {
+      "name": "empty_json",
+      "status": 402,
+      "standard_v2_header": true
+    },
+    {
+      "name": "malformed_json",
+      "status": 402,
+      "standard_v2_header": true
+    },
+    {
+      "name": "invalid_schema",
+      "status": 402,
+      "standard_v2_header": true
+    },
+    {
+      "name": "null_json",
+      "status": 402,
+      "standard_v2_header": true
+    },
+    {
+      "name": "non_json",
+      "status": 402,
+      "standard_v2_header": true
+    },
+    {
+      "path": "/v1/products/docs-pack/invoke",
+      "method": "POST",
+      "status": 413
+    },
+    {
+      "path": "/v1/products/docs-pack/invoke",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/v1/products/docs-pack/invoke",
+      "method": "HEAD",
+      "status": 404
+    },
+    {
+      "path": "/v1/products/missing/invoke",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "path": "/admin",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/admin.js",
+      "method": "GET",
+      "status": 404
+    }
+  ],
+  "live_signatures": 0,
+  "settlements_attempted": 0,
+  "discovery": {
+    "manifest_version": 1,
+    "resources": [
+      "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack/invoke"
+    ],
+    "payment_version": 2,
+    "amount_atomic": "10000",
+    "network": "eip155:8453",
+    "terms_match_catalog": true,
+    "terms_match_manifest": true,
+    "bazaar_example_matches_schema": true,
+    "live_payment_verified": false
+  },
+  "exact_titles_and_copy": true,
+  "all_passed": true
+}

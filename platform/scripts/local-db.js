@@ -8,7 +8,7 @@ export function database(path=':memory:'){
   sqlite.exec(readFileSync(new URL('../migrations/'+name,import.meta.url),'utf8'));
   sqlite.prepare('INSERT INTO schema_migrations VALUES(?)').run(name);
  }
- return {sqlite,prepare(sql){return {bind(...args){return {
+ return {sqlite,async batch(statements){sqlite.exec('BEGIN');try{const results=await Promise.all(statements.map(s=>s.all()));sqlite.exec('COMMIT');return results;}catch(e){sqlite.exec('ROLLBACK');throw e;}},prepare(sql){return {bind(...args){return {
   first:async()=>sqlite.prepare(sql).get(...args)??null,
   all:async()=>({results:sqlite.prepare(sql).all(...args)}),
   run:async()=>({meta:{changes:Number(sqlite.prepare(sql).run(...args).changes)}})

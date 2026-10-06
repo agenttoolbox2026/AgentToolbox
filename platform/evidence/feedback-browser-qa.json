@@ -1,0 +1,42 @@
+{
+  "checked_at": "2026-10-06T17:40:19.908Z",
+  "origin": "http://127.0.0.1:56557",
+  "public_run": false,
+  "results": [
+    {
+      "width": 1440,
+      "feedback_ui": true,
+      "navigation_reload": true,
+      "feedback_replay": true,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "width": 768,
+      "feedback_ui": true,
+      "navigation_reload": true,
+      "feedback_replay": true,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "width": 390,
+      "feedback_ui": true,
+      "navigation_reload": true,
+      "feedback_replay": true,
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "width": 320,
+      "feedback_ui": true,
+      "navigation_reload": true,
+      "feedback_replay": true,
+      "horizontal_overflow": false,
+      "page_errors": []
+    }
+  ],
+  "no_javascript_feedback_discovery": true,
+  "all_passed": true,
+  "scope": "Historical public feedback verification before dashboard separation; current public verification is recorded separately."
+}

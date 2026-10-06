@@ -172,3 +172,25 @@ test('unsigned client flags cannot create a live purchase or advance the public 
   assert.equal(s.db.sqlite.prepare('SELECT value FROM platform_public_totals').get().value,0);
  }finally{s.close();}
 });
+
+test('caller commitment binds original paid request, is private and is never replaceable on replay',async()=>{
+ const {hash}=await import('../src/telemetry.js');const secret='atbr_'+Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
+ const commitment=await hash(secret),s=await setup();try{
+  const value={...body,review_secret_hash:commitment},result=await(await s.execute({value,synthetic:false,customConfig:{...config,live:true}})).json();
+  const row=s.db.sqlite.prepare('SELECT * FROM platform_payments').get();assert.equal(row.review_secret_hash,commitment);assert.equal(row.state,'settled');assert(!JSON.stringify(row).includes(secret));assert(!JSON.stringify(result).includes(commitment));
+  assert.deepEqual(await(await s.execute({value,synthetic:false,customConfig:{...config,live:true}})).json(),result);
+  for(const changed of [body,{...body,review_secret_hash:'f'.repeat(64)}])await assert.rejects(s.execute({value:changed}),e=>e.code==='payment_replay_conflict');
+  assert.equal(s.counts.settle,1);
+ }finally{s.close();}
+});
+test('malformed commitment or raw secret cannot reach verification, work or settlement',async()=>{
+ const s=await setup();try{
+  for(const extra of [{review_secret_hash:'bad'},{review_secret:'atbr_'+'A'.repeat(43)}])await assert.rejects(s.execute({value:{...body,...extra}}),e=>e.code==='invalid_input');
+  assert.deepEqual(s.counts,{verify:0,settle:0,execute:0});
+ }finally{s.close();}
+});
+test('commitment storage failure happens before work and settlement; failed work never activates proof',async()=>{
+ const real=database(),db={...real,prepare(sql){if(sql.startsWith('INSERT OR IGNORE INTO platform_payments'))throw new Error('storage unavailable');return real.prepare(sql);}};
+ const s=await setup({db});try{await assert.rejects(s.execute({value:{...body,review_secret_hash:'a'.repeat(64)}}),/storage unavailable/);assert.equal(s.counts.settle,0);assert.equal(s.counts.execute,0);}finally{s.close();}
+ const f=await setup();try{await assert.rejects(f.execute({value:{...body,input:{n:-1},review_secret_hash:'b'.repeat(64)},synthetic:false,customConfig:{...config,live:true}}));assert.equal(f.db.sqlite.prepare('SELECT review_secret_hash FROM platform_payments').get().review_secret_hash,'b'.repeat(64));assert.equal(f.db.sqlite.prepare('SELECT COUNT(*) n FROM platform_paid_purchases').get().n,0);assert.equal(f.counts.settle,0);}finally{f.close();}
+});

@@ -1,0 +1,69 @@
+{
+  "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
+  "checked_at": "2026-10-06T20:08:02.183Z",
+  "public_review_writes": 0,
+  "live_payment_calls": 0,
+  "public_reviews": 0,
+  "rating_groups": [
+    {
+      "badge": "Verified purchase",
+      "reviews": 0,
+      "rated": 0,
+      "average_rating": null
+    },
+    {
+      "badge": "Example-linked",
+      "reviews": 0,
+      "rated": 0,
+      "average_rating": null
+    },
+    {
+      "badge": "Unverified",
+      "reviews": 0,
+      "rated": 0,
+      "average_rating": null
+    }
+  ],
+  "exact_titles": true,
+  "discovery": true,
+  "http_mcp_lists": true,
+  "missing_threads_404": true,
+  "forged_badge_rejected": true,
+  "private_routes_404": true,
+  "deployment_version": "195d66eb-cc65-4cd3-88b8-c84015f04135",
+  "tests_passed": 76,
+  "syntax_passed": true,
+  "worker_build_passed": true,
+  "workerd_local": {
+    "review_submit_list_read_reply": true,
+    "idempotency": true,
+    "synthetic_exclusion": true,
+    "invalid_capability_rejected": true,
+    "unsigned_402": true
+  },
+  "browser": {
+    "desktop_width": 1440,
+    "mobile_widths": [
+      390,
+      320
+    ],
+    "horizontal_overflow": false,
+    "console_errors": false,
+    "exact_title": "AgentToolbox",
+    "public_consent_required": true,
+    "form_method": "post",
+    "production_writes": 0,
+    "local_review_and_reply_forms_passed": true,
+    "local_nested_reply_target_passed": true,
+    "local_xss_rendered_as_plain_text": true
+  },
+  "limitations": [
+    "No live payment signature or settlement was tested.",
+    "Production has no genuine reviews yet; positive submit/reply and purchase-capability tests use local-only fixtures.",
+    "Purchase badge proves capability possession, not identity or unique buyer.",
+    "Anonymous comments are unverified; no public moderation/account system was added."
+  ],
+  "local_deployment_source_commit": "7452ec028220743312bc3d468b8c9e9655f3b613",
+  "implementation_commit": "4f47b46af64deb5c0f3eb5193f74b40268baa9a1",
+  "implementation_tree": "cdee47db995b9662ef04fb1ba9fbe58f4f08b2b4"
+}
