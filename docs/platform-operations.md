@@ -127,3 +127,11 @@ browser title `AgentToolbox`; visible headings/navigation retain their purpose.
 Unsigned invoke probes now receive the standard x402 challenge before body/schema
 validation, with no upstream work. The server-owned terms also produce x402scan
 discovery and concrete OpenAPI payment metadata. See [crawler compatibility](x402-discovery.md).
+
+## Public review rollout
+
+Migration 0005 is additive: separate public review/reply tables, private immutable
+payment commitment, indexes and atomic thread bounds. Existing feedback stays
+private. Review writes share FEEDBACK_LIMIT; no new services or credentials.
+See [public reviews](public-reviews.md) for capability semantics and exclusions.
+Automatic request logs remain disabled to avoid retaining review secrets.

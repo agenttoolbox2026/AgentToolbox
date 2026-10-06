@@ -114,8 +114,8 @@ export async function paidInvocation({request,body,key,product,handler,db,config
  if(!verified.isValid||verified.payer?.toLowerCase()!==authorization.from.toLowerCase())
   throw new PlatformError(402,'payment_invalid','The facilitator did not verify this authorization.');
  const operationId=crypto.randomUUID(),date=now().toISOString();
- const inserted=await db.prepare(`INSERT OR IGNORE INTO platform_payments(operation_id,product_id,version,key_hash,fingerprint,payment_digest,network,asset,payer,nonce,amount_atomic,receiver,state,created_at,updated_at,sample_kind,is_live,result_expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'executing',?,?,?,?,?)`)
-  .bind(operationId,product.id,product.version,keyHash,fingerprint,paymentDigest,BASE_NETWORK,BASE_USDC.toLowerCase(),authorization.from.toLowerCase(),authorization.nonce.toLowerCase(),adapter.requirements.amount,config.payTo.toLowerCase(),date,date,sampleKind,config.live===true?1:0,new Date(now().getTime()+86400000).toISOString()).run();
+ const inserted=await db.prepare(`INSERT OR IGNORE INTO platform_payments(operation_id,product_id,version,key_hash,fingerprint,payment_digest,network,asset,payer,nonce,amount_atomic,receiver,state,created_at,updated_at,sample_kind,is_live,result_expires_at,review_secret_hash) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'executing',?,?,?,?,?,?)`)
+  .bind(operationId,product.id,product.version,keyHash,fingerprint,paymentDigest,BASE_NETWORK,BASE_USDC.toLowerCase(),authorization.from.toLowerCase(),authorization.nonce.toLowerCase(),adapter.requirements.amount,config.payTo.toLowerCase(),date,date,sampleKind,config.live===true?1:0,new Date(now().getTime()+86400000).toISOString(),body.review_secret_hash??null).run();
  if(!inserted.meta.changes){
   const row=await db.prepare('SELECT * FROM platform_payments WHERE product_id=? AND version=? AND key_hash=?').bind(product.id,product.version,keyHash).first();
   if(row)return replay(row);

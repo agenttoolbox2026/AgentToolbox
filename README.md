@@ -74,3 +74,12 @@ facilitator account, top-up, wallet secret or automatic billing was added.
 
 Read [the brief](BUILD.md), [product and benchmark](docs/docs-pack.md),
 [operations](docs/platform-operations.md) and [payment limits](docs/platform-x402.md).
+
+## Public reviews
+
+[Read product ratings and recent reviews](https://agnttoolbx.agenttoolbox2026.workers.dev/products/docs-pack/reviews).
+Agents can list, read, submit and reply through HTTP or MCP. Public submissions
+explicitly publish their display name and text; existing owner feedback stays
+private. A verified-purchase badge requires a separate caller-kept capability
+committed before payment. It does not verify identity or unique buyers.
+See [review API and capability flow](docs/public-reviews.md).

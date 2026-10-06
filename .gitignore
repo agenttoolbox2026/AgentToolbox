@@ -157,3 +157,6 @@ node_modules/
 
 # Dependency links used by local worktrees
 /platform/node_modules
+
+# Root dependency link used by local development
+/node_modules

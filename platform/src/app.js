@@ -1,6 +1,6 @@
 import {products,findProduct} from './registry.js';
 import {service,searchSchema,invokeSchema,outcomeSchema,PlatformError} from './service.js';
-import {home,humansPage,notFoundPage} from './pages.js';
+import {home,humansPage,notFoundPage,reviewsPage,reviewPage} from './pages.js';
 import {publicPurchases} from './purchases.js';
 import {markdown,openapi} from './discovery.js';
 import {mcp} from './mcp.js';
@@ -81,12 +81,19 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
         if(request.headers.get('Accept')?.includes('text/markdown'))return finish(new Response(markdown(origin,catalog),{headers:{'Content-Type':'text/markdown; charset=utf-8'}}));
         return finish(html(home(params,catalog,origin)));
       }
+      const reviewList=path.match(/^\/(v1\/)?products\/([a-z0-9-]{1,64})\/reviews$/);
+      if(reviewList){const data=await api.reviews(reviewList[2],Object.fromEntries(url.searchParams));return finish(reviewList[1]?Response.json(data):html(reviewsPage(data)));}
+      const reviewDetail=path.match(/^\/(v1\/)?reviews\/([0-9a-f-]{36})(\/replies)?$/);
+      if(reviewDetail){const params=Object.fromEntries(url.searchParams);const data=reviewDetail[3]?await api.replies(reviewDetail[2],params):await api.review(reviewDetail[2],params);return finish(reviewDetail[1]||reviewDetail[3]?Response.json(data):html(reviewPage(data)));}
       const detail=path.match(/^\/(v1\/)?products\/([a-z0-9-]{1,64})$/);
       if(detail){const p=findProduct(detail[2],catalog);if(!p)throw new PlatformError(404,'product_not_found','No product has that identifier.');if(!isHead)await api.detail(p.id);return finish(detail[1]?Response.json({api_version:'1',product:p}):new Response(null,{status:308,headers:{Location:'/v1/products/'+p.id}}));}
       if(path.startsWith('/v1')||path==='/admin'||path.startsWith('/metrics'))throw new PlatformError(404,'not_found','No public resource at this path.');
       return finish(html(notFoundPage(),404));
     }
     if(method==='POST') {
+      if(path==='/v1/reviews')return finish(Response.json(await api.submitReview(await jsonBody(request),request.headers.get('Idempotency-Key'))));
+      const reply=path.match(/^\/v1\/reviews\/([0-9a-f-]{36})\/replies$/);
+      if(reply)return finish(Response.json(await api.reply(reply[1],await jsonBody(request),request.headers.get('Idempotency-Key'))));
       if(path==='/v1/feedback')return finish(Response.json(await api.feedback(await jsonBody(request),request.headers.get('Idempotency-Key'))));
       const invoke=path.match(/^\/v1\/products\/([a-z0-9-]{1,64})\/invoke$/);
       if(invoke) {const product=findProduct(invoke[1],catalog);
