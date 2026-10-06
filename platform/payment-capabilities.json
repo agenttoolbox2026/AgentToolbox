@@ -1,0 +1,55 @@
+{
+  "checked_at": "2026-10-06T05:02:48.385Z",
+  "source": "https://facilitator.payai.network/supported",
+  "kinds": [
+    {
+      "x402Version": 2,
+      "scheme": "exact",
+      "network": "eip155:8453"
+    },
+    {
+      "x402Version": 2,
+      "scheme": "batch-settlement",
+      "network": "eip155:8453",
+      "extra": {
+        "experimental": true,
+        "batchPolicy": {
+          "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          "minInitialDeposit": "100000",
+          "maxInitialDeposit": "100000000",
+          "minWithdrawDelay": 3600,
+          "maxWithdrawDelay": 86400,
+          "depositAttemptsPerMinute": 5
+        }
+      }
+    }
+  ],
+  "pricing": {
+    "creditUsd": "0.001",
+    "marginBps": 3000,
+    "rates": [
+      {
+        "network": "eip155:8453",
+        "scheme": "exact",
+        "transferMethod": "eip3009",
+        "credits": "2.11",
+        "usd": "0.00211",
+        "effectiveAt": "2026-10-05T12:00:00.001Z",
+        "rateId": "e26e3861-3377-42b5-8a68-cb28b7e42953",
+        "published": true
+      },
+      {
+        "network": "eip155:8453",
+        "scheme": "exact",
+        "transferMethod": "permit2",
+        "credits": "2.18",
+        "usd": "0.00218",
+        "effectiveAt": "2026-09-22T11:11:01.537Z",
+        "rateId": "36a49caa-4000-4357-804a-78956fb41a13",
+        "published": true
+      }
+    ]
+  },
+  "read_only": true,
+  "settlements_attempted": 0
+}

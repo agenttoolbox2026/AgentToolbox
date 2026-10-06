@@ -1,0 +1,278 @@
+[
+  {
+    "results": [
+      {
+        "interpretation": "Request counts are not customer counts; unclassified traffic is not verified organic usage."
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "ORD",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.1437
+      },
+      "duration": 0.1437,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 90112,
+      "rows_read": 0,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "day": "2026-10-06",
+        "product_id": "_catalog",
+        "version": "1",
+        "channel": "html",
+        "event": "catalog_view",
+        "sample_kind": "synthetic",
+        "count": 15,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "_catalog",
+        "version": "1",
+        "channel": "html",
+        "event": "catalog_view",
+        "sample_kind": "unclassified",
+        "count": 3,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "_catalog",
+        "version": "1",
+        "channel": "http",
+        "event": "catalog_view",
+        "sample_kind": "synthetic",
+        "count": 3,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "_catalog",
+        "version": "1",
+        "channel": "mcp",
+        "event": "catalog_view",
+        "sample_kind": "synthetic",
+        "count": 1,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "retry-gate",
+        "version": "0.1.0",
+        "channel": "html",
+        "event": "product_view",
+        "sample_kind": "synthetic",
+        "count": 2,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "retry-gate",
+        "version": "0.1.0",
+        "channel": "html",
+        "event": "product_view",
+        "sample_kind": "unclassified",
+        "count": 1,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "retry-gate",
+        "version": "0.1.0",
+        "channel": "http",
+        "event": "invoke_attempt",
+        "sample_kind": "synthetic",
+        "count": 1,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "retry-gate",
+        "version": "0.1.0",
+        "channel": "http",
+        "event": "product_view",
+        "sample_kind": "synthetic",
+        "count": 1,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "retry-gate",
+        "version": "0.1.0",
+        "channel": "http",
+        "event": "retired_rejected",
+        "sample_kind": "synthetic",
+        "count": 1,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "retry-gate",
+        "version": "0.1.0",
+        "channel": "mcp",
+        "event": "invoke_attempt",
+        "sample_kind": "synthetic",
+        "count": 1,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "retry-gate",
+        "version": "0.1.0",
+        "channel": "mcp",
+        "event": "product_view",
+        "sample_kind": "synthetic",
+        "count": 1,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "retry-gate",
+        "version": "0.1.0",
+        "channel": "mcp",
+        "event": "retired_rejected",
+        "sample_kind": "synthetic",
+        "count": 1,
+        "duration_ms": 0
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "ORD",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.2326
+      },
+      "duration": 0.2326,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 90112,
+      "rows_read": 12,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "ORD",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.123
+      },
+      "duration": 0.123,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 90112,
+      "rows_read": 2,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "ORD",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.111
+      },
+      "duration": 0.111,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 90112,
+      "rows_read": 2,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "ORD",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.0887
+      },
+      "duration": 0.0887,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 90112,
+      "rows_read": 2,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "ORD",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.1208
+      },
+      "duration": 0.1208,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 90112,
+      "rows_read": 2,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "payment_interpretation": "Facilitator reports are not reconciled on-chain revenue."
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "ORD",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.0806
+      },
+      "duration": 0.0806,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 90112,
+      "rows_read": 0,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

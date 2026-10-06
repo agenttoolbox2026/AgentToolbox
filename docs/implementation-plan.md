@@ -1,3 +1,5 @@
+> Historical retry-gate experiment record. The old public route was disabled on October 6, 2026. See [current platform operations](platform-operations.md). Root commands now target the platform; use explicit legacy scripts for this experiment.
+
 # First experiment — 2026-10-05 (America/Toronto)
 
 Read BUILD.md before edits. GitHub API verified the private repository, main branch,

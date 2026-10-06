@@ -1,0 +1,18 @@
+{
+  "worker": "agnttoolbx",
+  "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
+  "version": "9a08f07e-be73-4b45-8e57-aac8d90cdcad",
+  "old_worker": "agenttoolbox-retry-gate",
+  "old_disabled_version": "b20976ef-7333-4530-9186-f7f6ae3c7c6b",
+  "old_http_status": 404,
+  "d1": "6b3da390-f6c4-4013-a0c6-cbf7b0170cca",
+  "tests_passed": 34,
+  "payments_enabled": false,
+  "receiver_network_owner_confirmed": true,
+  "live_settlements_attempted": 0,
+  "notes": [
+    "No active product",
+    "No paid-readiness or customer claim",
+    "Observed traffic includes synthetic QA and unclassified visits"
+  ]
+}

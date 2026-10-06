@@ -1,20 +1,31 @@
 {
-  "name": "agenttoolbox-retry-gate",
-  "version": "0.1.0",
+  "name": "agenttoolbox",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "packageManager": "pnpm@11.19.0",
   "scripts": {
-    "dev": "node scripts/dev.js",
-    "test": "node --test test/*.test.js",
+    "dev": "node platform/scripts/dev.js",
+    "test": "node --test test/*.test.js platform/test/*.test.js",
     "trial": "node scripts/trial.js",
-    "smoke": "node scripts/smoke.js",
+    "smoke": "node platform/scripts/smoke.js",
     "stats": "node scripts/stats.js",
-    "report:remote": "node scripts/report-remote.js",
-    "worker:dev": "wrangler dev --local",
-    "worker:check": "wrangler deploy --dry-run --outdir .wrangler/dry-run"
+    "report:remote": "node platform/scripts/report.js",
+    "worker:dev": "wrangler dev --local --config platform/wrangler.jsonc",
+    "worker:check": "wrangler deploy --config platform/wrangler.jsonc --dry-run --outdir .wrangler/platform-dry",
+    "legacy:dev": "node scripts/dev.js",
+    "legacy:smoke": "node scripts/smoke.js",
+    "legacy:report:remote": "node scripts/report-remote.js",
+    "check": "node platform/scripts/check.js"
   },
-  "dependencies": { "@modelcontextprotocol/sdk": "1.32.1", "zod": "4.6.5" },
-  "devDependencies": { "wrangler": "4.147.0" }
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "wrangler": "4.147.0"
+  }
 }
