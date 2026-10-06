@@ -34,8 +34,13 @@ Account `adfd5522541f990a9ccb27900a7e1e00` has:
 - Hard D1 limits shown: 10 databases, 5 million rows read/day, 100,000 rows
   written/day, 5 GB total account storage.
 
-The newly connected MCP is not yet exposed in this running task; tools require reload. Local `wrangler whoami`
-reports unauthenticated. Browser sign-in does not authenticate Wrangler or MCP.
+The newly configured MCP is not exposed in this Work task. A resumed turn did not
+change that. A supported Codex app-server `mcpServerStatus/list` check then found
+`authStatus=notLoggedIn`: the MCP initialize handshake returns `Auth required`,
+despite the earlier login command's success message. A successful OAuth callback
+therefore has not established usable MCP access. No credentials were extracted.
+Local `wrangler whoami` reports unauthenticated. Browser sign-in does not
+authenticate Wrangler or MCP.
 Wrangler OAuth is a separate grant; do not assume MCP authorization approves it.
 The MCP consent screen was inspected and limited to the approved account and
 Worker/D1 operations. Credentials were saved by Codex, never printed or committed.
@@ -79,5 +84,35 @@ The local aggregate report showed 2 quotes, 1 stopped, 1 accepted, 1 result,
 1 eligible self-report and 1 helpful feedback, with zero USDC settlement.
 These are controlled test events, not customers, revenue or independent outcomes.
 
-No deployment or public URL is verified yet. Loading the newly connected MCP
-into the execution session is the current blocker; OAuth approval is complete. No testnet or mainnet funds moved.
+No deployment or public URL is verified yet. Cloudflare API authentication is
+the current blocker. No testnet or mainnet funds moved.
+
+## Resume diagnosis and smallest alternate
+
+[OpenAI MCP documentation](https://learn.chatgpt.com/docs/extend/mcp?surface=cli)
+documents Settings > MCP servers > Restart for desktop, and notes that cloud
+Work does not automatically expose local Codex configuration. The supported
+[app-server API](https://learn.chatgpt.com/docs/app-server) includes configuration
+reload and MCP status/call methods; the status check above failed authentication.
+Do not keep retrying an unchanged login or read saved tokens manually.
+
+The existing **Your Chrome** dashboard session remains signed in. Its Worker
+create flow offers a Hello World deployment or Git integration/static upload.
+The app needs two rate-limit bindings, which [Cloudflare documents as unavailable
+in the dashboard](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/).
+No placeholder was deployed and no remote resources were created during diagnosis.
+
+The pinned Wrangler and its [current command docs](https://developers.cloudflare.com/workers/wrangler/commands/general/)
+support selecting OAuth scopes. A separate narrowly scoped Wrangler grant was
+proposed to Douglas through Toby and is pending approval:
+
+```sh
+pnpm exec wrangler login --use-keyring --scopes account:read user:read workers_scripts:write d1:write
+```
+
+Worker script management includes scripts, Durable Objects, subdomains, triggers
+and tail data. D1 write allows database management. Keep broad `workers:write`,
+KV, routes, Pages, R2, containers and payment access excluded. Inspect actual
+consent and required background refresh access before accepting this second grant.
+Store credentials through Wrangler's OS keychain support; never paste tokens into
+chat. Once authorized, use the deployment sequence above without a paid upgrade.
