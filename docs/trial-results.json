@@ -1,0 +1,142 @@
+{
+  "trial_type": "designer-assisted local fixture; not an independent agent or customer",
+  "recorded_at": "2026-10-06T00:27:27.078Z",
+  "payments": "dev",
+  "tool_names": [
+    "retry_gate_recover",
+    "retry_gate_accept",
+    "retry_gate_result",
+    "retry_gate_receipt",
+    "retry_gate_feedback"
+  ],
+  "records": [
+    {
+      "task": "catalog",
+      "method": "baseline_informed",
+      "correct": true,
+      "attempts": 2,
+      "elapsed_ms": 1005.79,
+      "recommendation_latency_ms": null,
+      "receipt_state": null,
+      "amount_settled_usdc_atomic": 0
+    },
+    {
+      "task": "catalog",
+      "method": "gate",
+      "correct": true,
+      "attempts": 2,
+      "elapsed_ms": 1034.2,
+      "recommendation_latency_ms": 10.77,
+      "receipt_state": "completed",
+      "amount_settled_usdc_atomic": 0
+    },
+    {
+      "task": "inventory",
+      "method": "baseline_informed",
+      "correct": true,
+      "attempts": 2,
+      "elapsed_ms": 5.21,
+      "recommendation_latency_ms": null,
+      "receipt_state": null,
+      "amount_settled_usdc_atomic": 0
+    },
+    {
+      "task": "inventory",
+      "method": "gate",
+      "correct": true,
+      "attempts": 2,
+      "elapsed_ms": 22.71,
+      "recommendation_latency_ms": 7.31,
+      "receipt_state": "completed",
+      "amount_settled_usdc_atomic": 0
+    },
+    {
+      "task": "unsafe_order",
+      "method": "baseline_informed",
+      "correct": true,
+      "action": "stop",
+      "retries": 0,
+      "elapsed_ms": 0.01
+    },
+    {
+      "task": "unsafe_order",
+      "method": "gate",
+      "correct": true,
+      "action": "stop",
+      "retries": 0,
+      "elapsed_ms": 6.66
+    },
+    {
+      "task": "catalog_return",
+      "method": "baseline_informed",
+      "correct": true,
+      "attempts": 2,
+      "elapsed_ms": 1005.85,
+      "recommendation_latency_ms": null,
+      "receipt_state": null,
+      "amount_settled_usdc_atomic": 0
+    },
+    {
+      "task": "catalog_return",
+      "method": "gate",
+      "correct": true,
+      "attempts": 2,
+      "elapsed_ms": 1020.65,
+      "recommendation_latency_ms": 5.95,
+      "receipt_state": "completed",
+      "amount_settled_usdc_atomic": 0
+    }
+  ],
+  "metrics": {
+    "mode": "dev",
+    "window": "unexpired 24-hour learning records",
+    "calls": 4,
+    "recommendations": {
+      "rate_limited": 2,
+      "temporary_http": 1,
+      "unsafe_side_effect": 1
+    },
+    "actions": {
+      "wait_then_retry": 2,
+      "retry": 1,
+      "stop": 1
+    },
+    "discovery": {
+      "mcp": 4
+    },
+    "accepted_quotes": 3,
+    "outcomes": {
+      "success": 3,
+      "not_reported": 1
+    },
+    "eligible_self_reported_successes": 3,
+    "repeat_pseudonyms": 1,
+    "attempts_before": 4,
+    "reported_retry_attempts": 3,
+    "recovery_times_ms": [
+      1019,
+      11,
+      1010
+    ],
+    "decision_latency_ms": [
+      3,
+      1,
+      1,
+      1
+    ],
+    "helpful": 0,
+    "reported_operator_effort_ms": 0,
+    "reported_savings": {
+      "time_ms": 0,
+      "tokens": 0,
+      "usdc_atomic": 0
+    },
+    "savings_independently_verified": false,
+    "cost_to_serve_usdc_atomic": null,
+    "cost_status": "unmeasured; decision latency is only a proxy",
+    "settled_usdc_atomic": 0,
+    "mainnet_revenue_usdc_atomic": 0,
+    "ledger_events": 10
+  },
+  "interpretation": "Both informed baseline and helper should solve the supported fixtures. This checks integration and instrumentation, not added customer value. The shared pseudonym is a scripted repeat, not organic retention."
+}

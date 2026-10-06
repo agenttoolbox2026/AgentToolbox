@@ -1,0 +1,3 @@
+# Public address only; unused by dev payments. Never put a private key here.
+PAY_TO_ADDRESS=0xD43350dD5a40Dd8689C644A0477Bb75e3A59129D
+PAYMENTS_MODE=dev

@@ -147,3 +147,10 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+# Local experiment data and tooling
+.data/
+.wrangler/
+node_modules/
+.dev.vars
+.env
+*.sqlite*

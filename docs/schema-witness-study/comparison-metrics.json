@@ -1,0 +1,97 @@
+{
+  "elapsed_clock": "UTC wall-clock timestamps recorded at both boundaries; see amendments.jsonl",
+  "runs": {
+    "r1": {
+      "finished": true,
+      "observed_commands": 9,
+      "commands_with_nonzero_exit": 2,
+      "command_timeouts": 0,
+      "summed_command_runtime_ms": 2606.1548759999996,
+      "first_command_at_utc": "2026-10-06T05:17:43.782045+00:00",
+      "finish_at_utc": "2026-10-06T05:19:55.201083+00:00",
+      "bounded_elapsed_s": 131.419038,
+      "dispatch_to_finish_s": 147.228948,
+      "self_reported_exec_tool_calls": 10,
+      "optional_material_used": false,
+      "actual_tokens": null,
+      "exact_model_revision": null
+    },
+    "r2": {
+      "finished": true,
+      "observed_commands": 11,
+      "commands_with_nonzero_exit": 1,
+      "command_timeouts": 0,
+      "summed_command_runtime_ms": 1388.9872910000004,
+      "first_command_at_utc": "2026-10-06T05:18:11.422701+00:00",
+      "finish_at_utc": "2026-10-06T05:19:52.604136+00:00",
+      "bounded_elapsed_s": 101.181435,
+      "dispatch_to_finish_s": 119.532877,
+      "self_reported_exec_tool_calls": null,
+      "optional_material_used": true,
+      "actual_tokens": null,
+      "exact_model_revision": null
+    },
+    "r3": {
+      "finished": true,
+      "observed_commands": 15,
+      "commands_with_nonzero_exit": 4,
+      "command_timeouts": 0,
+      "summed_command_runtime_ms": 4821.529917,
+      "first_command_at_utc": "2026-10-06T05:18:19.652963+00:00",
+      "finish_at_utc": "2026-10-06T05:20:59.286212+00:00",
+      "bounded_elapsed_s": 159.633249,
+      "dispatch_to_finish_s": 177.734324,
+      "self_reported_exec_tool_calls": null,
+      "optional_material_used": false,
+      "actual_tokens": null,
+      "exact_model_revision": null
+    },
+    "r4": {
+      "finished": true,
+      "observed_commands": 6,
+      "commands_with_nonzero_exit": 0,
+      "command_timeouts": 0,
+      "summed_command_runtime_ms": 742.7807489999999,
+      "first_command_at_utc": "2026-10-06T05:17:53.911612+00:00",
+      "finish_at_utc": "2026-10-06T05:19:13.671487+00:00",
+      "bounded_elapsed_s": 79.759875,
+      "dispatch_to_finish_s": 93.785857,
+      "self_reported_exec_tool_calls": 7,
+      "optional_material_used": true,
+      "actual_tokens": null,
+      "exact_model_revision": null
+    }
+  },
+  "pairs": [
+    {
+      "task": "diagnose",
+      "baseline": "r1",
+      "treatment": "r2",
+      "treatment_commands_no_greater": false,
+      "elapsed_ratio_treatment_over_baseline": 0.7699145918264901,
+      "elapsed_reduction_s": 30.237603000000007
+    },
+    {
+      "task": "mitigate",
+      "baseline": "r3",
+      "treatment": "r4",
+      "treatment_commands_no_greater": true,
+      "elapsed_ratio_treatment_over_baseline": 0.4996445007518452,
+      "elapsed_reduction_s": 79.87337400000001
+    }
+  ],
+  "all_finished": true,
+  "aggregate_baseline_commands": 24,
+  "aggregate_treatment_commands": 17,
+  "aggregate_command_reduction_fraction": 0.29166666666666663,
+  "aggregate_elapsed_reduction_s": 110.11097700000002,
+  "gate_checks": {
+    "all_four_full_correctness_and_safety": true,
+    "no_invalidating_protocol_confound": true,
+    "no_command_increase_either_pair": false,
+    "aggregate_command_reduction_at_least_25_percent": true,
+    "elapsed_reduction_at_least_20_percent_each_pair": true,
+    "aggregate_elapsed_reduction_at_least_30_seconds": true
+  },
+  "useful_value_gate_passed": false
+}

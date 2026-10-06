@@ -1,0 +1,14 @@
+{
+  "checked_at": "2026-10-06T06:00:52.373688+00:00",
+  "status": "unverified",
+  "production_cpu_ms": null,
+  "evidence": [
+    "Available connected tools contain no Cloudflare analytics action.",
+    "Wrangler whoami confirmed existing scopes user:read, account:read, workers_scripts:write, d1:write, offline_access.",
+    "Wrangler explicitly reports workers_tail:read missing. No scope or credential was expanded."
+  ],
+  "limits": [
+    "Worker startup timing is not per-request CPU.",
+    "Successful free-example execution does not establish production CPU distribution or the full paid-path CPU."
+  ]
+}

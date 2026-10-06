@@ -1,0 +1,20 @@
+[
+  {
+    "width": 1440,
+    "document_width": 1440,
+    "height": 1591,
+    "flows": "empty→retired→detail→back→search→clear→agents→approach→home→reload",
+    "page_errors": []
+  },
+  {
+    "width": 390,
+    "document_width": 390,
+    "height": 1986,
+    "flows": "empty→retired→detail→back→search→clear→agents→approach→home→reload",
+    "page_errors": []
+  },
+  {
+    "javascript": false,
+    "retired_detail_navigation": "passed"
+  }
+]

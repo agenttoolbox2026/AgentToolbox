@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "agenttoolbox-retry-gate",
+  "account_id": "adfd5522541f990a9ccb27900a7e1e00",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": { "enabled": false },
+  "vars": { "PAYMENTS_MODE": "dev", "PUBLIC_ORIGIN": "https://agenttoolbox-retry-gate.agenttoolbox2026.workers.dev" },
+  "d1_databases": [{ "binding": "DB", "database_name": "agenttoolbox-retry-gate-dev", "database_id": "9de52fc9-b28d-456a-a290-80cc60c59c18", "migrations_dir": "migrations" }],
+  "ratelimits": [
+    { "name": "CLIENT_LIMIT", "namespace_id": "1001", "simple": { "limit": 60, "period": 60 } },
+    { "name": "SERVICE_LIMIT", "namespace_id": "1002", "simple": { "limit": 300, "period": 60 } }
+  ]
+}

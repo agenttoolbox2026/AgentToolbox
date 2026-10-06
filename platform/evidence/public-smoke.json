@@ -1,0 +1,144 @@
+{
+  "checked_at": "2026-10-06T06:01:30.712Z",
+  "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
+  "checks": [
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/agents",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/humans",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/llms.txt",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/openapi.json",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/health",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/v1/products",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/v1/products?status=retired",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/v1/products/retry-gate",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/v1/products/retry-gate/invoke",
+      "method": "POST",
+      "status": 410
+    },
+    {
+      "path": "/admin",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/metrics",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/v1/recover",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "path": "/agenttoolbox-icon.png",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/v1/products/docs-pack",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/v1/products/docs-pack/invoke",
+      "method": "POST",
+      "status": 402
+    },
+    {
+      "path": "/v1/products/docs-pack/invoke",
+      "method": "POST",
+      "status": 400
+    },
+    {
+      "path": "/v1/products/docs-pack/example",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/v1/stats",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "example_source_count": 2,
+      "example_excerpt_chars": 2392,
+      "paid_challenge_amount": "10000",
+      "paid_challenge_network": "eip155:8453",
+      "lifetime_paid_purchases": 0,
+      "settlements_attempted": 0
+    },
+    {
+      "protocol": "MCP",
+      "tools": [
+        "list_products",
+        "get_product",
+        "invoke_product",
+        "report_outcome"
+      ],
+      "catalog": "docs-pack active experimental",
+      "retired_invocation": "rejected"
+    },
+    {
+      "old_service": "/",
+      "method": "GET",
+      "status": 404
+    },
+    {
+      "old_service": "/v1/recover",
+      "method": "POST",
+      "status": 404
+    },
+    {
+      "old_service": "/mcp",
+      "method": "POST",
+      "status": 404
+    }
+  ],
+  "icon_sha256": "ff8b635d91d57f1e68a5d998e070615eb77269a38e25837595bd4c7a1e2ceb60",
+  "all_passed": true,
+  "sample_kind": "synthetic",
+  "settlements_attempted": 0
+}

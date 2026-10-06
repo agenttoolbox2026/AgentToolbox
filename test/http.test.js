@@ -1,0 +1,51 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createApp, localLimiter } from '../src/app.js';
+import { localDatabase } from '../scripts/local-db.js';
+import { example } from '../src/contracts.js';
+import { startServer } from '../scripts/dev.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+const origin = 'http://127.0.0.1:8787';
+
+test('HTTP discovery, strict bodies, host/origin, CORS and fail-closed limits', async t => {
+  const db = localDatabase(); t.after(() => db.close());
+  const app = createApp({ db, origin, limit: localLimiter() });
+  const call = (path, init) => app(new Request(origin + path, init));
+  for (const path of ['/', '/llms.txt', '/openapi.json', '/health']) assert.equal((await call(path)).status, 200);
+  assert.equal((await call('/', { headers: { Accept: 'text/markdown' } })).headers.get('content-type'), 'text/markdown; charset=utf-8');
+  assert.equal((await (await call('/', { headers: { Accept: 'application/json' } })).json()).payments, 'dev');
+  const post = body => ({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
+  assert.equal((await call('/v1/recover', post(JSON.stringify(example)))).status, 200);
+  assert.equal((await call('/v1/recover', post('{'))).status, 400);
+  assert.equal((await call('/v1/recover', post(' '.repeat(8193)))).status, 413);
+  assert.equal((await call('/v1/recover', { method: 'POST', body: '{}' })).status, 415);
+  assert.equal((await call('/v1/recover', post(JSON.stringify({ ...example, credentials: 'secret' })))).status, 400);
+  for (const path of ['/v1/recover', '/mcp']) assert.equal((await call(path, { ...post('{}'), headers: { 'content-type': 'application/json', Origin: 'https://evil.example' } })).status, 403);
+  assert.equal((await app(new Request('http://evil.example/health'))).status, 403);
+  assert.equal((await call('/llms.txt', { headers: { Origin: 'https://reader.example' } })).headers.get('access-control-allow-origin'), '*');
+  assert.equal((await call('/mcp', { headers: { Accept: 'text/event-stream' } })).status, 405);
+  assert.equal((await call('/mcp', { method: 'DELETE' })).status, 405);
+  const locked = createApp({ db, origin });
+  assert.equal((await locked(new Request(origin + '/health'))).status, 503);
+  const limited = createApp({ db, origin, limit: localLimiter({ perClient: 1 }) });
+  await limited(new Request(origin + '/health'));
+  const response = await limited(new Request(origin + '/health'));
+  assert.equal(response.status, 429); assert.equal(response.headers.get('retry-after'), '60');
+});
+
+test('real SDK client negotiates, discovers and invokes stateless MCP lifecycle', async t => {
+  const running = await startServer({ port: 0 });
+  const client = new Client({ name: 'agenttoolbox-integration-test', version: '1.0.0' });
+  t.after(async () => { await client.close(); await running.close(); });
+  await client.connect(new StreamableHTTPClientTransport(new URL('/mcp', running.origin)));
+  const tools = await client.listTools();
+  assert.equal(tools.tools.length, 5);
+  const q = (await client.callTool({ name: 'retry_gate_recover', arguments: { request: { ...example, failure: { kind: 'http', status: 503, headers: { 'retry-after': '0' } } }, idempotency_key: crypto.randomUUID() } })).structuredContent;
+  assert.equal(q.recoverable, true);
+  await client.callTool({ name: 'retry_gate_accept', arguments: { recovery_id: q.recovery_id, accept: true, max_price_usdc_atomic: 0 } });
+  const r = await client.callTool({ name: 'retry_gate_result', arguments: { recovery_id: q.recovery_id, outcome: 'success', retry_attempts: 1, completed: true, evidence: { type: 'http', final_status: 204, digest_sha256: 'a'.repeat(64) } } });
+  assert.equal(r.structuredContent?.eligible_success, true);
+  const duplicate = await client.callTool({ name: 'retry_gate_receipt', arguments: { recovery_id: q.recovery_id } });
+  assert.equal(duplicate.structuredContent?.recovery_id, q.recovery_id);
+});
