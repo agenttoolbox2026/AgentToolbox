@@ -4,7 +4,8 @@ import {home,humansPage,notFoundPage} from './pages.js';
 import {publicPurchases} from './purchases.js';
 import {markdown,openapi} from './discovery.js';
 import {mcp} from './mcp.js';
-import {paidInvocation} from './x402.js';
+import {paidInvocation,paymentManifest} from './x402.js';
+import {runtimeCatalog} from './payment-config.js';
 import {runExample} from './examples.js';
 const HEADERS={
  'Access-Control-Allow-Origin':'*',
@@ -16,19 +17,22 @@ const HEADERS={
  'Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
  'Cache-Control':'no-store',
 };
-async function jsonBody(request) {
- if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))throw new PlatformError(415,'unsupported_media_type','Use application/json.');
- const declared=Number(request.headers.get('content-length')??0);
- if(declared>16384)throw new PlatformError(413,'body_too_large','Maximum body is 16384 bytes.');
- const reader=request.body?.getReader();if(!reader)throw new PlatformError(400,'invalid_json','A JSON body is required.');
+async function boundedBody(request){
+ if(Number(request.headers.get('content-length')??0)>16384)throw new PlatformError(413,'body_too_large','Maximum body is 16384 bytes.');
+ const reader=request.body?.getReader();if(!reader)return new Uint8Array();
  const chunks=[];let length=0;
  while(true){const {value,done}=await reader.read();if(done)break;length+=value.byteLength;if(length>16384){await reader.cancel();throw new PlatformError(413,'body_too_large','Maximum body is 16384 bytes.');}chunks.push(value);}
- const joined=new Uint8Array(length);let offset=0;for(const chunk of chunks){joined.set(chunk,offset);offset+=chunk.length;}
- try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(joined));}catch{throw new PlatformError(400,'invalid_json','Malformed JSON.');}
+ const joined=new Uint8Array(length);let offset=0;for(const chunk of chunks){joined.set(chunk,offset);offset+=chunk.length;}return joined;
+}
+async function jsonBody(request){
+ if(!request.headers.get('content-type')?.toLowerCase().startsWith('application/json'))throw new PlatformError(415,'unsupported_media_type','Use application/json.');
+ const bytes=await boundedBody(request);
+ try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{throw new PlatformError(400,'invalid_json','Malformed or missing JSON.');}
 }
 function validate(schema,value) {const parsed=schema.safeParse(value);if(!parsed.success)throw new PlatformError(400,'invalid_input','Request does not match the published schema.');return parsed.data;}
 function html(content,status=200){return new Response(content,{status,headers:{'Content-Type':'text/html; charset=utf-8'}});}
-export function createPlatform({db,origin,catalog=products,handlers={},limit=async()=>true,feedbackLimit=async()=>true,assets,payments={enabled:false},paymentAdapterFactory}) {
+export function createPlatform({db,origin,catalog:sourceCatalog=products,handlers={},limit=async()=>true,feedbackLimit=async()=>true,assets,payments={enabled:false},paymentAdapterFactory}) {
+ const catalog=runtimeCatalog(sourceCatalog,handlers,payments);
  return async function app(request,client='unknown') {
   const url=new URL(request.url),path=url.pathname,method=request.method;
   const isHead=method==='HEAD';
@@ -55,8 +59,9 @@ export function createPlatform({db,origin,catalog=products,handlers={},limit=asy
       return finish(await mcp(request,api,await jsonBody(request)));
     }
     if(['GET','HEAD'].includes(method)) {
-      if(path==='/llms.txt')return finish(new Response(markdown(origin),{headers:{'Content-Type':'text/plain; charset=utf-8'}}));
-      if(path==='/openapi.json')return finish(Response.json(openapi(origin)));
+      if(path==='/.well-known/x402')return finish(Response.json(paymentManifest({catalog,handlers,config:payments,origin})));
+      if(path==='/llms.txt')return finish(new Response(markdown(origin,catalog),{headers:{'Content-Type':'text/plain; charset=utf-8'}}));
+      if(path==='/openapi.json')return finish(Response.json(openapi(origin,catalog)));
       if(path==='/agents'||path==='/about')return finish(new Response(null,{status:308,headers:{Location:path==='/agents'?'/':'/humans'}}));
       if(path==='/v1/stats')return finish(Response.json(await publicPurchases(db)));
       if(path==='/v1/products/docs-pack/example'){
@@ -73,7 +78,7 @@ export function createPlatform({db,origin,catalog=products,handlers={},limit=asy
         const params=validate(searchSchema,Object.fromEntries(url.searchParams));
         const data=isHead?null:await api.list(params);
         if(path==='/v1/products'||request.headers.get('Accept')?.includes('application/json'))return finish(Response.json(data??{}));
-        if(request.headers.get('Accept')?.includes('text/markdown'))return finish(new Response(markdown(origin),{headers:{'Content-Type':'text/markdown; charset=utf-8'}}));
+        if(request.headers.get('Accept')?.includes('text/markdown'))return finish(new Response(markdown(origin,catalog),{headers:{'Content-Type':'text/markdown; charset=utf-8'}}));
         return finish(html(home(params,catalog,origin)));
       }
       const detail=path.match(/^\/(v1\/)?products\/([a-z0-9-]{1,64})$/);
@@ -84,8 +89,14 @@ export function createPlatform({db,origin,catalog=products,handlers={},limit=asy
     if(method==='POST') {
       if(path==='/v1/feedback')return finish(Response.json(await api.feedback(await jsonBody(request),request.headers.get('Idempotency-Key'))));
       const invoke=path.match(/^\/v1\/products\/([a-z0-9-]{1,64})\/invoke$/);
-      if(invoke) {const body=validate(invokeSchema,await jsonBody(request));const product=findProduct(invoke[1],catalog);
-        if(product && ['active','validation'].includes(product.status) && product.pricing.payments_enabled) return finish(await paidInvocation({request,body,key:request.headers.get('Idempotency-Key'),product,handler:handlers[product.id],db,config:payments,adapterFactory:paymentAdapterFactory}));
+      if(invoke) {const product=findProduct(invoke[1],catalog);
+        if(!product)throw new PlatformError(404,'product_not_found','No product has that identifier.');
+        if(['active','validation'].includes(product.status)&&product.pricing.payments_enabled&&!request.headers.get('PAYMENT-SIGNATURE')){
+          await boundedBody(request);
+          return finish(await paidInvocation({request,product,handler:handlers[product.id],db,config:payments,origin}));
+        }
+        const body=validate(invokeSchema,await jsonBody(request));
+        if(product && ['active','validation'].includes(product.status) && product.pricing.payments_enabled) return finish(await paidInvocation({request,body,key:request.headers.get('Idempotency-Key'),product,handler:handlers[product.id],db,config:payments,origin,adapterFactory:paymentAdapterFactory}));
         return finish(Response.json(await api.invoke(invoke[1],body,request.headers.get('Idempotency-Key'))));}
       const outcome=path.match(/^\/v1\/runs\/([0-9a-f-]{36})\/outcome$/);
       if(outcome)return finish(Response.json(await api.outcome(outcome[1],validate(outcomeSchema,await jsonBody(request)))));

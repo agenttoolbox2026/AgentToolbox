@@ -123,3 +123,7 @@ page views or unique visitors. Referrers and campaign attribution are unavailabl
 
 All public pages and future pages using the shared shell have the exact HTML
 browser title `AgentToolbox`; visible headings/navigation retain their purpose.
+
+Unsigned invoke probes now receive the standard x402 challenge before body/schema
+validation, with no upstream work. The server-owned terms also produce x402scan
+discovery and concrete OpenAPI payment metadata. See [crawler compatibility](x402-discovery.md).

@@ -1,25 +1,48 @@
 import {HTTPFacilitatorClient,x402ResourceServer} from '@x402/core/server';
 import {ExactEvmScheme} from '@x402/evm/exact/server';
 import {decodePaymentSignatureHeader,encodePaymentRequiredHeader,encodePaymentResponseHeader} from '@x402/core/http';
-import {PlatformError} from './service.js';
+import {PlatformError,invokeSchema} from './service.js';
+import {z} from 'zod';
+import {BASE_NETWORK,BASE_USDC,FACILITATOR,paymentRequirements} from './payment-config.js';
+export {BASE_NETWORK,BASE_USDC,FACILITATOR} from './payment-config.js';
 import {hash,telemetry} from './telemetry.js';
 import {expirePaidResults} from './purchases.js';
-export const BASE_NETWORK='eip155:8453';
-export const BASE_USDC='0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
-export const FACILITATOR='https://facilitator.payai.network';
 export function canonical(value) {
  if(Array.isArray(value))return '['+value.map(canonical).join(',')+']';
  if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';
  return JSON.stringify(value);
 }
-export async function sdkAdapter({payTo,amount,facilitatorClient}){
+export function invocationJsonSchema(product){
+ const schema=z.toJSONSchema(invokeSchema);
+ schema.properties.version={type:'string',const:product.version};
+ if(product.input_schema)schema.properties.input=product.input_schema;
+ schema.properties.max_charge_usdc_atomic.minimum=product.pricing.amount_atomic;
+ return schema;
+}
+export function paymentChallenge(product,requirements,origin){
+ const input={type:'http',method:'POST',bodyType:'json',body:{version:product.version,input:product.example_input??{},max_charge_usdc_atomic:product.pricing.amount_atomic}};
+ const inputSchema={type:'object',properties:{type:{const:'http'},method:{const:'POST'},bodyType:{const:'json'},body:invocationJsonSchema(product)},required:['type','method','bodyType','body'],additionalProperties:false};
+ const outputSchema={type:'object',properties:{type:{const:'json'},example:product.output_schema??{type:'object'}},required:['type'],additionalProperties:false};
+ return {x402Version:2,error:'PAYMENT-SIGNATURE header is required',
+  resource:{url:new URL('/v1/products/'+product.id+'/invoke',origin).href,description:product.summary??'Validated product outcome',mimeType:'application/json',serviceName:'AgentToolbox'},
+  accepts:[requirements],extensions:{bazaar:{info:{input,output:{type:'json'}},schema:{type:'object',properties:{input:inputSchema,output:outputSchema},required:['input'],additionalProperties:false}}}};
+}
+export function paymentManifest({catalog,handlers,config,origin}){
+ const routes=[];
+ for(const product of catalog){const terms=handlers[product.id]?paymentRequirements(product,config):null;if(terms)routes.push({resource:new URL('/v1/products/'+product.id+'/invoke',origin).href,product_id:product.id,version:product.version,method:'POST',accepts:[terms],live_payment_verified:product.pricing.live_payment_verified===true});}
+ // x402scan discovery version 1 is separate from x402 payment protocol version 2.
+ return {version:1,resources:routes.map(route=>route.resource),payment:{x402Version:2,facilitator:FACILITATOR,configured:routes.length>0,routes},instructions:'Inspect the contract and preserve the Idempotency-Key/body/authorization. Settlement occurs only after validated success. Live payment behavior is not yet independently verified.'};
+}
+export async function sdkAdapter({payTo,amount,network=BASE_NETWORK,asset=BASE_USDC,facilitatorClient}){
+ const expected=paymentRequirements({status:'active',pricing:{payments_enabled:true,amount_atomic:amount}},{enabled:true,receiverConfirmed:true,network,asset,payTo});
+ if(!expected)throw new PlatformError(503,'payment_configuration_error','Unsupported payment configuration.');
  const client=facilitatorClient??new HTTPFacilitatorClient({url:FACILITATOR,timeoutMs:10000});
- const server=new x402ResourceServer(client).register(BASE_NETWORK,new ExactEvmScheme());
+ const server=new x402ResourceServer(client).register(expected.network,new ExactEvmScheme());
  await server.initialize();
- const requirements=(await server.buildPaymentRequirements({scheme:'exact',network:BASE_NETWORK,payTo,
-  price:{asset:BASE_USDC,amount:String(amount),extra:{name:'USD Coin',version:'2',assetTransferMethod:'eip3009'}},
-  maxTimeoutSeconds:300}))[0];
- if(requirements.network!==BASE_NETWORK||requirements.scheme!=='exact'||requirements.asset.toLowerCase()!==BASE_USDC.toLowerCase()||requirements.payTo.toLowerCase()!==payTo.toLowerCase()||requirements.amount!==String(amount))
+ const requirements=(await server.buildPaymentRequirements({scheme:expected.scheme,network:expected.network,payTo:expected.payTo,
+  price:{asset:expected.asset,amount:expected.amount,extra:expected.extra},
+  maxTimeoutSeconds:expected.maxTimeoutSeconds}))[0];
+ if(canonical(requirements)!==canonical(expected))
   throw new PlatformError(503,'payment_configuration_error','Payment requirements do not match the product.');
  return {requirements,
   challenge:resource=>server.createPaymentRequiredResponse([requirements],{url:resource,description:'Validated product outcome',mimeType:'application/json'}),
@@ -46,29 +69,30 @@ function validatePayload(payload,requirements,nowSeconds,existing=false){
   throw new PlatformError(400,'invalid_authorization','Authorization recipient, amount or validity window is invalid.');
  return a;
 }
-export async function paidInvocation({request,body,key,product,handler,db,config,adapterFactory=sdkAdapter,now=()=>new Date()}){
+export async function paidInvocation({request,body,key,product,handler,db,config,origin,adapterFactory=sdkAdapter,now=()=>new Date()}){
  if(request.method!=='POST'||new URL(request.url).pathname!=='/v1/products/'+product.id+'/invoke')
   throw new PlatformError(405,'method_not_allowed','Paid products use their exact POST invocation path.');
- if(!config?.enabled||!config.receiverConfirmed||config.network!==BASE_NETWORK||!/^0x[0-9a-fA-F]{40}$/.test(config.payTo??''))
-  throw new PlatformError(503,'payment_not_ready','Paid execution is not enabled or receiver/network verification is incomplete.');
  if(product.status!=='active'&&product.status!=='validation')throw new PlatformError(410,'product_retired','Retired products cannot charge.');
- if(body.version!==product.version)throw new PlatformError(409,'version_mismatch','Inspect the current product version.');
- if(!handler||!Number.isSafeInteger(product.pricing.amount_atomic)||product.pricing.amount_atomic<=0)
-  throw new PlatformError(503,'product_unavailable','No paid execution contract is available.');
- if(body.max_charge_usdc_atomic<product.pricing.amount_atomic)throw new PlatformError(400,'charge_cap_exceeded','The product price exceeds the caller charge cap.');
- if(!/^[A-Za-z0-9_-]{32,128}$/.test(key??''))throw new PlatformError(400,'idempotency_key_required','A stable Idempotency-Key is required.');
- const input=handler.input.safeParse(body.input);if(!input.success)throw new PlatformError(400,'invalid_input','Input does not match the product schema.');
- const adapter=await adapterFactory({payTo:config.payTo,amount:product.pricing.amount_atomic});
+ const terms=paymentRequirements(product,config);
+ if(!terms)throw new PlatformError(503,'payment_not_ready','Paid execution is not enabled or receiver/network/asset verification is incomplete.');
+ if(!handler)throw new PlatformError(503,'product_unavailable','No paid execution contract is available.');
  const signature=request.headers.get('PAYMENT-SIGNATURE');
  const sampleKind=request.headers.get('X-AgentToolbox-Sample')==='synthetic'?'synthetic':'unclassified';
  const metrics=telemetry(db,{sampleKind,now});
  await metrics.record('invoke_attempt',product);
  if(!signature){
-  const challenge=await adapter.challenge(request.url);await metrics.record('payment_required',product);
+  const challenge=paymentChallenge(product,terms,origin??new URL(request.url).origin);await metrics.record('payment_required',product);
   return Response.json({error:{code:'payment_required',message:'Authorize the disclosed amount for this product. Settlement follows validated success.'},payment:challenge},
    {status:402,headers:{'PAYMENT-REQUIRED':encodePaymentRequiredHeader(challenge),'Cache-Control':'no-store'}});
  }
  if(signature.length>12288)throw new PlatformError(413,'payment_header_too_large','Payment header exceeds its bound.');
+ const parsed=invokeSchema.safeParse(body);if(!parsed.success)throw new PlatformError(400,'invalid_input','Request does not match the published invocation schema.');body=parsed.data;
+ if(body.version!==product.version)throw new PlatformError(409,'version_mismatch','Inspect the current product version.');
+ if(body.max_charge_usdc_atomic<product.pricing.amount_atomic)throw new PlatformError(400,'charge_cap_exceeded','The product price exceeds the caller charge cap.');
+ if(!/^[A-Za-z0-9_-]{32,128}$/.test(key??''))throw new PlatformError(400,'idempotency_key_required','A stable Idempotency-Key is required.');
+ const input=handler.input.safeParse(body.input);if(!input.success)throw new PlatformError(400,'invalid_input','Input does not match the product schema.');
+ const adapter=await adapterFactory({payTo:terms.payTo,amount:Number(terms.amount),network:terms.network,asset:terms.asset});
+ if(canonical(adapter.requirements)!==canonical(terms))throw new PlatformError(503,'payment_configuration_error','Payment requirements differ from published terms.');
  let payload;try{payload=decodePaymentSignatureHeader(signature);}catch{throw new PlatformError(400,'invalid_payment','Malformed payment header.');}
  const keyHash=await hash(key);
  await expirePaidResults(db,now());

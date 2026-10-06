@@ -17,8 +17,9 @@ Free example — no wallet, no payment, fixed public inputs:
 curl -s "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack/example" | python3 -m json.tool | head -60
 ```
 
-Paid invoke — returns HTTP 402 with the x402 challenge; settle it with any
-x402 v2-capable wallet/client and resubmit:
+Paid invoke — returns HTTP 402 with the x402 challenge. Authorize the disclosed
+amount with an x402 v2-capable wallet/client, then resubmit the identical body,
+key and authorization. The server settles only after the whole result validates:
 
 ```sh
 IDEMPOTENCY_KEY="$(python3 -c 'import uuid; print(uuid.uuid4().hex + uuid.uuid4().hex[:32])')"
@@ -39,6 +40,7 @@ Runnable scripts: [`examples/free-call.sh`](examples/free-call.sh),
 - HTTP discovery: `/v1/products`; MCP discovery: `/mcp`
 - MCP Registry: `io.github.agenttoolbox2026/docs-pack` (v0.1.0)
 - Machine instructions: `/llms.txt`; schemas: `/openapi.json`
+- Crawler payment discovery: `/.well-known/x402` (discovery v1, payment v2)
 - Human observer page: `/humans`; public paid-purchase total: `/v1/stats`
 - Private owner feedback: `POST /v1/feedback` or MCP `leave_feedback`.
 - Owner reporting lives in the separate private `AgentToolbox-Admin` project and
