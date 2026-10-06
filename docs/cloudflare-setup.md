@@ -26,17 +26,22 @@ Applicable Codex instructions and outcomes:
 3. Run `codex mcp login cloudflare`. The default broad consent was canceled.
    Douglas approved a narrowed grant, and login reported success with
    `--scopes offline_access,user:read,account:read,workers-scripts.read,workers-scripts.write,d1.read,d1.write`.
-   However, a subsequent supported Codex app-server `mcpServerStatus/list` check
-   returned `notLoggedIn` / `Auth required` at initialization. Cloudflare MCP
-   tools are not available in this Work task. Restart/reconnect is still needed
-   to establish and verify usable MCP access; do not claim MCP tool access works.
+   The original saved grant was later rejected with `invalid_grant`. Reconnecting
+   the same approved scopes succeeded. A fresh supported Codex app-server
+   `mcpServerStatus/list` check now initializes `cloudflare-api` successfully,
+   returns `authStatus=oAuth`, `toolsError=null` and lists `docs`, `search` and
+   `execute`. This existing Work chat has not loaded those tools; restart the
+   agent to use them here. A direct app-server tool invocation could not resolve
+   this Work chat as a local Codex thread, so no Cloudflare API call through MCP
+   is claimed. Authenticated deployment operations were verified with Wrangler.
 4. The prompt says to restart the agent to load newly installed skills/MCPs.
    The optional beta `cf` CLI was skipped because this project already uses pinned
    Wrangler. Other agents' setup sections do not apply.
 
 Cloudflare MCP and the deployed application's `/mcp` are separate: the former
 manages Cloudflare, while the latter exposes the five AgentToolbox product tools.
-The product MCP was verified publicly despite the management MCP limitation.
+The product MCP was verified publicly. The management MCP now initializes, while
+its tools require a fresh compatible agent session for normal use.
 
 ## Working deployment access
 
