@@ -5,12 +5,15 @@ Remote reports must use the deployed D1 database, with existing authenticated
 access and a verified database ID in Wrangler config:
 
 ```sh
-pnpm exec wrangler d1 execute agenttoolbox-retry-gate-dev --remote --file scripts/report-d1.sql --json
+pnpm report:remote
 ```
 
-The file contains SELECT statements only. It returns aggregates without recovery
-handles, caller hashes or evidence hashes. To validate against local workerd/D1,
-replace `--remote` with `--local`. Querying D1 uses plan quotas; verify the account
+The SQL file contains SELECT statements only. The wrapper passes it as one
+`--command=` argument because remote Wrangler `--file` returns an import summary
+instead of SELECT result rows. It returns aggregates without recovery handles,
+caller hashes or evidence hashes. To validate locally, use
+`pnpm exec wrangler d1 execute DB --local --file scripts/report-d1.sql --json`.
+Querying D1 uses plan quotas; verify the account
 is on Free before relying on its hard limits to prevent overage spending.
 
 Migration `0002_usage_totals.sql` adds one daily counter row per UTC event date.

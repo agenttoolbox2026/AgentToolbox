@@ -1,6 +1,11 @@
 # AgentToolbox — deterministic retry-gate experiment
 
-**Dev only. Maximum charge: 0 USDC. Nothing deployed; no payments received.**
+**Live on Cloudflare Free in dev mode. Maximum charge: 0 USDC. No payments received.**
+
+Public service: https://agenttoolbox-retry-gate.agenttoolbox2026.workers.dev
+
+MCP endpoint: https://agenttoolbox-retry-gate.agenttoolbox2026.workers.dev/mcp
+
 Read [BUILD.md](BUILD.md) for the founder requirements. This is a product hypothesis,
 not a validated service. The first controlled comparison found no advantage over
 a caller already using correct retry rules; the helper added latency.
@@ -97,35 +102,43 @@ client to `http://127.0.0.1:8787/mcp`; the five tool descriptions explain the fl
   prevents live revenue records. Costs remain unmeasured; latency is only a proxy.
   Optional reported savings and operator effort are not independent observations.
 
-## Cloudflare status and local verification
+## Cloudflare deployment and local verification
 
-GitHub access and main were verified. Cloudflare's connected API is not exposed in
-this session; Wrangler `whoami` was unauthenticated. The brief's Worker/D1 inventory,
-subdomain and MFA status could not be reverified. No resources or temporary account
-were created. Restore that connection or run `wrangler login` before account checks.
+Deployed on October 5, 2026 (America/Toronto) using authenticated Wrangler, one
+Worker, one D1 database and two rate-limit bindings under the existing Free plan.
+Both migrations are applied remotely. Public discovery formats, plain-HTTP flow,
+concurrent duplicate requests, MCP discovery and unsafe-write rejection passed.
+The remote report reconciled two controlled test quotes, one accepted result and
+zero settlement. These are synthetic validation events, not customer usage.
+See [deployment evidence and setup status](docs/cloudflare-setup.md).
 
 To test the actual Worker/D1 runtime locally (stop `pnpm dev` first):
 
 ```sh
 pnpm exec wrangler d1 migrations apply agenttoolbox-retry-gate-dev --local
-pnpm worker:dev
+pnpm worker:dev --var PUBLIC_ORIGIN:http://127.0.0.1:8787
 # Another terminal:
 pnpm smoke
 pnpm worker:check
 ```
 
-`worker:check` is a dry run. The checked-in D1 ID is a local placeholder,
-workers.dev and previews are disabled, and PUBLIC_ORIGIN is localhost. This
-configuration is deliberately not deployment-ready. No remote database commands
-or deployment scripts are included. In restricted environments, point
-`XDG_CONFIG_HOME` and `WRANGLER_LOG_PATH` at writable local scratch paths.
+`worker:check` is a dry run. The checked-in D1 ID and public origin identify the
+deployed service; `wrangler dev --local` uses separate local storage. Preview URLs
+and observability logs remain disabled. With the authorized account connection:
 
-Proposed later resources: one `agenttoolbox-retry-gate` Worker, one
-`agenttoolbox-retry-gate-dev` D1 database and two rate-limit bindings. After access
-verification, recheck inventory/subdomain, free-plan entitlements and bot controls,
-describe any actual charge exposure, then configure a verified database ID and
-public origin. No paid add-ons, R2, Pages, Durable Objects, queues or dashboards.
-Do not enable paid resources without founder approval.
+```sh
+pnpm exec wrangler d1 migrations apply DB --remote
+pnpm exec wrangler deploy
+pnpm smoke https://agenttoolbox-retry-gate.agenttoolbox2026.workers.dev
+pnpm report:remote
+```
+
+Remote commands operate on the deployed database. Do not set a scratch
+`XDG_CONFIG_HOME` for authenticated commands: it can hide the saved connection.
+No paid add-ons, R2, Pages, Durable Objects, queues or dashboards are provisioned.
+Do not enable paid resources without founder approval. Free quotas fail closed;
+location-based rate limits are not a strict global request cap. Production CPU
+distribution and organic agent value remain unmeasured.
 
 ## Payments and learning evidence
 

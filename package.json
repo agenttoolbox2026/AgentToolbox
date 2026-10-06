@@ -11,6 +11,7 @@
     "trial": "node scripts/trial.js",
     "smoke": "node scripts/smoke.js",
     "stats": "node scripts/stats.js",
+    "report:remote": "node scripts/report-remote.js",
     "worker:dev": "wrangler dev --local",
     "worker:check": "wrangler deploy --dry-run --outdir .wrangler/dry-run"
   },
