@@ -8,12 +8,16 @@ function query(sql){
  return JSON.parse(result.stdout);
 }
 const report=query(readFileSync(new URL('./report.sql',import.meta.url),'utf8'));
-const rows=[],cutoff=new Date().toISOString();let cursor='';
+// Ledger rows are append-only. A fixed rowid watermark gives a stable prefix
+// even when a new settlement is appended between pages.
+const watermark=query('SELECT CAST(COALESCE(MAX(rowid),0) AS TEXT) watermark FROM platform_payment_ledger')[0]?.results?.[0]?.watermark;
+if(!/^(0|[1-9][0-9]{0,18})$/.test(watermark??''))throw new Error('Missing ledger watermark.');
+const rows=[];let cursor='0';
 for(let page=0;;page++){
  if(page>=100)throw new Error('Report exceeds 100,000 ledger rows; export for exact offline aggregation. No partial totals reported.');
- const batch=query(`SELECT event_id,product_id,version,sample_kind,event,amount_atomic,created_at FROM platform_payment_ledger WHERE event_id>'${cursor}' AND created_at<='${cutoff}' ORDER BY event_id LIMIT 1000`)[0]?.results;
+ const batch=query(`SELECT CAST(rowid AS TEXT) row_sequence,product_id,version,sample_kind,event,amount_atomic,created_at FROM platform_payment_ledger WHERE rowid>${cursor} AND rowid<=${watermark} ORDER BY rowid LIMIT 1000`)[0]?.results;
  if(!Array.isArray(batch))throw new Error('Missing ledger rows.');rows.push(...batch);
  if(batch.length<1000)break;
- cursor=batch.at(-1).event_id;if(!/^[0-9a-f-]{32,36}$/.test(cursor))throw new Error('Invalid event cursor.');
+ cursor=batch.at(-1).row_sequence;if(!/^[1-9][0-9]{0,18}$/.test(cursor))throw new Error('Invalid ledger cursor.');
 }
 console.log(JSON.stringify({report,...exactLedgerTotals(rows)},null,2));

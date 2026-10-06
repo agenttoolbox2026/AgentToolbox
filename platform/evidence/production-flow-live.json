@@ -1,0 +1,62 @@
+{
+  "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
+  "completed_at": "2026-10-06T21:20:57.100Z",
+  "synthetic_header": true,
+  "successful_quotes": 2,
+  "quoted_atomic_amounts": [
+    "10000",
+    "20000"
+  ],
+  "higher_quote_bazaar_omitted": true,
+  "preparations_created": 1,
+  "stable_preview_replays": 1,
+  "preview_bytes": 591,
+  "preview_sample_cases": 1,
+  "full_cases_withheld": 8,
+  "wrong_capability_rejections": 1,
+  "unsigned_invokes_402": 2,
+  "full_result_released": false,
+  "post_requests": 7,
+  "contract_reads": 1,
+  "free_examples": 0,
+  "payment_headers": 0,
+  "settlement_calls": 0,
+  "purchases": 0,
+  "expires_at": "2026-10-06T21:34:47.682Z",
+  "d1_state": {
+    "preparations": [
+      {
+        "product_id": "contract-cases",
+        "state": "ready",
+        "n": 1,
+        "first_created": "2026-10-06T21:19:47.682Z",
+        "expires_at": "2026-10-06T21:34:47.682Z",
+        "preview_bytes": 591,
+        "full_case_count": 9
+      }
+    ],
+    "quotes": [
+      {
+        "product_id": "contract-cases",
+        "amount_atomic": "10000",
+        "n": 1,
+        "first_created": "2026-10-06T21:19:47.561Z",
+        "expires_at": "2026-10-06T21:34:47.561Z",
+        "claims": 0
+      },
+      {
+        "product_id": "contract-cases",
+        "amount_atomic": "20000",
+        "n": 1,
+        "first_created": "2026-10-06T21:19:47.931Z",
+        "expires_at": "2026-10-06T21:34:47.682Z",
+        "claims": 0
+      }
+    ],
+    "payments": 0,
+    "purchases": 0,
+    "ledger": 0
+  },
+  "validation_note": "Initial six-request success sequence passed quotes, stable preview and capability checks. Its last broad text assertion also matched the public output-schema enum negative_mutation; corrected to check the response envelope and absence of result data. One additional unsigned synthetic probe verified the structural assertion; positive writes were not repeated.",
+  "retention": "Expire normally; no deletion."
+}

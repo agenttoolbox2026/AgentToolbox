@@ -74,7 +74,7 @@ unauthenticated result/status endpoint.
 Migration `0006_quotes_preparations.sql` adds private quote/preparation tables and
 frozen metadata columns to payments. Existing payment/ledger/purchase fields and
 append-only records stay intact. Amounts remain TEXT. `platform/scripts/report.js`
-keyset-pages ledger rows and uses BigInt for exact lifetime and daily totals;
+keyset-pages an immutable ledger prefix at a fixed row watermark and uses BigInt for exact lifetime and daily totals;
 serialized amounts are strings even when a sum exceeds uint256. It fails instead
 of silently truncating after its 100,000-row bound. Public totals count purchases,
 not money or unique identities. Quotes/preparations are never revenue.

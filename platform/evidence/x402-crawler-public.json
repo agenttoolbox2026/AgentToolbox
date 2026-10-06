@@ -1,7 +1,7 @@
 {
-  "checked_at": "2026-10-06T20:08:04.038Z",
+  "checked_at": "2026-10-06T21:21:54.472Z",
   "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
-  "version": "195d66eb-cc65-4cd3-88b8-c84015f04135",
+  "version": "7510e712-6003-4662-8419-73a15851ef75",
   "probes": [
     {
       "name": "empty",
@@ -69,7 +69,10 @@
   "discovery": {
     "manifest_version": 1,
     "resources": [
-      "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack/invoke"
+      "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack/invoke",
+      "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/quote-proof/invoke",
+      "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/contract-cases/invoke",
+      "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/mcp-wirecheck/invoke"
     ],
     "payment_version": 2,
     "amount_atomic": "10000",
