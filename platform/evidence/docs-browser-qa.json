@@ -1,0 +1,38 @@
+{
+  "checked_at": "2026-10-06T05:48:43.993Z",
+  "origin": "http://127.0.0.1:8787",
+  "results": [
+    {
+      "width": 1440,
+      "flows": "home→humans→home→reload",
+      "home_words_including_example": 108,
+      "overflow": false,
+      "page_errors": []
+    },
+    {
+      "width": 768,
+      "flows": "home→humans→home→reload",
+      "home_words_including_example": 108,
+      "overflow": false,
+      "page_errors": []
+    },
+    {
+      "width": 390,
+      "flows": "home→humans→home→reload",
+      "home_words_including_example": 108,
+      "overflow": false,
+      "page_errors": []
+    },
+    {
+      "width": 320,
+      "flows": "home→humans→home→reload",
+      "home_words_including_example": 108,
+      "overflow": false,
+      "page_errors": []
+    }
+  ],
+  "no_javascript_navigation": true,
+  "no_javascript_server_counter": true,
+  "stale_counter_handling": "passed",
+  "all_passed": true
+}

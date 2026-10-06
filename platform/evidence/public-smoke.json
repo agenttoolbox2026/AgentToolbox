@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-10-06T05:16:09.566Z",
+  "checked_at": "2026-10-06T06:01:30.712Z",
   "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
   "checks": [
     {
@@ -13,7 +13,7 @@
       "status": 200
     },
     {
-      "path": "/about",
+      "path": "/humans",
       "method": "GET",
       "status": 200
     },
@@ -78,6 +78,39 @@
       "status": 200
     },
     {
+      "path": "/v1/products/docs-pack",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/v1/products/docs-pack/invoke",
+      "method": "POST",
+      "status": 402
+    },
+    {
+      "path": "/v1/products/docs-pack/invoke",
+      "method": "POST",
+      "status": 400
+    },
+    {
+      "path": "/v1/products/docs-pack/example",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "path": "/v1/stats",
+      "method": "GET",
+      "status": 200
+    },
+    {
+      "example_source_count": 2,
+      "example_excerpt_chars": 2392,
+      "paid_challenge_amount": "10000",
+      "paid_challenge_network": "eip155:8453",
+      "lifetime_paid_purchases": 0,
+      "settlements_attempted": 0
+    },
+    {
       "protocol": "MCP",
       "tools": [
         "list_products",
@@ -85,7 +118,7 @@
         "invoke_product",
         "report_outcome"
       ],
-      "catalog": "empty",
+      "catalog": "docs-pack active experimental",
       "retired_invocation": "rejected"
     },
     {

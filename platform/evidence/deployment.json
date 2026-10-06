@@ -1,18 +1,31 @@
 {
   "worker": "agnttoolbx",
   "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
-  "version": "9a08f07e-be73-4b45-8e57-aac8d90cdcad",
+  "version": "7ad0b29f-e10e-441c-82e4-5897ee9dd12f",
   "old_worker": "agenttoolbox-retry-gate",
   "old_disabled_version": "b20976ef-7333-4530-9186-f7f6ae3c7c6b",
   "old_http_status": 404,
   "d1": "6b3da390-f6c4-4013-a0c6-cbf7b0170cca",
-  "tests_passed": 34,
-  "payments_enabled": false,
+  "tests_passed": 47,
+  "payments_enabled": true,
   "receiver_network_owner_confirmed": true,
   "live_settlements_attempted": 0,
   "notes": [
-    "No active product",
-    "No paid-readiness or customer claim",
-    "Observed traffic includes synthetic QA and unclassified visits"
-  ]
+    "Experimental product; no general efficiency or demand claim",
+    "Unsigned live x402 challenge and actual deployed free example passed",
+    "No live signatures, transactions, credential grants, paid resources or facilitator top-ups",
+    "Counter follows durable facilitator-confirmed purchases, not independent on-chain revenue",
+    "Unclassified visits are not verified organic agents"
+  ],
+  "checked_at": "2026-10-06T06:02:36.442283+00:00",
+  "active_product": "docs-pack",
+  "product_version": "0.1.0",
+  "price_usdc_atomic": 10000,
+  "live_payment_verified": false,
+  "production_cpu_ms": null,
+  "public_paid_purchases": 0,
+  "foreground_chrome_visually_verified": true,
+  "foreground_page_observed": "/humans",
+  "paid_result_cleanup_cron_utc": "17 5 * * *",
+  "asset_version": "20261006-2"
 }

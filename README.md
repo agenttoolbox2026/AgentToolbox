@@ -1,25 +1,32 @@
 # AgentToolbox
 
-A stable catalog for small agent tools and measured product experiments.
+Agent-first home: **https://agnttoolbx.agenttoolbox2026.workers.dev**
 
-Public site: **https://agnttoolbx.agenttoolbox2026.workers.dev**
+**Docs Pack** is the first experimental product: up to five supported public
+documentation URLs and literal query terms return bounded exact excerpts,
+source hashes, offsets and matched headings. Price: **$0.01 USDC on Base per
+successful whole pack**, using HTTP x402 v2. No source match or failed source
+means no settlement. Live payment verification remains user-controlled and has
+not been performed by the implementation agent.
 
-- HTTP catalog: /v1/products
-- Product contracts: /v1/products/{id}
-- MCP: /mcp
-- Agent guide: /llms.txt
-- Schemas: /openapi.json
+- Contract: `/v1/products/docs-pack`
+- Real, fixed free example: `/v1/products/docs-pack/example`
+- Paid invocation: `POST /v1/products/docs-pack/invoke`
+- HTTP discovery: `/v1/products`; MCP discovery: `/mcp`
+- Machine instructions: `/llms.txt`; schemas: `/openapi.json`
+- Human observer page: `/humans`; public paid-purchase total: `/v1/stats`
 
-The active catalog is honestly empty. Retry gate is retired; its old public
-route is disabled and its source, D1 history and experiment reports are preserved.
-The catalog can be searched and navigated without JavaScript. HTML, JSON and MCP
-read one registry.
+The human counter counts completed live paid purchases, including repeats.
+It excludes synthetic tests, mocks, failed/pending operations, replays and
+self-purchases from the receiving wallet. It does not identify unique agents.
+Private operations and reports remain authenticated. The original retry gate
+is retired; its source, D1 database and history remain preserved.
 
-## Run and validate
+## Run
 
 Node.js 24+ and pnpm 11.19.0:
 
-~~~sh
+```sh
 pnpm install --frozen-lockfile
 pnpm --dir platform install --frozen-lockfile
 pnpm dev
@@ -27,34 +34,12 @@ pnpm test
 pnpm check
 pnpm worker:check
 pnpm smoke https://agnttoolbx.agenttoolbox2026.workers.dev
-~~~
+pnpm report:remote
+```
 
-Platform code lives in platform/. The original src/, test/ and scripts/ remain
-historical experiment code. Explicit legacy scripts are available; they are not
-the new deployment.
+Platform code is in `platform/`; root `src/`, `test/` and `scripts/` preserve the
+legacy experiment. The original icon is unchanged. No paid Cloudflare resource,
+facilitator account, top-up, wallet secret or automatic billing was added.
 
-The supplied original PNG is platform/public/agenttoolbox-icon.png; layout uses
-the original pixels. There are no remote fonts or image services.
-
-## Payments and measurement
-
-Current official @x402/core and @x402/evm 2.28.0 are integrated through an explicit
-durable settlement adapter. Mock tests cover challenge headers, exact contract
-matching, failed outcomes, concurrency/replay, storage failures, timeout/unknown
-state and free-credit exhaustion. An unsigned challenge was verified in workerd.
-
-**No paid product is live and no real settlement test has been performed.**
-The recipient and Base native-USDC network are owner-confirmed. A useful concrete
-product contract and user-controlled payment verification remain outstanding. Capability advertising
-and mocked settlement do not establish paid readiness.
-
-Private report: pnpm report:remote. It returns per-product/version UTC daily
-counts, channel, sample classification, execution/outcome totals and optional
-repeat pseudonyms. Payment ledger reporting distinguishes facilitator reports
-from independently reconciled revenue. There is no public admin or analytics
-endpoint. Searches, IP addresses and raw inputs are not stored in telemetry.
-
-Read [the current brief](BUILD.md), [platform operations](docs/platform-operations.md),
-[x402 implementation](docs/platform-x402.md), and the preserved
-[fresh-agent comparison](docs/fresh-agent-report.md). No usefulness or customer
-claims are inferred from synthetic checks.
+Read [the brief](BUILD.md), [product and benchmark](docs/docs-pack.md),
+[operations](docs/platform-operations.md) and [payment limits](docs/platform-x402.md).

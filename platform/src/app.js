@@ -1,6 +1,7 @@
 import {products,findProduct} from './registry.js';
 import {service,searchSchema,invokeSchema,outcomeSchema,PlatformError} from './service.js';
-import {home,productPage,agentsPage,aboutPage,notFoundPage} from './pages.js';
+import {home,humansPage,notFoundPage} from './pages.js';
+import {publicPurchases} from './purchases.js';
 import {markdown,openapi} from './discovery.js';
 import {mcp} from './mcp.js';
 import {paidInvocation} from './x402.js';
@@ -53,17 +54,30 @@ export function createPlatform({db,origin,catalog=products,handlers={},limit=asy
     if(['GET','HEAD'].includes(method)) {
       if(path==='/llms.txt')return finish(new Response(markdown(origin),{headers:{'Content-Type':'text/plain; charset=utf-8'}}));
       if(path==='/openapi.json')return finish(Response.json(openapi(origin)));
-      if(path==='/agents')return finish(html(agentsPage(origin)));
-      if(path==='/about')return finish(html(aboutPage()));
+      if(path==='/agents'||path==='/about')return finish(new Response(null,{status:308,headers:{Location:path==='/agents'?'/':'/humans'}}));
+      if(path==='/v1/stats')return finish(Response.json(await publicPurchases(db)));
+      if(path==='/v1/products/docs-pack/example'){
+        const product=findProduct('docs-pack',catalog),handler=handlers['docs-pack'];
+        if(!product||!handler)throw new PlatformError(503,'example_unavailable','Example is unavailable.');
+        // Fixed public input only: exercises the deployed implementation without
+        // accepting a payment, arbitrary free workloads, or creating purchases.
+        const output=await handler.run(handler.input.parse(product.example_input));
+        if(!handler.output.safeParse(output).success||!await handler.success(output))throw new PlatformError(422,'example_unavailable','Example did not meet its contract.');
+        return finish(Response.json({example:true,payment:{status:'not_required',amount_settled_atomic:0},output}));
+      }
+      if(path==='/humans'){
+        let stats;try{stats=await publicPurchases(db);}catch{stats=null;}
+        return finish(html(humansPage(stats)));
+      }
       if(path==='/'||path==='/v1/products'){
         const params=validate(searchSchema,Object.fromEntries(url.searchParams));
         const data=isHead?null:await api.list(params);
         if(path==='/v1/products'||request.headers.get('Accept')?.includes('application/json'))return finish(Response.json(data??{}));
         if(request.headers.get('Accept')?.includes('text/markdown'))return finish(new Response(markdown(origin),{headers:{'Content-Type':'text/markdown; charset=utf-8'}}));
-        return finish(html(home(params,catalog)));
+        return finish(html(home(params,catalog,origin)));
       }
       const detail=path.match(/^\/(v1\/)?products\/([a-z0-9-]{1,64})$/);
-      if(detail){const p=findProduct(detail[2],catalog);if(!p)throw new PlatformError(404,'product_not_found','No product has that identifier.');if(!isHead)await api.detail(p.id);return finish(detail[1]?Response.json({api_version:'1',product:p}):html(productPage(p)));}
+      if(detail){const p=findProduct(detail[2],catalog);if(!p)throw new PlatformError(404,'product_not_found','No product has that identifier.');if(!isHead)await api.detail(p.id);return finish(detail[1]?Response.json({api_version:'1',product:p}):new Response(null,{status:308,headers:{Location:'/v1/products/'+p.id}}));}
       if(path.startsWith('/v1')||path==='/admin'||path.startsWith('/metrics'))throw new PlatformError(404,'not_found','No public resource at this path.');
       return finish(html(notFoundPage(),404));
     }

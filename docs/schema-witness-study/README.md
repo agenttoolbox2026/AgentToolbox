@@ -1,3 +1,5 @@
+> Historical pre-launch decision. The schema-witness candidate remains unlaunched. A separate Docs Pack experiment was subsequently authorized; see [Docs Pack](../docs-pack.md).
+
 # Schema-witness research decision
 
 The bounded fresh-agent comparison failed its preregistered usefulness gate.

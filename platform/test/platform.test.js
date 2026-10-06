@@ -19,12 +19,12 @@ function setup(overrides={}){
 }
 const post=(body,key='test_key_abcdefghijklmnopqrstuvwxyz123')=>({method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':key},body:JSON.stringify(body)});
 const input={version:'1.0.0',input:{value:4},max_charge_usdc_atomic:0};
-test('same honest lifecycle in HTML, JSON, Markdown, OpenAPI; retired has no invocation',async()=>{
+test('same experimental product in HTML, JSON, Markdown and OpenAPI; retired remains uncallable',async()=>{
  const {request,close}=setup();try{
-  const active=await(await request('/v1/products')).json();assert.deepEqual(active.products,[]);
-  const html=await(await request('/')).text();assert.match(html,/0<\/b> available tools/);assert.match(html,/no active tools/i);
+  const active=await(await request('/v1/products')).json();assert.deepEqual(active.products.map(p=>p.id),['docs-pack']);
+  const html=await(await request('/')).text();assert.match(html,/Docs Pack/);assert.match(html,/\$0.01/);assert.ok(!html.includes('Our approach'));
   const json=await(await request('/',{headers:{Accept:'application/json'}})).json();assert.deepEqual(json,active);
-  const md=await(await request('/llms.txt')).text();assert.match(md,/"products":\[\]/);
+  const md=await(await request('/llms.txt')).text();assert.match(md,/docs-pack/);
   const retired=await(await request('/v1/products?status=retired&q=retry')).json();assert.equal(retired.products[0].id,'retry-gate');
   const detail=await(await request('/v1/products/retry-gate')).json();assert.equal(detail.product.status,'retired');assert.equal(detail.product.invocation,null);
   const schema=await(await request('/openapi.json')).json();assert.equal(schema.openapi,'3.1.0');assert.ok(schema.paths['/v1/products/{id}/invoke']);
@@ -106,12 +106,13 @@ test('rate limit fails explicitly before records',async()=>{
   const r=await request('/v1/products');assert.equal(r.status,429);assert.equal(db.sqlite.prepare('SELECT count(*) AS n FROM platform_daily').get().n,0);
  }finally{close();}
 });
-test('official MCP SDK discovers and calls same empty/retired catalog',async()=>{
+test('official MCP SDK discovers active paid HTTP contract and retired stop',async()=>{
  const run=await start({port:0});const client=new Client({name:'platform-smoke',version:'1'},{capabilities:{}});
  try{
   await client.connect(new StreamableHTTPClientTransport(new URL(run.origin+'/mcp'),{requestInit:{headers:{'X-AgentToolbox-Sample':'synthetic'}}}));
   const tools=await client.listTools();assert.deepEqual(tools.tools.map(t=>t.name).sort(),['get_product','invoke_product','list_products','report_outcome']);
-  const list=await client.callTool({name:'list_products',arguments:{}});assert.deepEqual(list.structuredContent.products,[]);
+  const list=await client.callTool({name:'list_products',arguments:{}});assert.deepEqual(list.structuredContent.products.map(p=>p.id),['docs-pack']);
+  const paid=await client.callTool({name:'invoke_product',arguments:{product_id:'docs-pack',version:'0.1.0',input:{},max_charge_usdc_atomic:10000,idempotency_key:'mcp_paid_abcdefghijklmnopqrstuvwxyz'}});assert.equal(paid.isError,true);assert.match(paid.content[0].text,/paid_http_required/);
   const detail=await client.callTool({name:'get_product',arguments:{product_id:'retry-gate'}});assert.equal(detail.structuredContent.product.status,'retired');
   const retired=await client.callTool({name:'invoke_product',arguments:{product_id:'retry-gate',version:'0.1.0',input:{},max_charge_usdc_atomic:0,idempotency_key:'mcp_test_abcdefghijklmnopqrstuvwxyz'}});assert.equal(retired.isError,true);assert.match(retired.content[0].text,/product_retired/);
  }finally{await client.close();await run.close();}

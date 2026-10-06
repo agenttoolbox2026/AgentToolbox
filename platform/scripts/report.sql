@@ -5,3 +5,5 @@ SELECT product_id,version,sample_kind,state,COUNT(*) AS retained_runs FROM platf
 SELECT product_id,version,sample_kind,state,COUNT(*) AS payment_operations FROM platform_payments GROUP BY product_id,version,sample_kind,state;
 SELECT product_id,version,sample_kind,event,COUNT(*) AS events,SUM(CAST(amount_atomic AS INTEGER)) AS recorded_atomic_units FROM platform_payment_ledger GROUP BY product_id,version,sample_kind,event;
 SELECT 'Facilitator reports are not reconciled on-chain revenue.' AS payment_interpretation;
+SELECT product_id,version,sample_kind,outcome,COUNT(*) AS paid_outcome_reports FROM platform_payments WHERE outcome IS NOT NULL GROUP BY product_id,version,sample_kind,outcome;
+SELECT * FROM platform_public_totals;

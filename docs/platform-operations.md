@@ -55,7 +55,8 @@ platform/src/registry.js is the source of truth. Each product has a stable ID,
 semantic version, lifecycle, problem/tags, promised outcome, success criterion,
 evidence basis, price/payment availability and schemas. Retired IDs keep a
 detail document and return 410 on invocation, never a substitute product.
-No active handler is installed in production.
+Docs Pack 0.1.0 is the active experimental handler. Its fixed free example runs
+the same implementation with documented public URLs.
 
 Adding a product requires an actual bounded handler, strict input/output schemas,
 a deterministic success check, declared data handling and meaningful tests.
@@ -68,14 +69,17 @@ Version pinning and Idempotency-Key prevent accidental changed-request replays.
 Free-run IDs are unguessable capability handles; keep them private. Free outputs
 are retained at most logically 24 hours, with physical cleanup on the next
 invocation. Only product-approved non-sensitive output may be retained.
-Paid-result retention/reconciliation must be completed before activating a paid
-product; pending financial operations cannot be silently purged.
+Paid result bodies expire logically after 24 hours and are removed on the next
+paid invocation or daily 05:17 UTC cleanup. Financial tombstones/ledger remain.
+Unresolved settlements require manual authenticated reconciliation, never
+automatic resubmission.
 
 ## Private learning report
 
 Authenticated Wrangler SELECT queries expose daily product/version/channel/event
 counts, total server elapsed milliseconds, self-reported outcomes and voluntary
-random-pseudonym repeat totals. No public metrics route exists.
+random-pseudonym repeat totals. Only the lifetime completed-paid-purchase total is public at /v1/stats; private
+per-product reporting is never exposed there.
 The synthetic request header is an honest classification convention, not
 authentication: outsiders can set it. All other traffic is unclassified, not
 assumed organic agents. Caller pseudonyms and outcomes are unverified; neither
@@ -91,3 +95,14 @@ bounded result; never raw authorization signatures. Unknown/settling operations
 need operator reconciliation before any later action. The private append-only
 ledger stores lifecycle and facilitator transaction references. A facilitator
 report is not independently verified on-chain revenue.
+
+## Public counter
+
+D1 triggers create one immutable purchase receipt per completed live operation
+and increment a durable total atomically. Synthetic, mock, unresolved, failed,
+zero-value and receiver-self-purchase operations are excluded. Repeated delivery
+uses the same operation ID and cannot increment twice; distinct purchases by
+the same payer do increment. The counter follows the durable facilitator-confirmed
+settlement record, not independently reconciled on-chain revenue. It does not
+verify agent identity. UI refreshes every 30 seconds while visible, retaining the
+last verified value on failure instead of inventing a zero.

@@ -25,9 +25,9 @@ async function setup({settle,db:overrideDb,handler:overrideHandler}={}){
  const now=Math.floor(Date.now()/1000);
  const payload={x402Version:2,resource:{url,description:'Mock fixture',mimeType:'application/json'},accepted:adapter.requirements,
  payload:{signature:'0x'+'00'.repeat(65),authorization:{from:payer,to:payTo,value:'1000',validAfter:String(now-1),validBefore:String(now+300),nonce}}};
- const execute=async({signed=true,value=body,customPayload=payload,customKey=key,method='POST',path=url,customConfig=config}={})=>{
-  const request=new Request(path,{method,headers:{...(signed?{'PAYMENT-SIGNATURE':encodePaymentSignatureHeader(customPayload)}:{}),'X-AgentToolbox-Sample':'synthetic'}});
-  return paidInvocation({request,body:value,key:customKey,product,handler:{...(overrideHandler??handler),run:async p=>{counts.execute++;return (overrideHandler??handler).run(p);}},db,config:customConfig,adapterFactory:async()=>adapter});
+ const execute=async({signed=true,value=body,customPayload=payload,customKey=key,method='POST',path=url,customConfig=config,synthetic=true,customNow=()=>new Date()}={})=>{
+  const request=new Request(path,{method,headers:{...(signed?{'PAYMENT-SIGNATURE':encodePaymentSignatureHeader(customPayload)}:{}),...(synthetic?{'X-AgentToolbox-Sample':'synthetic'}:{})}});
+  return paidInvocation({request,body:value,key:customKey,product,handler:{...(overrideHandler??handler),run:async p=>{counts.execute++;return (overrideHandler??handler).run(p);}},db,config:customConfig,adapterFactory:async()=>adapter,now:customNow});
  };
  return {db,counts,adapter,payload,execute,close:()=>db.close()};
 }
@@ -81,11 +81,17 @@ test('settlement timeout stays unknown and withholds output without recharge',as
   await assert.rejects(s.execute(),e=>e.code==='settlement_unresolved');
   assert.equal(s.db.sqlite.prepare('SELECT state FROM platform_payments').get().state,'unknown');
   await assert.rejects(s.execute(),e=>e.code==='settlement_unresolved');assert.equal(s.counts.settle,1);
+  await assert.rejects(s.execute({customNow:()=>new Date(Date.now()+3600000)}),e=>e.code==='settlement_unresolved');
+  assert.equal(s.counts.execute,1);assert.equal(s.counts.verify,1);assert.equal(s.counts.settle,1);
  }finally{s.close();}
 });
 test('free-credit exhaustion fails closed with no automatic provider upgrade or second charge',async()=>{
  const s=await setup({settle:async()=>({success:false,errorReason:'free_tier_exhausted',network:BASE_NETWORK,transaction:''})});
  try{await assert.rejects(s.execute(),e=>e.code==='settlement_unresolved');await assert.rejects(s.execute(),e=>e.code==='settlement_unresolved');assert.equal(s.counts.settle,1);}finally{s.close();}
+});
+test('SDK settlement_pending is not automatically retried',async()=>{
+ const s=await setup({settle:async()=>({success:false,errorReason:'settlement_pending',network:BASE_NETWORK,transaction,payer})});
+ try{await assert.rejects(s.execute(),e=>e.code==='settlement_unresolved');assert.equal(s.counts.settle,1);await assert.rejects(s.execute(),e=>e.code==='settlement_unresolved');assert.equal(s.counts.settle,1);}finally{s.close();}
 });
 test('ledger failure after settlement leaves unresolved state; replay cannot recharge',async()=>{
  const real=database();const db={...real,prepare(sql){const statement=real.prepare(sql);if(!sql.startsWith('INSERT INTO platform_payment_ledger'))return statement;return {bind(...args){if(args[4]==='settlement_reported')return {run:async()=>{throw new Error('ledger unavailable');}};return statement.bind(...args);}};}};
@@ -104,5 +110,65 @@ test('HTTP adapter exposes official payment challenge only for explicit callable
   const app=createPlatform({db:s.db,origin:'https://example.invalid',catalog:[product],handlers:{'paid-fixture':handler},payments:config,paymentAdapterFactory:async()=>s.adapter});
   const r=await app(new Request(url,{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':key,'X-AgentToolbox-Sample':'synthetic'},body:JSON.stringify(body)}));
   assert.equal(r.status,402);assert.ok(r.headers.get('PAYMENT-REQUIRED'));assert.equal(s.counts.settle,0);
+ }finally{s.close();}
+});
+
+test('live counter includes only completed non-synthetic purchases and excludes repeated delivery',async()=>{
+ const s=await setup();try{
+  const read=async()=>Number((await s.db.prepare('SELECT value FROM platform_public_totals WHERE key=?').bind('paid_purchases').first()).value);
+  assert.equal(await read(),0);
+  await s.execute({synthetic:false,customConfig:{...config,live:true}});
+  assert.equal(await read(),1);
+  await s.execute({synthetic:false,customConfig:{...config,live:true}});
+  assert.equal(await read(),1);
+  assert.equal(s.counts.settle,1);
+  const second=structuredClone(s.payload);second.payload.authorization.nonce='0x'+'bb'.repeat(32);
+  await s.execute({customPayload:second,customKey:'synthetic_other_abcdefghijklmnopqrstuvwxyz',customConfig:{...config,live:true}});
+  assert.equal(await read(),1);
+  const third=structuredClone(s.payload);third.payload.authorization.nonce='0x'+'cc'.repeat(32);
+  await s.execute({customPayload:third,customKey:'mock_other_abcdefghijklmnopqrstuvwxyz',synthetic:false});
+  assert.equal(await read(),1);
+  const fourth=structuredClone(s.payload);fourth.payload.authorization.nonce='0x'+'dd'.repeat(32);
+  await s.execute({customPayload:fourth,customKey:'repeat_customer_abcdefghijklmnopqrstuvwxyz',synthetic:false,customConfig:{...config,live:true}});
+  assert.equal(await read(),2);
+  assert.throws(()=>s.db.sqlite.exec('DELETE FROM platform_paid_purchases'),/append_only/);
+ }finally{s.close();}
+});
+test('unresolved and failed operations never increment public purchases',async()=>{
+ const s=await setup({settle:async()=>{throw new Error('timeout');}});try{
+  await assert.rejects(s.execute({synthetic:false,customConfig:{...config,live:true}}),e=>e.code==='settlement_unresolved');
+  assert.equal(s.db.sqlite.prepare('SELECT value FROM platform_public_totals').get().value,0);
+ }finally{s.close();}
+ const f=await setup();try{await assert.rejects(f.execute({value:{...body,input:{n:-1}},synthetic:false,customConfig:{...config,live:true}}));assert.equal(f.db.sqlite.prepare('SELECT value FROM platform_public_totals').get().value,0);}finally{f.close();}
+});
+test('settled replay works after authorization expiry; retained output expires without a second charge',async()=>{
+ const s=await setup();try{
+  const original=await(await s.execute()).json();
+  const later=()=>new Date(Date.now()+3600000);
+  assert.deepEqual(await(await s.execute({customNow:later})).json(),original);
+  await assert.rejects(s.execute({customNow:()=>new Date(Date.now()+90000000)}),e=>e.code==='paid_result_expired');
+  assert.equal(s.counts.settle,1);assert.equal(s.db.sqlite.prepare('SELECT result_json FROM platform_payments').get().result_json,null);
+  assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) AS n FROM platform_payment_ledger').get().n,3);
+ }finally{s.close();}
+});
+test('paid usefulness report is private, idempotent and never causes a payment',async()=>{
+ const s=await setup();try{
+  const result=await(await s.execute()).json();
+  const app=createPlatform({db:s.db,origin:'https://example.invalid'});
+  const report=outcome=>app(new Request('https://example.invalid'+result.outcome_url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({outcome})}));
+  assert.equal((await report('success')).status,200);assert.equal((await report('success')).status,200);assert.equal((await report('failure')).status,409);
+  assert.equal(s.counts.settle,1);assert.equal(s.db.sqlite.prepare("SELECT SUM(count) AS n FROM platform_daily WHERE event='outcome_success'").get().n,1);
+ }finally{s.close();}
+});
+test('unsigned client flags cannot create a live purchase or advance the public counter',async()=>{
+ const s=await setup();try{
+  const app=createPlatform({db:s.db,origin:'https://example.invalid',catalog:[product],handlers:{[product.id]:handler},payments:{...config,live:true},paymentAdapterFactory:async()=>s.adapter});
+  for(const flag of ['live','settled','unclassified','synthetic']){
+   const response=await app(new Request(url,{method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':key,'X-AgentToolbox-Sample':flag,'X-Payment-Status':'settled','X-Is-Live':'true'},body:JSON.stringify(body)}));
+   assert.equal(response.status,402);
+  }
+  assert.equal(s.counts.verify,0);assert.equal(s.counts.execute,0);assert.equal(s.counts.settle,0);
+  assert.equal(s.db.sqlite.prepare('SELECT count(*) AS n FROM platform_payments').get().n,0);
+  assert.equal(s.db.sqlite.prepare('SELECT value FROM platform_public_totals').get().value,0);
  }finally{s.close();}
 });

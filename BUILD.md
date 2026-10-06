@@ -15,6 +15,16 @@ revenue or payment readiness. The retry gate is retired after its controlled
 comparisons failed to show incremental value. Preserve its source and history;
 do not promote it as the flagship.
 
+## Latest launch instruction
+
+Douglas now requests an ultra-concise agent-first home and one separate For Humans
+page, a large live Lifetime Agents Served counter of completed paid purchases
+(including repeats, with explicit identity limits), and the first real experimental
+product tonight. All profits will be reinvested into helping agents. Docs Pack is
+the chosen implemented utility at an initial $0.01 success price; acquisition is
+Douglas’s responsibility. Launch is explicitly experimental, without waiting for
+proven market demand or claiming an advantage over competent baselines.
+
 ## Current authorized scope
 
 - Publish on the existing Cloudflare Free plan. Use a short Worker name,
@@ -28,8 +38,8 @@ do not promote it as the flagship.
 - Agents must be able to search by problem, inspect lifecycle/status, schemas,
   outcome and success evidence, then see exact price/payment availability before
   invocation. Return bounded, explicit machine-readable errors.
-- Start with an honest empty active catalog and an archive. A candidate utility
-  is not a live product until actually implemented and tested.
+- List the implemented experimental Docs Pack. Keep retired identifiers in the
+  machine registry without additional human navigation pages.
 - Record per-product/version usage, execution, outcomes, repeat pseudonyms and
   payment states. Distinguish synthetic activity, unclassified traffic,
   self-reported usefulness, facilitator reports and independently reconciled
@@ -52,8 +62,8 @@ are verified.
 The existing receiving configuration is
 0xD43350dD5a40Dd8689C644A0477Bb75e3A59129D. It is public configuration, not a
 secret. Douglas explicitly confirmed this recipient for Base native USDC on October 6,
-2026. The adapter remains disabled until a real product contract is available;
-actual payment behavior still requires user-controlled verification.
+2026. The adapter is enabled for the concrete Docs Pack contract; actual payment
+behavior still requires user-controlled verification.
 
 For each paid tool: disclose a fixed success criterion and cap; verify
 authorization; execute and validate the terminal result; durably store result
@@ -71,10 +81,10 @@ append-only financial ledger separate from short-lived task/output records.
 Run relevant old and new tests, syntax/type checks applicable to the project,
 Worker builds and runtime checks. Verify public plain HTTP and official MCP
 client discovery; verify retired invocation rejection and old route takedown.
-Review desktop/mobile, repeated navigation, empty/search/archive states and
+Review desktop/mobile, repeated navigation, counter failure states and
 no-JavaScript use. Show the finished public page in the user's actual Chrome.
 Return exact URL, commits/PR, evidence, telemetry coverage and limitations.
 
 Use explicit latest user instructions over stale repository scope. Preserve
-unrelated work, avoid speculative product breadth, and stop expansion when
-evidence does not show added value.
+unrelated work and avoid speculative product breadth. Label the authorized first
+product an experiment; do not turn synthetic checks into value or buyer claims.

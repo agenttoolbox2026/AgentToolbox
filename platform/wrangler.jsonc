@@ -18,7 +18,7 @@
   },
   "vars": {
     "PUBLIC_ORIGIN": "https://agnttoolbx.agenttoolbox2026.workers.dev",
-    "PAYMENTS_MODE": "unavailable",
+    "PAYMENTS_MODE": "x402",
     "PAY_TO_ADDRESS": "0xD43350dD5a40Dd8689C644A0477Bb75e3A59129D",
     "PAYMENT_NETWORK": "eip155:8453",
     "PAYMENT_ASSET": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
@@ -49,5 +49,10 @@
         "period": 60
       }
     }
-  ]
+  ],
+  "triggers": {
+    "crons": [
+      "17 5 * * *"
+    ]
+  }
 }

@@ -12,13 +12,13 @@
       "served_by_colo": "ORD",
       "served_by_primary": true,
       "timings": {
-        "sql_duration_ms": 0.1437
+        "sql_duration_ms": 0.1222
       },
-      "duration": 0.1437,
+      "duration": 0.1222,
       "changes": 0,
       "last_row_id": 0,
       "changed_db": false,
-      "size_after": 90112,
+      "size_after": 110592,
       "rows_read": 0,
       "rows_written": 0,
       "total_attempts": 1
@@ -33,7 +33,7 @@
         "channel": "html",
         "event": "catalog_view",
         "sample_kind": "synthetic",
-        "count": 15,
+        "count": 44,
         "duration_ms": 0
       },
       {
@@ -43,7 +43,7 @@
         "channel": "html",
         "event": "catalog_view",
         "sample_kind": "unclassified",
-        "count": 3,
+        "count": 76,
         "duration_ms": 0
       },
       {
@@ -53,7 +53,17 @@
         "channel": "http",
         "event": "catalog_view",
         "sample_kind": "synthetic",
-        "count": 3,
+        "count": 9,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "_catalog",
+        "version": "1",
+        "channel": "http",
+        "event": "catalog_view",
+        "sample_kind": "unclassified",
+        "count": 5,
         "duration_ms": 0
       },
       {
@@ -63,7 +73,47 @@
         "channel": "mcp",
         "event": "catalog_view",
         "sample_kind": "synthetic",
-        "count": 1,
+        "count": 3,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "docs-pack",
+        "version": "0.1.0",
+        "channel": "http",
+        "event": "invoke_attempt",
+        "sample_kind": "synthetic",
+        "count": 2,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "docs-pack",
+        "version": "0.1.0",
+        "channel": "http",
+        "event": "payment_required",
+        "sample_kind": "synthetic",
+        "count": 2,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "docs-pack",
+        "version": "0.1.0",
+        "channel": "http",
+        "event": "product_view",
+        "sample_kind": "synthetic",
+        "count": 2,
+        "duration_ms": 0
+      },
+      {
+        "day": "2026-10-06",
+        "product_id": "docs-pack",
+        "version": "0.1.0",
+        "channel": "http",
+        "event": "product_view",
+        "sample_kind": "unclassified",
+        "count": 3,
         "duration_ms": 0
       },
       {
@@ -83,7 +133,7 @@
         "channel": "html",
         "event": "product_view",
         "sample_kind": "unclassified",
-        "count": 1,
+        "count": 2,
         "duration_ms": 0
       },
       {
@@ -93,7 +143,7 @@
         "channel": "http",
         "event": "invoke_attempt",
         "sample_kind": "synthetic",
-        "count": 1,
+        "count": 3,
         "duration_ms": 0
       },
       {
@@ -103,7 +153,7 @@
         "channel": "http",
         "event": "product_view",
         "sample_kind": "synthetic",
-        "count": 1,
+        "count": 3,
         "duration_ms": 0
       },
       {
@@ -113,7 +163,7 @@
         "channel": "http",
         "event": "retired_rejected",
         "sample_kind": "synthetic",
-        "count": 1,
+        "count": 3,
         "duration_ms": 0
       },
       {
@@ -123,7 +173,7 @@
         "channel": "mcp",
         "event": "invoke_attempt",
         "sample_kind": "synthetic",
-        "count": 1,
+        "count": 3,
         "duration_ms": 0
       },
       {
@@ -133,7 +183,7 @@
         "channel": "mcp",
         "event": "product_view",
         "sample_kind": "synthetic",
-        "count": 1,
+        "count": 3,
         "duration_ms": 0
       },
       {
@@ -143,7 +193,7 @@
         "channel": "mcp",
         "event": "retired_rejected",
         "sample_kind": "synthetic",
-        "count": 1,
+        "count": 3,
         "duration_ms": 0
       }
     ],
@@ -154,14 +204,14 @@
       "served_by_colo": "ORD",
       "served_by_primary": true,
       "timings": {
-        "sql_duration_ms": 0.2326
+        "sql_duration_ms": 0.2138
       },
-      "duration": 0.2326,
+      "duration": 0.2138,
       "changes": 0,
       "last_row_id": 0,
       "changed_db": false,
-      "size_after": 90112,
-      "rows_read": 12,
+      "size_after": 110592,
+      "rows_read": 17,
       "rows_written": 0,
       "total_attempts": 1
     }
@@ -175,13 +225,13 @@
       "served_by_colo": "ORD",
       "served_by_primary": true,
       "timings": {
-        "sql_duration_ms": 0.123
+        "sql_duration_ms": 0.0937
       },
-      "duration": 0.123,
+      "duration": 0.0937,
       "changes": 0,
       "last_row_id": 0,
       "changed_db": false,
-      "size_after": 90112,
+      "size_after": 110592,
       "rows_read": 2,
       "rows_written": 0,
       "total_attempts": 1
@@ -196,13 +246,13 @@
       "served_by_colo": "ORD",
       "served_by_primary": true,
       "timings": {
-        "sql_duration_ms": 0.111
+        "sql_duration_ms": 0.0964
       },
-      "duration": 0.111,
+      "duration": 0.0964,
       "changes": 0,
       "last_row_id": 0,
       "changed_db": false,
-      "size_after": 90112,
+      "size_after": 110592,
       "rows_read": 2,
       "rows_written": 0,
       "total_attempts": 1
@@ -217,13 +267,13 @@
       "served_by_colo": "ORD",
       "served_by_primary": true,
       "timings": {
-        "sql_duration_ms": 0.0887
+        "sql_duration_ms": 0.0557
       },
-      "duration": 0.0887,
+      "duration": 0.0557,
       "changes": 0,
       "last_row_id": 0,
       "changed_db": false,
-      "size_after": 90112,
+      "size_after": 110592,
       "rows_read": 2,
       "rows_written": 0,
       "total_attempts": 1
@@ -238,13 +288,13 @@
       "served_by_colo": "ORD",
       "served_by_primary": true,
       "timings": {
-        "sql_duration_ms": 0.1208
+        "sql_duration_ms": 0.1083
       },
-      "duration": 0.1208,
+      "duration": 0.1083,
       "changes": 0,
       "last_row_id": 0,
       "changed_db": false,
-      "size_after": 90112,
+      "size_after": 110592,
       "rows_read": 2,
       "rows_written": 0,
       "total_attempts": 1
@@ -263,14 +313,61 @@
       "served_by_colo": "ORD",
       "served_by_primary": true,
       "timings": {
-        "sql_duration_ms": 0.0806
+        "sql_duration_ms": 0.0716
       },
-      "duration": 0.0806,
+      "duration": 0.0716,
       "changes": 0,
       "last_row_id": 0,
       "changed_db": false,
-      "size_after": 90112,
+      "size_after": 110592,
       "rows_read": 0,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "ORD",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.0837
+      },
+      "duration": 0.0837,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 110592,
+      "rows_read": 2,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  },
+  {
+    "results": [
+      {
+        "key": "paid_purchases",
+        "value": 0
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "ENAM",
+      "served_by_colo": "ORD",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.0805
+      },
+      "duration": 0.0805,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 110592,
+      "rows_read": 1,
       "rows_written": 0,
       "total_attempts": 1
     }

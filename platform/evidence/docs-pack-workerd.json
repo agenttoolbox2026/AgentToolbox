@@ -1,0 +1,23 @@
+{
+  "checked_at": "2026-10-06T05:48:14.204Z",
+  "runtime": "local Cloudflare workerd; real external documentation; no payments",
+  "html_fixture": {
+    "passed": true,
+    "excludes_navigation_scripts_hidden_footer": true,
+    "preserves_pre_indentation": true
+  },
+  "markdown": {
+    "urls": [
+      "https://developers.cloudflare.com/workers/platform/limits/index.md",
+      "https://developers.cloudflare.com/workers/platform/pricing/index.md"
+    ],
+    "excerpt_chars": 2392
+  },
+  "html": {
+    "url": "https://docs.python.org/3/library/asyncio-task.html",
+    "source_bytes": 177639,
+    "excerpt_chars": 2395
+  },
+  "all_passed": true,
+  "settlements_attempted": 0
+}

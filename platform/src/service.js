@@ -22,7 +22,7 @@ export function service({db,catalog=products,handlers={},channel='http',sampleKi
       if(!['active','validation'].includes(p.status)) throw new PlatformError(503,'product_unavailable','This product cannot be invoked.');
       if(body.version!==p.version) throw new PlatformError(409,'version_mismatch','Inspect the current product contract before invoking.',{current_version:p.version});
       if(!handlers[id]) throw new PlatformError(503,'product_unavailable','No executable product handler is installed.');
-      if(p.pricing.payments_enabled || p.pricing.amount_atomic>0) throw new PlatformError(503,'payment_not_ready','Payment-backed execution requires a verified product payment adapter.');
+      if(p.pricing.payments_enabled || p.pricing.amount_atomic>0) throw new PlatformError(402,'paid_http_required','Use the product HTTP endpoint with an x402-capable client.',{path:p.invocation?.path??'/v1/products/'+p.id+'/invoke',amount_atomic:p.pricing.amount_atomic,network:p.pricing.network});
       if(!/^[A-Za-z0-9_-]{32,128}$/.test(key??'')) throw new PlatformError(400,'idempotency_key_required','Send an Idempotency-Key of 32–128 letters, digits, underscores or hyphens.');
       const handler=handlers[id], parsed=handler.input.safeParse(body.input);
       if(!parsed.success) throw new PlatformError(400,'invalid_input','Input does not match the product schema.');
@@ -61,14 +61,16 @@ export function service({db,catalog=products,handlers={},channel='http',sampleKi
       }
     },
     async outcome(id,body) {
-      const row=await db.prepare('SELECT * FROM platform_runs WHERE id=? AND expires_at>=?').bind(id,now().toISOString()).first();
+      let row=await db.prepare('SELECT * FROM platform_runs WHERE id=? AND expires_at>=?').bind(id,now().toISOString()).first();
+      let table='platform_runs',idColumn='id';
+      if(!row){row=await db.prepare('SELECT * FROM platform_payments WHERE operation_id=? AND result_expires_at>=?').bind(id,now().toISOString()).first();table='platform_payments';idColumn='operation_id';}
       if(!row) throw new PlatformError(404,'run_not_found','Run is unknown or expired.');
-      if(row.state!=='completed') throw new PlatformError(409,'run_not_completed','Only completed runs accept outcome reports.');
+      if(!['completed','settled'].includes(row.state)) throw new PlatformError(409,'run_not_completed','Only completed runs accept outcome reports.');
       if(row.outcome && row.outcome!==body.outcome) throw new PlatformError(409,'outcome_conflict','An outcome was already reported.');
       if(!row.outcome) {
-        const changed=await db.prepare('UPDATE platform_runs SET outcome=? WHERE id=? AND outcome IS NULL').bind(body.outcome,id).run();
+        const changed=await db.prepare('UPDATE '+table+' SET outcome=? WHERE '+idColumn+'=? AND outcome IS NULL').bind(body.outcome,id).run();
         if(changed.meta.changes) await telemetry(db,{channel,sampleKind:row.sample_kind,now}).record('outcome_'+body.outcome,{id:row.product_id,version:row.version});
-        else { const latest=await db.prepare('SELECT outcome FROM platform_runs WHERE id=?').bind(id).first();if(latest.outcome!==body.outcome) throw new PlatformError(409,'outcome_conflict','An outcome was already reported.'); }
+        else { const latest=await db.prepare('SELECT outcome FROM '+table+' WHERE '+idColumn+'=?').bind(id).first();if(latest.outcome!==body.outcome) throw new PlatformError(409,'outcome_conflict','An outcome was already reported.'); }
       }
       return {run_id:id,outcome:body.outcome,evidence:'caller_reported',payment_effect:'none'};
     },

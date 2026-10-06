@@ -3,6 +3,7 @@ import {ExactEvmScheme} from '@x402/evm/exact/server';
 import {decodePaymentSignatureHeader,encodePaymentRequiredHeader,encodePaymentResponseHeader} from '@x402/core/http';
 import {PlatformError} from './service.js';
 import {hash,telemetry} from './telemetry.js';
+import {expirePaidResults} from './purchases.js';
 export const BASE_NETWORK='eip155:8453';
 export const BASE_USDC='0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 export const FACILITATOR='https://facilitator.payai.network';
@@ -23,10 +24,12 @@ export async function sdkAdapter({payTo,amount,facilitatorClient}){
  return {requirements,
   challenge:resource=>server.createPaymentRequiredResponse([requirements],{url:resource,description:'Validated product outcome',mimeType:'application/json'}),
   verify:payload=>server.verifyPayment(payload,requirements),
-  settle:payload=>server.settlePayment(payload,requirements),
+  // The high-level resource server retries settlement_pending automatically.
+  // Our durable state machine instead requires reconciliation after one call.
+  settle:payload=>client.settle(payload,requirements),
  };
 }
-function validatePayload(payload,requirements,nowSeconds){
+function validatePayload(payload,requirements,nowSeconds,existing=false){
  const a=payload?.payload?.authorization,accepted=payload?.accepted;
  if(payload?.x402Version!==2||!accepted||!a||typeof payload?.payload?.signature!=='string')
   throw new PlatformError(400,'invalid_payment','Use an x402 v2 exact EIP-3009 authorization.');
@@ -39,7 +42,7 @@ function validatePayload(payload,requirements,nowSeconds){
  if(!/^0x[0-9a-fA-F]{40}$/.test(a.from??'')||!/^0x[0-9a-fA-F]{64}$/.test(a.nonce??'')||
     a.to?.toLowerCase()!==requirements.payTo.toLowerCase()||String(a.value)!==requirements.amount||
     !/^\d{1,12}$/.test(String(a.validAfter))||!/^\d{1,12}$/.test(String(a.validBefore))||
-    Number(a.validAfter)>nowSeconds||Number(a.validBefore)<nowSeconds+30||Number(a.validBefore)>nowSeconds+600)
+    (!existing&&(Number(a.validAfter)>nowSeconds||Number(a.validBefore)<nowSeconds+30||Number(a.validBefore)>nowSeconds+600)))
   throw new PlatformError(400,'invalid_authorization','Authorization recipient, amount or validity window is invalid.');
  return a;
 }
@@ -59,6 +62,7 @@ export async function paidInvocation({request,body,key,product,handler,db,config
  const signature=request.headers.get('PAYMENT-SIGNATURE');
  const sampleKind=request.headers.get('X-AgentToolbox-Sample')==='synthetic'?'synthetic':'unclassified';
  const metrics=telemetry(db,{sampleKind,now});
+ await metrics.record('invoke_attempt',product);
  if(!signature){
   const challenge=await adapter.challenge(request.url);await metrics.record('payment_required',product);
   return Response.json({error:{code:'payment_required',message:'Authorize the disclosed amount for this product. Settlement follows validated success.'},payment:challenge},
@@ -66,13 +70,18 @@ export async function paidInvocation({request,body,key,product,handler,db,config
  }
  if(signature.length>12288)throw new PlatformError(413,'payment_header_too_large','Payment header exceeds its bound.');
  let payload;try{payload=decodePaymentSignatureHeader(signature);}catch{throw new PlatformError(400,'invalid_payment','Malformed payment header.');}
- const authorization=validatePayload(payload,adapter.requirements,Math.floor(now().getTime()/1000));
- const fingerprint=await hash(canonical({method:'POST',path:new URL(request.url).pathname,product:product.id,version:product.version,body:{...body,input:input.data},requirements:adapter.requirements,facilitator:FACILITATOR}));
- const paymentDigest=await hash(canonical(payload)),keyHash=await hash(key);
+ const keyHash=await hash(key);
+ await expirePaidResults(db,now());
  const previous=await db.prepare('SELECT * FROM platform_payments WHERE product_id=? AND version=? AND key_hash=?').bind(product.id,product.version,keyHash).first();
+ const authorization=validatePayload(payload,adapter.requirements,Math.floor(now().getTime()/1000),!!previous);
+ const fingerprint=await hash(canonical({method:'POST',path:new URL(request.url).pathname,product:product.id,version:product.version,body:{...body,input:input.data},requirements:adapter.requirements,facilitator:FACILITATOR}));
+ const paymentDigest=await hash(canonical(payload));
  const replay=row=>{
   if(row.fingerprint!==fingerprint||row.payment_digest!==paymentDigest)throw new PlatformError(409,'payment_replay_conflict','This operation is bound to another request or authorization. Do not create a replacement charge.');
-  if(row.state==='settled')return Response.json(JSON.parse(row.result_json),{headers:{'PAYMENT-RESPONSE':encodePaymentResponseHeader(JSON.parse(row.settlement_json))}});
+  if(row.state==='settled'){
+   if(!row.result_json)throw new PlatformError(410,'paid_result_expired','The 24-hour result retention window expired. This purchase will not execute or charge again.',{operation_id:row.operation_id});
+   return Response.json(JSON.parse(row.result_json),{headers:{'PAYMENT-RESPONSE':encodePaymentResponseHeader(JSON.parse(row.settlement_json))}});
+  }
   if(row.state==='failed')throw new PlatformError(422,'outcome_not_met','This operation did not meet its success criterion. No settlement was requested.');
   throw new PlatformError(503,'settlement_unresolved','The operation is in progress or requires reconciliation. Reuse this request; do not issue a new authorization.',{operation_id:row.operation_id});
  };
@@ -81,8 +90,8 @@ export async function paidInvocation({request,body,key,product,handler,db,config
  if(!verified.isValid||verified.payer?.toLowerCase()!==authorization.from.toLowerCase())
   throw new PlatformError(402,'payment_invalid','The facilitator did not verify this authorization.');
  const operationId=crypto.randomUUID(),date=now().toISOString();
- const inserted=await db.prepare(`INSERT OR IGNORE INTO platform_payments(operation_id,product_id,version,key_hash,fingerprint,payment_digest,network,asset,payer,nonce,amount_atomic,receiver,state,created_at,updated_at,sample_kind) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'executing',?,?,?)`)
-  .bind(operationId,product.id,product.version,keyHash,fingerprint,paymentDigest,BASE_NETWORK,BASE_USDC.toLowerCase(),authorization.from.toLowerCase(),authorization.nonce.toLowerCase(),adapter.requirements.amount,config.payTo.toLowerCase(),date,date,sampleKind).run();
+ const inserted=await db.prepare(`INSERT OR IGNORE INTO platform_payments(operation_id,product_id,version,key_hash,fingerprint,payment_digest,network,asset,payer,nonce,amount_atomic,receiver,state,created_at,updated_at,sample_kind,is_live,result_expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'executing',?,?,?,?,?)`)
+  .bind(operationId,product.id,product.version,keyHash,fingerprint,paymentDigest,BASE_NETWORK,BASE_USDC.toLowerCase(),authorization.from.toLowerCase(),authorization.nonce.toLowerCase(),adapter.requirements.amount,config.payTo.toLowerCase(),date,date,sampleKind,config.live===true?1:0,new Date(now().getTime()+86400000).toISOString()).run();
  if(!inserted.meta.changes){
   const row=await db.prepare('SELECT * FROM platform_payments WHERE product_id=? AND version=? AND key_hash=?').bind(product.id,product.version,keyHash).first();
   if(row)return replay(row);
@@ -91,20 +100,21 @@ export async function paidInvocation({request,body,key,product,handler,db,config
  await metrics.record('payment_verified',product);
  const ledger=async(event,amount='0',transaction=null)=>db.prepare('INSERT INTO platform_payment_ledger VALUES(?,?,?,?,?,?,?,?,?,?,?)')
   .bind(crypto.randomUUID(),operationId,product.id,product.version,event,BASE_NETWORK,BASE_USDC,amount,transaction,sampleKind,now().toISOString()).run();
- let output;
+ let output;const executionStarted=Date.now();
  try{
   const result=await handler.run(input.data),checked=handler.output.safeParse(result);
   if(!checked.success||!await handler.success(checked.data))throw new Error('criterion');
   output={api_version:'1',operation_id:operationId,product_id:product.id,version:product.version,execution:'completed',evidence:'server_validated',output:checked.data};
   if(new TextEncoder().encode(JSON.stringify(output)).length>16384)throw new Error('output_bound');
- }catch{
+ }catch(e){
   await db.prepare("UPDATE platform_payments SET state='failed',updated_at=? WHERE operation_id=?").bind(now().toISOString(),operationId).run();
-  await ledger('outcome_failed');await metrics.record('execution_failure',product);
-  throw new PlatformError(422,'outcome_not_met','The disclosed outcome was not met. No settlement was requested.');
+  await ledger('outcome_failed');await metrics.record('execution_failure',product,Date.now()-executionStarted);
+  const reason=handler.failureReason?.(e);
+  throw new PlatformError(422,'outcome_not_met','The disclosed outcome was not met. No settlement was requested.',reason?{reason}:{});
  }
  // Durable output and intent must succeed before the only settlement call.
  await db.prepare("UPDATE platform_payments SET state='outcome_ready',result_json=?,updated_at=? WHERE operation_id=?").bind(JSON.stringify(output),now().toISOString(),operationId).run();
- await ledger('outcome_validated');await metrics.record('execution_success',product);
+ await ledger('outcome_validated');await metrics.record('execution_success',product,Date.now()-executionStarted);
  const claim=await db.prepare("UPDATE platform_payments SET state='settling',updated_at=? WHERE operation_id=? AND state='outcome_ready'").bind(now().toISOString(),operationId).run();
  if(!claim.meta.changes)throw new PlatformError(503,'settlement_unresolved','Settlement state changed; reconciliation is required.');
  await ledger('settlement_intent');
@@ -121,10 +131,13 @@ export async function paidInvocation({request,body,key,product,handler,db,config
   throw new PlatformError(503,'settlement_unresolved','Payment was not confirmed. No output release or new authorization; reconcile this operation.');
  }
  output.payment={status:'facilitator_confirmed',network:BASE_NETWORK,asset:BASE_USDC,amount_settled_atomic:adapter.requirements.amount,transaction:receipt.transaction,onchain_reconciled:false};
+ output.outcome_url='/v1/runs/'+operationId+'/outcome';
+ output.result_expires_at=new Date(Date.parse(date)+86400000).toISOString();
  // Ledger before settled state. Failure here leaves settling, so replay cannot expose output or charge again.
  await ledger('settlement_reported',adapter.requirements.amount,receipt.transaction);
- await db.prepare("UPDATE platform_payments SET state='settled',result_json=?,settlement_json=?,updated_at=? WHERE operation_id=? AND state='settling'")
+ const completed=await db.prepare("UPDATE platform_payments SET state='settled',result_json=?,settlement_json=?,updated_at=? WHERE operation_id=? AND state='settling'")
   .bind(JSON.stringify(output),JSON.stringify(receipt),now().toISOString(),operationId).run();
+ if(completed.meta.changes!==1)throw new PlatformError(503,'settlement_unresolved','Payment state needs reconciliation. Do not submit another authorization.',{operation_id:operationId});
  await metrics.record('payment_settled',product);
  return Response.json(output,{headers:{'PAYMENT-RESPONSE':encodePaymentResponseHeader(receipt)}});
 }

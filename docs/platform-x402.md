@@ -58,18 +58,19 @@ Current protocol/source references:
 - [Payment identifiers](https://docs.x402.org/extensions/payment-identifier)
 - [PayAI Base merchant guide](https://docs.payai.network/x402/base-mainnet-express)
 
-## Launch blockers
+## Experimental launch and remaining verification
 
-Production has zero active products and payments unavailable. The adapter is
-implemented but cannot be reached for a live product.
+Docs Pack 0.1.0 is active at $0.01 USDC per successful whole pack. The owner-confirmed
+receiver is 0xD43350dD5a40Dd8689C644A0477Bb75e3A59129D on Base native USDC.
+Results have 24-hour logical retention, with daily/opportunistic physical cleanup;
+financial receipts and replay tombstones persist. Paid usefulness reports are
+idempotent self-reports and cannot trigger or reverse payments.
 
-The prior brief supplied receiving address
-0xD43350dD5a40Dd8689C644A0477Bb75e3A59129D; Douglas explicitly confirmed this recipient for Base native USDC on October 6,
-2026. The exact destination/network are configured with execution disabled.
-Activation requires a useful tested product with a concrete success rule, bounded
-paid-result retention, and user-controlled live payment
-verification including independent transaction/ledger reconciliation.
+The adapter uses the official facilitator client's single settle call directly.
+The high-level resource server's settlement_pending automatic retry is not used.
+A regression test verifies one call and unresolved state even for that response.
 
-No private keys, wallet signatures, real POST /settle calls, payments, refunds or
-on-chain transfers were made by the implementation agent. No organic discovery,
-paid customer, repeat paid call or revenue is claimed.
+Actual payment behavior still requires a user-controlled live test and independent
+transaction/receiver/ledger reconciliation. No private keys, wallet signatures,
+real POST /settle calls, payments, refunds or on-chain transfers were made by the
+implementation agent. No paid customer, repeat paid call or revenue is claimed.
