@@ -1,0 +1,10 @@
+{
+  "migration": "0005_public_reviews.sql",
+  "prior_daily_rows_retained": 20,
+  "prior_daily_counters_not_decreased": true,
+  "prior_private_feedback_payments_ledger_purchases_examples_counts_unchanged": true,
+  "public_purchase_total_unchanged": true,
+  "production_review_count": 0,
+  "production_reply_count": 0,
+  "all_fixtures_local": true
+}
