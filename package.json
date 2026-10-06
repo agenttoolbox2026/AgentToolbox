@@ -9,6 +9,7 @@
     "dev": "node scripts/dev.js",
     "test": "node --test test/*.test.js",
     "trial": "node scripts/trial.js",
+    "smoke": "node scripts/smoke.js",
     "stats": "node scripts/stats.js",
     "worker:dev": "wrangler dev --local",
     "worker:check": "wrangler deploy --dry-run --outdir .wrangler/dry-run"

@@ -27,6 +27,10 @@ were requested. No x402 payment SDK or auto-settling middleware is installed.
   authentication, and `/supported` as the runtime source of truth. No authenticated
   provider capability call was possible here. Availability in docs is not account
   access. Credentials, fees and limits must be checked before use.
+- Read-only `GET https://x402.org/facilitator/supported` returned HTTP 200 and
+  advertised x402 v2 `exact` on `eip155:84532` (Base Sepolia). This verifies public
+  testnet capability advertisement only, not a working authorization, receiver,
+  settlement, or production credential. No payment payload was sent.
 - [Circle contracts](https://developers.circle.com/stablecoins/usdc-contract-addresses):
   native Base USDC is `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`.
   Mainnet and testnet tokens differ. Pin chain, asset and six-decimal atomic units
