@@ -89,6 +89,10 @@ client to `http://127.0.0.1:8787/mcp`; the five tool descriptions explain the fl
   reset; they are separate from learning records. UPDATE/DELETE is rejected by SQL
   triggers; corrections must be new events. Database administrators can change the
   schema, so this is application enforcement, not tamper-proof storage.
+- Non-identifying UTC daily usage counters survive expiry, starting when migration
+  0002 is applied, without historical backfill. They measure event volume, not
+  unique customers or caller retention. See [remote reporting](docs/production-reporting.md)
+  for read-only D1 aggregate queries; `pnpm stats` remains local only.
 - Amounts are integer USDC atomic units. Dev schema/code enforces zero charges and
   prevents live revenue records. Costs remain unmeasured; latency is only a proxy.
   Optional reported savings and operator effort are not independent observations.

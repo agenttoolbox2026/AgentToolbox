@@ -23,12 +23,18 @@ export function stats(db, now = Date.now()) {
     reported_retry_attempts: rows.filter(r => r.result_json).length,
     recovery_times_ms: rows.filter(r => r.result_ms).map(r => r.result_ms - r.created_ms),
     decision_latency_ms: rows.map(r => r.latency_ms),
+    decision_latency_scope: 'validation, hashing and rules only; excludes database and receipt work',
     helpful: rows.filter(r => r.helpful === 1).length,
     reported_operator_effort_ms: rows.reduce((n, r) => n + (r.operator_effort_ms ?? 0), 0),
     reported_savings: sums, savings_independently_verified: false,
     cost_to_serve_usdc_atomic: null, cost_status: 'unmeasured; decision latency is only a proxy',
     settled_usdc_atomic: 0, mainnet_revenue_usdc_atomic: 0,
     ledger_events: db.sqlite.prepare('SELECT COUNT(*) AS n FROM payment_events').get().n,
+    durable_usage: {
+      coverage: db.sqlite.prepare('SELECT started_at FROM usage_coverage WHERE id=1').get().started_at,
+      meaning: 'UTC event-day counts since migration; no historical backfill, caller retention or unique-user counts',
+      days: db.sqlite.prepare('SELECT * FROM daily_usage ORDER BY day').all(),
+    },
   };
 }
 if (process.argv[1] && import.meta.url === new URL(process.argv[1], 'file:').href) {
