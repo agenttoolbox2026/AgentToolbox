@@ -1,0 +1,53 @@
+{
+  "checked_at": "2026-10-06T18:53:56.197Z",
+  "version": "0483e025-b62e-4602-9b27-22262afdde68",
+  "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200
+    },
+    {
+      "path": "/humans",
+      "status": 200
+    },
+    {
+      "path": "/closeout-missing",
+      "status": 404
+    },
+    {
+      "path": "/admin",
+      "status": 404
+    },
+    {
+      "path": "/admin/api/overview",
+      "status": 404
+    },
+    {
+      "path": "/admin.js",
+      "status": 404
+    },
+    {
+      "path": "/admin.css",
+      "status": 404
+    },
+    {
+      "path": "/health",
+      "status": 200
+    },
+    {
+      "path": "/v1/stats",
+      "status": 200
+    },
+    {
+      "path": "/llms.txt",
+      "status": 200
+    },
+    {
+      "path": "/openapi.json",
+      "status": 200
+    }
+  ],
+  "no_paid_operations": true,
+  "all_passed": true
+}

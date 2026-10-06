@@ -55,7 +55,8 @@ test('request and method bounds; private operations have no public dashboard',as
   assert.equal((await request('/v1/products/retry-gate/invoke',{method:'POST',body:'{}'})).status,415);
   assert.equal((await request('/v1/products/retry-gate/invoke',post({extra:'x'.repeat(20000)}))).status,413);
   assert.equal((await request('/mcp')).status,405);
-  for(const path of ['/admin','/metrics','/v1/recover','/v1/runs/not-a-run/outcome'])assert.equal((await request(path)).status,404);
+  assert.equal((await request('/admin')).status,404);
+  for(const path of ['/metrics','/v1/recover','/v1/runs/not-a-run/outcome'])assert.equal((await request(path)).status,404);
   const head=await request('/',{method:'HEAD'});assert.equal(await head.text(),'');
   assert.equal((await request('/v1/products',{method:'OPTIONS'})).status,204);
  }finally{close();}
@@ -110,7 +111,7 @@ test('official MCP SDK discovers active paid HTTP contract and retired stop',asy
  const run=await start({port:0});const client=new Client({name:'platform-smoke',version:'1'},{capabilities:{}});
  try{
   await client.connect(new StreamableHTTPClientTransport(new URL(run.origin+'/mcp'),{requestInit:{headers:{'X-AgentToolbox-Sample':'synthetic'}}}));
-  const tools=await client.listTools();assert.deepEqual(tools.tools.map(t=>t.name).sort(),['get_product','invoke_product','list_products','report_outcome']);
+   const tools=await client.listTools();assert.deepEqual(tools.tools.map(t=>t.name).sort(),['get_product','invoke_product','leave_feedback','list_products','report_outcome']);
   const list=await client.callTool({name:'list_products',arguments:{}});assert.deepEqual(list.structuredContent.products.map(p=>p.id),['docs-pack']);
   const paid=await client.callTool({name:'invoke_product',arguments:{product_id:'docs-pack',version:'0.1.0',input:{},max_charge_usdc_atomic:10000,idempotency_key:'mcp_paid_abcdefghijklmnopqrstuvwxyz'}});assert.equal(paid.isError,true);assert.match(paid.content[0].text,/paid_http_required/);
   const detail=await client.callTool({name:'get_product',arguments:{product_id:'retry-gate'}});assert.equal(detail.structuredContent.product.status,'retired');

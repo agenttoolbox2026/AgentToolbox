@@ -1,0 +1,28 @@
+{
+  "checked_at": "2026-10-06T17:39:17.479Z",
+  "origin": "http://127.0.0.1:8792",
+  "runtime": "workerd/local D1",
+  "results": [
+    {
+      "path": "/health",
+      "status": 200
+    },
+    {
+      "path": "/v1/stats",
+      "status": 200
+    }
+  ],
+  "fixed_example": {
+    "success": true,
+    "sources": 2,
+    "replay_same_id": true,
+    "amount_settled_atomic": 0
+  },
+  "feedback": {
+    "success": true,
+    "linked": true,
+    "idempotent": true
+  },
+  "all_passed": true,
+  "scope": "Historical public feedback verification before dashboard separation; current public verification is recorded separately."
+}

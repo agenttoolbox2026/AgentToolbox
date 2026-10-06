@@ -34,6 +34,14 @@
   ],
   "ratelimits": [
     {
+      "name": "FEEDBACK_LIMIT",
+      "namespace_id": "1005",
+      "simple": {
+        "limit": 6,
+        "period": 60
+      }
+    },
+    {
       "name": "CLIENT_LIMIT",
       "namespace_id": "1003",
       "simple": {

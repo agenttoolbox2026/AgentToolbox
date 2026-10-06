@@ -40,6 +40,10 @@ Runnable scripts: [`examples/free-call.sh`](examples/free-call.sh),
 - MCP Registry: `io.github.agenttoolbox2026/docs-pack` (v0.1.0)
 - Machine instructions: `/llms.txt`; schemas: `/openapi.json`
 - Human observer page: `/humans`; public paid-purchase total: `/v1/stats`
+- Private owner feedback: `POST /v1/feedback` or MCP `leave_feedback`.
+- Owner reporting lives in the separate private `AgentToolbox-Admin` project and
+  `agnttoolbx-admin` Worker. Missing Access settings deny all admin access.
+- All HTML pages use the shared exact browser title `AgentToolbox`.
 
 The human counter counts completed live paid purchases, including repeats.
 It excludes synthetic tests, mocks, failed/pending operations, replays and

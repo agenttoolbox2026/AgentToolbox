@@ -1,0 +1,39 @@
+{
+  "checked_at": "2026-10-06T18:52:02.806Z",
+  "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
+  "public_run": true,
+  "results": [
+    {
+      "width": 1440,
+      "exact_browser_titles": true,
+      "feedback_ui": true,
+      "navigation_reload": true,
+      "feedback_replay": true,
+      "dashboard": "former dashboard routes/assets absent",
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "width": 390,
+      "exact_browser_titles": true,
+      "feedback_ui": true,
+      "navigation_reload": true,
+      "feedback_replay": false,
+      "dashboard": "former dashboard routes/assets absent",
+      "horizontal_overflow": false,
+      "page_errors": []
+    },
+    {
+      "width": 320,
+      "exact_browser_titles": true,
+      "feedback_ui": true,
+      "navigation_reload": true,
+      "feedback_replay": false,
+      "dashboard": "former dashboard routes/assets absent",
+      "horizontal_overflow": false,
+      "page_errors": []
+    }
+  ],
+  "no_javascript_feedback_discovery": true,
+  "all_passed": true
+}

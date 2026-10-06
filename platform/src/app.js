@@ -5,6 +5,7 @@ import {publicPurchases} from './purchases.js';
 import {markdown,openapi} from './discovery.js';
 import {mcp} from './mcp.js';
 import {paidInvocation} from './x402.js';
+import {runExample} from './examples.js';
 const HEADERS={
  'Access-Control-Allow-Origin':'*',
  'Access-Control-Allow-Methods':'GET,HEAD,POST,OPTIONS',
@@ -27,7 +28,7 @@ async function jsonBody(request) {
 }
 function validate(schema,value) {const parsed=schema.safeParse(value);if(!parsed.success)throw new PlatformError(400,'invalid_input','Request does not match the published schema.');return parsed.data;}
 function html(content,status=200){return new Response(content,{status,headers:{'Content-Type':'text/html; charset=utf-8'}});}
-export function createPlatform({db,origin,catalog=products,handlers={},limit=async()=>true,assets,payments={enabled:false},paymentAdapterFactory}) {
+export function createPlatform({db,origin,catalog=products,handlers={},limit=async()=>true,feedbackLimit=async()=>true,assets,payments={enabled:false},paymentAdapterFactory}) {
  return async function app(request,client='unknown') {
   const url=new URL(request.url),path=url.pathname,method=request.method;
   const isHead=method==='HEAD';
@@ -37,15 +38,17 @@ export function createPlatform({db,origin,catalog=products,handlers={},limit=asy
     return new Response(isHead?null:response.body,{status:response.status,headers});
   };
   try{
+    if(path==='/admin'||path.startsWith('/admin/'))throw new PlatformError(404,'not_found','No public resource at this path.');
     if(method==='OPTIONS')return finish(new Response(null,{status:204}));
     if(!await limit(client))throw new PlatformError(429,'rate_limited','Wait before retrying.');
     if(path==='/health' && ['GET','HEAD'].includes(method))return finish(Response.json({ok:true,service:'agenttoolbox',api_version:'1'}));
-    if(path.startsWith('/agenttoolbox-icon')||path==='/style.css'||path==='/site.js') {
+    if(path.startsWith('/agenttoolbox-icon')||['/style.css','/site.js'].includes(path)) {
       if(!['GET','HEAD'].includes(method))throw new PlatformError(405,'method_not_allowed','Use GET.');
       return finish(assets?await assets.fetch(request):new Response(null,{status:404}));
     }
     const channel=path==='/mcp'?'mcp':(path.startsWith('/v1')||path==='/openapi.json'||path==='/llms.txt'||request.headers.get('Accept')?.includes('application/json')?'http':'html');
-    const api=service({db,catalog,handlers,channel,sampleKind:request.headers.get('X-AgentToolbox-Sample')==='synthetic'?'synthetic':'unclassified'});
+    const sampleKind=request.headers.get('X-AgentToolbox-Sample')==='synthetic'?'synthetic':'unclassified';
+    const api=service({db,catalog,handlers,channel,sampleKind,feedbackAllowed:()=>feedbackLimit(client)});
     if(path==='/mcp') {
       if(method!=='POST')throw new PlatformError(405,'method_not_allowed','MCP uses POST.');
       if(request.headers.has('Origin')&&request.headers.get('Origin')!==origin)throw new PlatformError(403,'origin_not_allowed','Use the catalog origin.');
@@ -59,11 +62,8 @@ export function createPlatform({db,origin,catalog=products,handlers={},limit=asy
       if(path==='/v1/products/docs-pack/example'){
         const product=findProduct('docs-pack',catalog),handler=handlers['docs-pack'];
         if(!product||!handler)throw new PlatformError(503,'example_unavailable','Example is unavailable.');
-        // Fixed public input only: exercises the deployed implementation without
-        // accepting a payment, arbitrary free workloads, or creating purchases.
-        const output=await handler.run(handler.input.parse(product.example_input));
-        if(!handler.output.safeParse(output).success||!await handler.success(output))throw new PlatformError(422,'example_unavailable','Example did not meet its contract.');
-        return finish(Response.json({example:true,payment:{status:'not_required',amount_settled_atomic:0},output}));
+        if(isHead)return finish(Response.json({example:true}));
+        return finish(Response.json(await runExample({db,product,handler,key:request.headers.get('Idempotency-Key'),sampleKind})));
       }
       if(path==='/humans'){
         let stats;try{stats=await publicPurchases(db);}catch{stats=null;}
@@ -82,6 +82,7 @@ export function createPlatform({db,origin,catalog=products,handlers={},limit=asy
       return finish(html(notFoundPage(),404));
     }
     if(method==='POST') {
+      if(path==='/v1/feedback')return finish(Response.json(await api.feedback(await jsonBody(request),request.headers.get('Idempotency-Key'))));
       const invoke=path.match(/^\/v1\/products\/([a-z0-9-]{1,64})\/invoke$/);
       if(invoke) {const body=validate(invokeSchema,await jsonBody(request));const product=findProduct(invoke[1],catalog);
         if(product && ['active','validation'].includes(product.status) && product.pricing.payments_enabled) return finish(await paidInvocation({request,body,key:request.headers.get('Idempotency-Key'),product,handler:handlers[product.id],db,config:payments,adapterFactory:paymentAdapterFactory}));

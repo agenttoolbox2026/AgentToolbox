@@ -10,8 +10,8 @@ New D1 database: agnttoolbx-metrics,
 6b3da390-f6c4-4013-a0c6-cbf7b0170cca, region ENAM.
 
 The existing Free plan and existing scoped Wrangler access are used. No domain
-purchase or paid service. Two per-location rate bindings: 60 requests/client/min,
-300 requests/service/min. These are abuse controls, not global billing caps.
+purchase or paid service. Three per-location rate bindings: 60 requests/client/min,
+300 requests/service/min and six feedback submissions/client/min. These are abuse controls, not global billing caps.
 Static assets use Cloudflare's direct asset serving; dynamic requests go through
 the Worker. Preview URLs and automatic request logs remain disabled; no payload
 logging or new tracing retention was introduced. Free quota exhaustion fails
@@ -106,3 +106,20 @@ the same payer do increment. The counter follows the durable facilitator-confirm
 settlement record, not independently reconciled on-chain revenue. It does not
 verify agent identity. UI refreshes every 30 seconds while visible, retaining the
 last verified value on failure instead of inventing a zero.
+
+## Feedback and owner reporting separation
+
+Public feedback capture and fixed-example metadata are in migration 0004. The
+migration was applied once and keeps prior records/counters; earlier example
+activity is unknown. The separate admin Worker binds the same D1 database and
+performs read-only reporting. Its UI, analytics queries and authentication source
+belong in the private AgentToolbox-Admin repository, never this public repository.
+Public `/admin` routes and former dashboard assets return 404 after separation.
+
+Cloudflare Workers analytics can be queried read-only with the existing access.
+Its request count includes APIs, bots and checks, and is not a visitor count.
+D1 home catalog events are render requests, including repeats, not verified
+page views or unique visitors. Referrers and campaign attribution are unavailable.
+
+All public pages and future pages using the shared shell have the exact HTML
+browser title `AgentToolbox`; visible headings/navigation retain their purpose.
