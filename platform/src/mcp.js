@@ -1,3 +1,4 @@
+import {registerCreatorPayoutTools} from './creator-payout-api.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { z } from 'zod';
@@ -12,6 +13,7 @@ export async function mcp(request,api,parsedBody) {
     try {const data=await fn(input);return {content:[{type:'text',text:JSON.stringify(data)}],structuredContent:data};}
     catch(e) {return {isError:true,content:[{type:'text',text:JSON.stringify({error:{code:e instanceof PlatformError?e.code:'internal_error',message:e instanceof PlatformError?e.message:'Request failed.',...(e instanceof PlatformError?{details:e.details}:{})}})}]};}
   });
+  registerCreatorPayoutTools(register,api);
   register('list_products','Find tools by problem keywords. Default active only. An empty list means no matching callable tools; status retired/all is for history.',searchSchema,p=>api.list(p),true);
   register('get_product','Inspect a stable product ID: status, version, success criterion, input/output schemas and exact payment availability.',z.strictObject({product_id:z.string().min(1).max(64)}),p=>api.detail(p.product_id),true);
   register('get_creator_terms','Read frozen creator submission terms and bounds. 0.50 USDC list fee, 100% off now, no fee charged. Approval earns 90% lifetime gross revenue; publishing, adapter installation and transfers require separate review.',z.strictObject({}),()=>api.creatorTerms(),true);
