@@ -6,6 +6,7 @@ import {submitFeedback} from './feedback.js';
 import {listReviews,readReview,listReplies,submitReview,submitReply} from './reviews.js';
 import {successContractPin} from './contract-pins.js';
 import {referralCodeSchema} from './referral-schema.js';
+import {creatorBeneficiary} from './submissions.js';
 export class PlatformError extends Error {
   constructor(status,code,message,details={}) { super(message); this.status=status;this.code=code;this.details=details; }
 }
@@ -58,12 +59,14 @@ export function service({db,catalog=products,handlers={},channel='http',sampleKi
       if(prior) return replay(prior);
       if(body.payment_requirements_sha256)throw new PlatformError(400,'payment_not_required','This free invocation has no PaymentRequirements object to pin.');
       const successPin=await successContractPin(p);assertContractPins(body,{success_contract_sha256:successPin.sha256});
+      await creatorBeneficiary(db,p,handler);
       const callerHash=trackingEnabled&&body.agent_id?await hash(body.agent_id):null;
       const inserted=await db.prepare(`INSERT OR IGNORE INTO platform_runs(id,product_id,version,idempotency_hash,input_hash,caller_hash,created_at,expires_at,state,sample_kind) VALUES(?,?,?,?,?,?,?,?,'running',?)`)
         .bind(runId,p.id,p.version,keyHash,inputHash,callerHash,date,new Date(now().getTime()+86400000).toISOString(),sampleKind).run();
       if(!inserted.meta.changes) return replay(await db.prepare('SELECT * FROM platform_runs WHERE product_id=? AND version=? AND idempotency_hash=?').bind(p.id,p.version,keyHash).first());
       const started=Date.now();
       try {
+        await creatorBeneficiary(db,p,handler);
         const output=await handler.run(parsed.data);
         const checked=handler.output.safeParse(output);
         if(!checked.success || !(await handler.success(checked.data))) throw new PlatformError(422,'outcome_not_met','The product success criterion was not met. No charge.');
