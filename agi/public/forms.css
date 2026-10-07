@@ -1,71 +1,97 @@
 @charset "UTF-8";
 /* Operational pages share the agent document typography. These rules do not
    reveal hidden controls or change any field's behavior. */
-.workflow-document{padding-bottom:25.5px}
+.workflow-document{padding-bottom:24px}
 .workflow-document :where(.workflow,.reviews,.feedback,.retry-request,.review-card,.reply,form,fieldset){min-width:0;max-width:100%}
 .workflow-document :where(.workflow,.reviews){margin:0;padding:0}
 .workflow-document h1::before{content:"# "}
 .workflow-document h2::before{content:"## "}
 .workflow-document h3::before{content:"### "}
-.workflow-document :where(.workflow,.reviews)>a:first-child{display:inline-block;margin-bottom:25.5px}
+.workflow-document :where(.workflow,.reviews)>a:first-child{display:inline-block;margin-bottom:24px}
 .workflow-document :where(.workflow,.reviews)>a:first-child+h1{margin-top:0}
 .workflow-document :where(.footnote,.feedback-api,.review-meta small,.review-aggregates small){font-size:13px;line-height:1.7;color:#b3b7be}
-.workflow-document :where(.feedback,.retry-request){margin:25.5px 0}
-.workflow-document details>summary{width:fit-content;max-width:100%;cursor:pointer;color:#8ab4f8;text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere}
-.workflow-document details[open]>summary{margin-bottom:17px}
-.workflow-document details>summary:hover{color:#c3d9fb}
-.workflow-document details :where(label,form){margin-top:17px}
-.workflow-document form{display:grid;gap:17px;margin:25.5px 0}
+.workflow-document :where(.feedback,.retry-request){margin:24px 0}
+.workflow-document details>summary{width:fit-content;max-width:100%;cursor:pointer;color:var(--link);text-decoration:underline;text-underline-offset:2px;overflow-wrap:anywhere}
+.workflow-document details[open]>summary{margin-bottom:16px}
+.workflow-document details>summary:hover{color:var(--link-hover)}
+.workflow-document details :where(label,form){margin-top:16px}
+.workflow-document form{display:grid;gap:16px;margin:24px 0}
 .workflow-document form :where(p,pre,details,label,form){margin-top:0;margin-bottom:0}
 .workflow-document label{display:grid;gap:6px;line-height:1.7;min-width:0;max-width:100%}
-.workflow-document fieldset{display:grid;gap:17px;border:0;padding:0;margin:0;min-inline-size:0}
-.workflow-document legend{color:#8ab4f8;font-weight:700;padding:0;margin-bottom:17px;max-width:100%;overflow-wrap:anywhere}
+.workflow-document fieldset{display:grid;gap:16px;border:0;padding:0;margin:0;min-inline-size:0}
+.workflow-document legend{color:var(--link);font-weight:700;padding:0;margin-bottom:16px;max-width:100%;overflow-wrap:anywhere}
 .workflow-document legend::before{content:"## "}
-.workflow-document :where(input,textarea,select,button){font:inherit;line-height:1.6;color:#e8eaed;border:1px solid #5f6368;border-radius:0;box-shadow:none;background:transparent;max-width:100%;min-width:0}
+.workflow-document :where(input,textarea,select,button){font:inherit;line-height:1.6;color:var(--text);border:1px solid var(--field-line);border-radius:0;box-shadow:none;background:transparent;max-width:100%;min-width:0}
 .workflow-document :where(input,textarea,select){width:100%;padding:8px 10px}
 .workflow-document textarea{display:block;resize:vertical;white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2}
-.workflow-document input::placeholder,.workflow-document textarea::placeholder{color:#9aa0a6;opacity:1}
+.workflow-document input::placeholder,.workflow-document textarea::placeholder{color:var(--muted);opacity:1}
 .workflow-document input[readonly]{color:#b3b7be;border-style:dashed}
-.workflow-document select option{background:#101112;color:#e8eaed}
-.workflow-document button{width:fit-content;min-height:40px;padding:7px 12px;cursor:pointer;white-space:normal;overflow-wrap:anywhere;text-align:left}
-.workflow-document button:hover{border-color:#8ab4f8;color:#8ab4f8}
-.workflow-document button:disabled{cursor:wait;color:#9aa0a6;border-color:#5f6368}
-.workflow-document :where(input,textarea,select,button,summary):focus-visible{outline:2px solid #fdd663;outline-offset:4px}
+.workflow-document select option{background:var(--canvas);color:var(--text)}
+.workflow-document button{width:fit-content;min-height:44px;padding:7px 12px;cursor:pointer;white-space:normal;overflow-wrap:anywhere;text-align:left}
+.workflow-document button:hover{border-color:var(--link);color:var(--link)}
+.workflow-document button:disabled{cursor:wait;color:var(--muted);border-color:#5f6368}
+.workflow-document :where(input,textarea,select,button,summary):focus-visible{outline:2px solid var(--focus);outline-offset:4px}
 .workflow-document .workflow-actions{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px}
-.workflow-document .feedback-fields{display:flex;flex-wrap:wrap;gap:17px}
+.workflow-document .feedback-fields{display:flex;flex-wrap:wrap;gap:16px}
 .workflow-document .feedback-fields>label{flex:1 1 150px}
 .workflow-document .feedback-fields>.reference-field{flex-grow:2}
 .workflow-document .public-consent{display:flex;align-items:flex-start;gap:10px}
-.workflow-document input[type="checkbox"]{width:16px;height:16px;flex:none;margin:5px 0 0;padding:0;accent-color:#8ab4f8}
-.workflow-document [role="status"]{color:#e3c66f;overflow-wrap:anywhere}
+.workflow-document input[type="checkbox"]{width:16px;height:16px;flex:none;margin:5px 0 0;padding:0;accent-color:var(--link)}
+.workflow-document [role="status"]{color:var(--quote);overflow-wrap:anywhere}
 .workflow-document [role="status"]:empty{display:none}
-.workflow-document .workflow-result{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;tab-size:2;color:#81c9b4;margin:0}
-.workflow-document noscript{display:block;color:#e3c66f;font-size:13px;line-height:1.7}
-.workflow-document .review-aggregates{display:grid;gap:12px;margin:25.5px 0}
+.workflow-document .workflow-result{max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal;tab-size:2;color:var(--code);margin:0}
+.workflow-document noscript{display:block;color:var(--quote);font-size:13px;line-height:1.7}
+.workflow-document .review-aggregates{display:grid;gap:12px;margin:24px 0}
 .workflow-document .review-aggregates>div{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px;min-width:0}
-.workflow-document .review-card{border:0;border-bottom:1px solid #3c4043;background:none;border-radius:0;padding:0 0 25.5px;margin:25.5px 0}
+.workflow-document .review-card{border:0;border-bottom:1px solid var(--line);background:none;border-radius:0;padding:0 0 24px;margin:24px 0}
 .workflow-document .review-meta{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px;min-width:0}
 .workflow-document .review-meta :where(strong,span,small,a){max-width:100%;overflow-wrap:anywhere}
-.workflow-document .review-text{white-space:pre-wrap;overflow-wrap:anywhere;margin:17px 0}
-.workflow-document .badge{font:inherit;font-size:13px;color:#e3c66f;background:none;border:0;border-radius:0;padding:0;white-space:normal;overflow-wrap:anywhere}
+.workflow-document .review-text{white-space:pre-wrap;overflow-wrap:anywhere;margin:16px 0}
+.workflow-document .badge{font:inherit;font-size:13px;color:var(--quote);background:none;border:0;border-radius:0;padding:0;white-space:normal;overflow-wrap:anywhere}
 .workflow-document .badge::before{content:"["}
 .workflow-document .badge::after{content:"]"}
-.workflow-document .review-meta button{font-size:13px;min-height:34px;padding:3px 8px}
+.workflow-document .review-meta button{font-size:13px;min-height:44px;padding:7px 10px}
 .workflow-document .reply{padding-left:0;border-left:0}
 .workflow-document .reply-target{color:#b3b7be}
-.workflow-document .more-reviews{display:inline-block;margin-bottom:25.5px}
-.workflow-footer nav{display:flex;flex-wrap:wrap;gap:8px 20px;margin-bottom:17px;font-size:13px}
+.workflow-document .more-reviews{display:inline-block;margin-bottom:24px}
+.workflow-footer nav{display:flex;flex-wrap:wrap;gap:8px 20px;margin-bottom:16px;font-size:13px}
 .workflow-footer p{margin:0}
-.document .catalog-search{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin:25.5px 0}
+.document .catalog-search{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px;margin:24px 0}
 .document .catalog-search label{display:grid;gap:6px;min-width:0;flex:1 1 220px}
-.document .catalog-search :where(input,button){font:inherit;line-height:1.6;color:#e8eaed;background:transparent;border:1px solid #5f6368;border-radius:0;box-shadow:none;max-width:100%;min-width:0;min-height:40px;padding:7px 10px}
+.document .catalog-search :where(input,button){font:inherit;line-height:1.6;color:var(--text);background:transparent;border:1px solid var(--field-line);border-radius:0;box-shadow:none;max-width:100%;min-width:0;min-height:44px;padding:7px 10px}
 .document .catalog-search input{width:100%}
-.document .catalog-search input::placeholder{color:#9aa0a6;opacity:1}
+.document .catalog-search input::placeholder{color:var(--muted);opacity:1}
 .document .catalog-search button{width:fit-content;cursor:pointer;white-space:normal;overflow-wrap:anywhere}
-.document .catalog-search button:hover{border-color:#8ab4f8;color:#8ab4f8}
-.document .catalog-search :where(input,button):focus-visible{outline:2px solid #fdd663;outline-offset:4px}
+.document .catalog-search button:hover{border-color:var(--link);color:var(--link)}
+.document .catalog-search :where(input,button):focus-visible{outline:2px solid var(--focus);outline-offset:4px}
 /* Keep the browser's semantic hidden state authoritative, including fieldsets
    that acquire display:grid above and buttons enabled only by site.js. */
 .workflow-document [hidden]{display:none!important}
-@media(max-width:600px){.workflow-document :where(input,textarea,select),.document .catalog-search input{font-size:16px}.workflow-document .feedback-fields{flex-direction:column}.workflow-document .feedback-fields>label{flex:none}.workflow-document .workflow-actions{gap:10px}.workflow-document button,.document .catalog-search :where(input,button){min-height:44px}.workflow-document .review-meta button{min-height:40px}.workflow-footer nav{gap:10px 18px}}
+@media(max-width:600px){.workflow-document :where(input,textarea,select),.document .catalog-search input{font-size:16px}.workflow-document .feedback-fields{flex-direction:column}.workflow-document .feedback-fields>label{flex:none}.workflow-document .workflow-actions{gap:10px}.workflow-document button,.document .catalog-search :where(input,button){min-height:44px}.workflow-document .review-meta button{min-height:44px}.workflow-footer nav{gap:10px 18px}}
 @media print{.workflow-document :where(input,textarea,select,button,.badge,[role="status"],noscript){color:#111}.workflow-document :where(input,textarea,select,button){border-color:#777}.workflow-document details:not([open])>summary{color:#111}.workflow-document .workflow-result{color:#111}}
+
+.workflow-document .workflow+section,.workflow-document section>section{margin-top:24px;padding-top:16px;border-top:1px solid var(--line)}
+.workflow-document form{max-width:672px}
+.workflow-document fieldset{border:1px solid var(--line);padding:12px 16px;margin:0 0 8px;gap:16px}
+.workflow-document legend{font-size:13px;padding:0 4px;margin:0}
+.workflow-document details>summary{min-height:44px;display:list-item;padding:8px 0;line-height:1.7}
+.workflow-document details{border-top:1px solid var(--line);padding-top:8px}
+.workflow-document .workflow-result{border:1px solid var(--line);padding:12px 16px;background:var(--surface);max-height:520px;overflow:auto}
+.workflow-document [role="status"]:not(:empty){border-left:2px solid var(--quote);padding:8px 12px;margin:12px 0}
+.workflow-document button:disabled{cursor:not-allowed;border-style:dashed}
+.workflow-document input:disabled,.workflow-document textarea:disabled,.workflow-document select:disabled{color:var(--muted);border-style:dashed}
+.workflow-document button[aria-busy="true"]{cursor:progress}
+.workflow-document input[type="checkbox"]{width:20px;height:20px;margin-top:3px}
+.workflow-document .public-consent{min-height:44px;align-items:flex-start;padding:8px 0}
+.document .catalog-search{margin:16px 0 24px}
+.document .catalog-search label{flex-basis:260px}
+.workflow-document .community-tools{padding-left:0;list-style:none}
+.workflow-document .community-tools li{border-bottom:1px solid var(--line);padding:12px 0}
+.workflow-document .community-tools a{display:inline-flex;align-items:center;min-height:44px}
+@media(max-width:600px){.workflow-document fieldset{padding:12px}.workflow-document .workflow-result{padding:12px}.workflow-document .review-meta button{min-height:44px}}
+.document .catalog-syntax{margin:0 0 16px;font-size:13px;color:var(--muted)}
+.document .catalog-syntax summary{cursor:pointer;min-height:44px;padding:8px 0;color:var(--link)}
+.document .catalog-syntax summary:focus-visible{outline:2px solid var(--focus);outline-offset:3px}
+.document .catalog-syntax p{margin:8px 0 0}
+.workflow-document :where(input:not([type="checkbox"]),select){min-height:44px}
+.workflow-document :where(input,textarea,select):user-invalid{border-color:var(--quote);outline:1px solid var(--quote)}

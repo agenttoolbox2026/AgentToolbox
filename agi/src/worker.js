@@ -172,7 +172,7 @@ export function createAgi({model:sourceModel=generated,platformOptions={},compil
   // Execute locally: never proxy an authorization or capability to another host.
   const response=await app(request,request.headers.get('CF-Connecting-IP')??'unknown');
   if(read&&request.method!=='HEAD'&&response.headers.get('Content-Type')?.startsWith('text/html')){
-   let html=themeWorkflowHtml(await response.text());
+   let html=themeWorkflowHtml(await response.text(),path);
    // Only exact, trusted registry links are rewritten. Machine endpoints retain
    // their JSON contracts; the destination documents link back to those APIs.
    for(const tool of model.tools){
