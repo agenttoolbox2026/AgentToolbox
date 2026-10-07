@@ -16,7 +16,7 @@ const security={
  'Permissions-Policy':'camera=(), microphone=(), geolocation=(), payment=()',
  'Strict-Transport-Security':'max-age=31536000',
 };
-const assetPaths=new Set(['/style.css','/humans.css','/workflow.css','/site.js','/retry-envelope.js','/agenttoolbox-icon.png']);
+const assetPaths=new Set(['/style.css','/humans.css','/header.css','/workflow.css','/site.js','/retry-envelope.js','/agenttoolbox-icon.png']);
 const acceptType=request=>{
  const types=(request.headers.get('Accept')??'text/html').split(',').map((part,index)=>{
   const [mime,...params]=part.trim().toLowerCase().split(';');

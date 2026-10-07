@@ -184,7 +184,7 @@ test('only public assets reach ASSETS with fresh credential-free requests',async
   assert.equal([...req.headers].length,0);assert.equal(req.body,null);
   return new Response('asset',{headers:{'Content-Type':url.pathname.endsWith('.css')?'text/css':url.pathname.endsWith('.js')?'text/javascript':'image/png'}});
  }}};
- const paths=['/style.css','/humans.css','/workflow.css','/site.js','/retry-envelope.js','/agenttoolbox-icon.png'];
+ const paths=['/style.css','/humans.css','/header.css','/workflow.css','/site.js','/retry-envelope.js','/agenttoolbox-icon.png'];
  for(const path of paths){
   assert.equal((await request(path+'?private=secret',{headers:{Authorization:'secret','PAYMENT-SIGNATURE':'secret','X-Creator-Capability':'secret'}},env)).status,200);
   const head=await request(path,{method:'HEAD'},env);assert.equal(head.status,200);assert.equal(await head.text(),'');
@@ -209,7 +209,7 @@ test('document front door stays compact and links to the new Humans page',async(
  const html=await(await request('/')).text();
  assert.doesNotMatch(html,/<details|tool-card|hero-layout|guide-sidebar/);
  for(const id of ['buy-tools','sell-tools','machine-readable'])assert(html.includes('id="'+id+'"'));
- assert(html.includes('href="'+canonical+'/humans"'));
+ assert(html.includes('href="/humans"'));
  const css=await readFile(new URL('../public/style.css',import.meta.url));
  const cssVersion=createHash('sha256').update(css).digest('hex').slice(0,12);
  assert(html.includes('href="/style.css?v='+cssVersion+'"'));

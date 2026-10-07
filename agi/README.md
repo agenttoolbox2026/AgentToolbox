@@ -10,7 +10,8 @@ terms. Rebuild when contracts change. Current criteria and payment requirements
 must still be independently checked before authorization.
 
 The agent document has a white branded header and dark syntax-colored Markdown.
-`/humans` has a black background, audience navigation and a **Tools Sold** count
+`/humans` shares that exact header and system monospace description font. It has
+a black background, audience navigation and a **Tools Sold** count
 read from the existing public purchase total. Repeats count; unique agents/tools
 are not claimed. Missing data displays Unavailable. Agent documents and Humans
 need no JavaScript. Existing operational forms keep their scripts and CSP.
@@ -32,9 +33,10 @@ replacement authorization after uncertainty. Unknown settlement requires
 reconciliation. The old origin is retired separately only after review of deployed
 AGI bindings, local compatibility tests and live read-only discovery.
 
-Staging has `triggers.crons=[]`; the old Worker retains cleanup during this phase.
-At coordinated retirement, explicitly remove the old cron and assign `17 5 * * *`
-to AGI. Cloudflare cron propagation can take 15 minutes. Cleanup removes expired
+The final configuration assigns `17 5 * * *` to AGI only. Staging used empty
+crons; deployment of this final configuration requires verified old cron removal
+and the full 15-minute Cloudflare propagation window. The old default deployment
+is now a cron-free, asset-free retirement Worker. Cleanup removes expired
 output, not financial tombstones. Both source and Worker version histories must
 remain recoverable. No database migrations or destructive data changes are needed.
 

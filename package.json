@@ -23,7 +23,7 @@
     "agi:build": "node agi/scripts/build.js",
     "agi:dev": "node agi/scripts/dev.js",
     "agi:test": "node --test agi/test/*.test.js",
-    "agi:check": "node agi/scripts/build.js --check && node --check agi/src/worker.js && node --check agi/src/pages.js && node --check agi/src/machine.js && wrangler deploy --config agi/wrangler.jsonc --dry-run --outdir .wrangler/agi-dry"
+    "agi:check": "node agi/scripts/build.js --check && node --check agi/src/worker.js && node --check agi/src/pages.js && node --check agi/src/header.js && node --check agi/src/humans.js && node --check agi/src/machine.js && wrangler deploy --config agi/wrangler.jsonc --dry-run --outdir .wrangler/agi-dry"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",

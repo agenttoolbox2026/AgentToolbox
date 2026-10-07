@@ -33,7 +33,7 @@ function fixture(t,{run,settle}={}){
  const assets={fetch:async request=>{
   assetRequests.push(request);
   const path=new URL(request.url).pathname;
-  const files={'/style.css':'style.css','/workflow.css':'workflow.css','/humans.css':'humans.css','/site.js':'site.js','/retry-envelope.js':'retry-envelope.js','/agenttoolbox-icon.png':'agenttoolbox-icon.png'};
+  const files={'/style.css':'style.css','/workflow.css':'workflow.css','/humans.css':'humans.css','/header.css':'header.css','/site.js':'site.js','/retry-envelope.js':'retry-envelope.js','/agenttoolbox-icon.png':'agenttoolbox-icon.png'};
   if(!Object.hasOwn(files,path))return new Response(null,{status:404});
   const content=await readFile(new URL('../public/'+files[path],import.meta.url));
   return new Response(request.method==='HEAD'?null:content,{headers:{'Content-Type':path.endsWith('.js')?'text/javascript':path.endsWith('.css')?'text/css':'image/png'}});
@@ -189,7 +189,7 @@ test('AGI keeps HTTP capability CORS and enforces the new exact MCP Origin polic
  assert.equal(s.counts.settle,0);
 });
 
-test('operational pages retain working CSP and load actual workflow CSS and both script modules through sanitized assets',async t=>{
+test('operational pages retain working CSP and load actual workflow/header CSS and script modules through sanitized assets',async t=>{
  const s=fixture(t);
  for(const path of ['/submit-tool','/update-tool','/products/docs-pack/preview','/products/docs-pack/reviews']){
   const response=await s.next(path);assert.equal(response.status,200,path);
@@ -200,8 +200,9 @@ test('operational pages retain working CSP and load actual workflow CSS and both
   assert(!policy.includes("connect-src 'none'"),path);assert.equal(response.headers.get('cache-control'),'no-store');
  }
  const secrets={Authorization:'Bearer private-sentinel',Cookie:'private-sentinel','PAYMENT-SIGNATURE':'private-sentinel','X-Preparation-Capability':'private-sentinel','X-Creator-Capability':'private-sentinel','X-Referral-Capability':'private-sentinel'};
- for(const path of ['/workflow.css','/site.js','/retry-envelope.js'])for(const method of ['GET','HEAD']){
+ for(const path of ['/workflow.css','/header.css','/site.js','/retry-envelope.js'])for(const method of ['GET','HEAD']){
   const response=await s.next(path+'?private=private-query',{method,headers:secrets});assert.equal(response.status,200,path);
+  assert.equal(response.headers.get('cache-control'),path==='/header.css'?'public, max-age=3600':'no-store');
   const body=await response.text(),sent=s.assetRequests.at(-1);
   assert.equal(sent.url,ORIGIN+path);assert.equal(sent.method,method);assert.equal(sent.body,null);
   for(const name of Object.keys(secrets))assert.equal(sent.headers.has(name),false,path+': '+name);

@@ -15,7 +15,7 @@ try{
    await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('link',{name:'For Humans'}).waitFor();
    assert.equal(await page.locator('script').count(),0);
    const layout=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,header:getComputedStyle(document.querySelector('header')).backgroundColor,bg:getComputedStyle(document.documentElement).backgroundColor}));
-   assert(layout.scroll<=layout.width+1,`${name}${route} overflow ${JSON.stringify(layout)}`);assert.equal(layout.header,route==='/humans'?'rgb(0, 0, 0)':'rgb(255, 255, 255)');
+   assert(layout.scroll<=layout.width+1,`${name}${route} overflow ${JSON.stringify(layout)}`);assert.equal(layout.header,'rgb(255, 255, 255)');
    if(route==='/'){
     assert.equal(await page.locator('details,.tool-card').count(),0);
     assert.equal(await page.locator('#buy-tools').count(),1);

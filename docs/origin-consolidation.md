@@ -31,6 +31,10 @@ Unclaimed preparations and quotes remain product/version/input/capability/amount
 
 Rollback restores a recorded Worker revision and keeps the same D1. It does not rewind financial rows, reset capabilities or attempt settlement again. Do not silently run two active schedulers or re-enable public admissions at both origins during rollback.
 
+The default `platform/wrangler.jsonc` now targets `src/retired-worker.js`, with no asset binding and explicit empty crons. The original runtime source remains in the repository/history, but the default old-public deploy cannot restore admissions or its former destructive maintenance. Do not use native rollback to an old scheduled revision such as `dedda843-b079-465e-be9b-1f23caa9241d`. Keep the old Worker retired and roll AGI back only to a reviewed preservation-safe revision. Any exceptional old-origin restoration must be rebuilt with `preserveRecords: true` maintenance and initial empty crons under lead coordination.
+
+The authorized old-public retirement is version `25fce34f-b3ef-4515-ab25-2af0b31916cd`. Its provider-downloaded bundle SHA-256 is `d38b94429cdc8fa8f1ee68ec1b859768b4f7e1cea7854a3c0e1cce6c75abf321`, identical to the reviewed temporary dry-run artifact. The committed entrypoint and configuration preserve that response and operational binding contract; bundled source-path comments can differ by checkout location. Native provider readback confirms no old cron, no assets and the original D1 binding. Public GET checks return 410 without redirects, including former assets. Operator preservation/readback evidence stays in the local handoff; owner-positive browser actions remain unverified.
+
 ## Local regression evidence
 
 `platform/test/origin-migration.test.js` uses only in-memory D1 and mock adapters. It covers exact old-packet replay at AGI, modified-payload rejection, concurrent claims, unresolved settlement, preparation reuse, expiry without TTL extension, frozen terms/pins, telemetry deferral, asset credential exclusion and MCP/CORS. `platform/test/retired-origin.test.js` checks the pure retirement response. No real endpoint, wallet or facilitator participates in these payment fixtures.

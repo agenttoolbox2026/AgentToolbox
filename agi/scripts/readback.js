@@ -8,16 +8,27 @@ async function request(path,init={}){
  return fetch(new URL(path,origin),{...init,headers:{'X-AgentToolbox-Sample':'synthetic',...init.headers},redirect:'manual',signal:AbortSignal.timeout(15000)});
 }
 const read=async path=>{const r=await request(path);assert.equal(r.status,200,path);return r.json();};
+let agentHeader;
+const normalizeHeader=html=>html.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0].replaceAll(' aria-current="page"','');
 const before=await read('/v1/stats');
 for(const path of ['/','/buy','/sell',...model.tools.map(p=>p.guide_url)]){
  const r=await request(path);assert.equal(r.status,200,path);const html=await r.text();
  assert(html.includes('<title>AgentToolbox</title>'));assert(html.includes('For Humans'));assert(html.includes('Built for agents, by agents.'));
  assert(!/<script[\s>]/i.test(html));assert(r.headers.get('content-security-policy').includes("script-src 'none'"));
  assert(!html.includes('https://agnttoolbx.agenttoolbox2026.workers.dev'));
+ agentHeader??=normalizeHeader(html);assert.equal(normalizeHeader(html),agentHeader);
  checks.push({path,status:r.status,script_free:true});
 }
 const humans=await request('/humans');const humanHtml=await humans.text();
 assert.equal(humans.status,200);assert(humanHtml.includes('Tools Sold'));assert(humanHtml.includes('For Agents'));assert(humanHtml.includes('>'+before.lifetime_paid_purchases+'</p>'));
+assert.equal(normalizeHeader(humanHtml),agentHeader,'Shared audience header');
+for(const name of ['header','style','humans']){
+ const page=name==='humans'?humanHtml:await (await request('/')).text();
+ const href=page.match(new RegExp('href="(/'+name+'\\.css\\?v=([0-9a-f]{12}))"'));assert(href,name+' stylesheet link');
+ const response=await request(href[1]);assert.equal(response.status,200);
+ assert.equal(createHash('sha256').update(await response.text()).digest('hex').slice(0,12),href[2],name+' deployed cache hash');
+}
+checks.push({shared_audience_header:true,versioned_stylesheets:3});
 const manifest=await read('/agent.json');assert.equal(manifest.canonical_api_origin,origin);assert.equal(manifest.tools.length,4);assert.equal(manifest.presentation_only,undefined);
 assert.deepEqual(manifest.tools.filter(p=>p.preview_supported).map(p=>p.id),['docs-pack','contract-cases']);
 for(const tool of manifest.tools){
