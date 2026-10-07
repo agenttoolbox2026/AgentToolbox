@@ -10,6 +10,11 @@ const security={
  'Permissions-Policy':'camera=(), microphone=(), geolocation=(), payment=()',
  'Strict-Transport-Security':'max-age=31536000',
 };
+// Fetch clients may retain custom headers across a cross-origin redirect.
+// Never issue even a discovery redirect when the incoming request has secrets.
+const credentialHeaders=['authorization','proxy-authorization','cookie',
+ 'payment-signature','x-payment','x-creator-capability','x-preparation-capability',
+ 'x-referral-capability','x-api-key','x-auth-token'];
 const acceptType=request=>{
  const types=(request.headers.get('Accept')??'text/html').split(',').map((part,index)=>{
   const [mime,...params]=part.trim().toLowerCase().split(';');
@@ -31,7 +36,10 @@ export default {
   // A caller may already have attached credentials to a mistaken origin.
   if(path==='/mcp'||path==='/v1'||path.startsWith('/v1/'))return json(request,{error:{code:'canonical_api_required',message:'Send operational requests directly to the canonical API. This host is presentation only.',canonical_api_origin:model.origin,mcp_endpoint:model.machine.mcp}},421,{'Cache-Control':'no-store'});
   if(!['GET','HEAD'].includes(request.method))return json(request,{error:{code:'method_not_allowed',message:'This presentation host supports GET and HEAD only.',canonical_api_origin:model.origin}},405,{Allow:'GET, HEAD','Cache-Control':'no-store'});
-  if(path==='/openapi.json'||path==='/.well-known/x402')return respond(request,null,'text/plain',307,{Location:model.origin+path,'Cache-Control':'no-store'});
+  if(path==='/openapi.json'||path==='/.well-known/x402'){
+   if(credentialHeaders.some(name=>request.headers.has(name)))return json(request,{error:{code:'canonical_api_required',message:'Credential-bearing discovery requests must be sent directly to the canonical API; this host will not redirect them.',canonical_api_origin:model.origin}},421,{'Cache-Control':'no-store'});
+   return respond(request,null,'text/plain',307,{Location:model.origin+path,'Cache-Control':'no-store'});
+  }
   if(['/style.css','/agenttoolbox-icon.png'].includes(path)){
    if(!env?.ASSETS)return json(request,{error:{code:'asset_unavailable'}},503,{'Cache-Control':'no-store'});
    const asset=await env.ASSETS.fetch(new Request(model.siteOrigin+path,{method:request.method}));

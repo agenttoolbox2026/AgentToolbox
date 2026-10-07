@@ -139,14 +139,36 @@ test('HEAD has matching status and MIME type but no body on public and missing r
  for(const path of ['/missing','/tools/missing','/tools/missing.md','/tools/retry-gate'])assert.equal((await request(path)).status,404,path);
 });
 
-test('canonical schema redirects never forward visitor queries or credentials',async t=>{
+test('credential-free canonical schema redirects never forward visitor queries',async t=>{
  noNetwork(t);
  for(const path of ['/openapi.json','/.well-known/x402'])for(const method of ['GET','HEAD']){
-  const response=await request(path+'?capability=secret-query&destination=https://evil.invalid',{method,headers:{Authorization:'Bearer secret-header','X-Creator-Capability':'secret-creator'}});
+  const response=await request(path+'?capability=secret-query&destination=https://evil.invalid',{method});
   assert.equal(response.status,307,path+' '+method);
   assert.equal(response.headers.get('location'),canonical+path);
   assert.doesNotMatch(await response.text(),/secret-query|secret-header|secret-creator|evil\.invalid/);
  }
+});
+
+test('redirect-following clients never send credentials to a destination from discovery aliases',async t=>{
+ const destinationCalls=[];
+ t.mock.method(globalThis,'fetch',async request=>{destinationCalls.push(request);return new Response('Unexpected destination call');});
+ // Model clients that follow 307s while retaining custom credential headers.
+ // The previous implementation reached fetch here even with a fixed Location.
+ const followingClient=async request=>{
+  const response=await worker.fetch(request,{});
+  if([301,302,303,307,308].includes(response.status)&&response.headers.has('location'))
+   return fetch(new Request(new URL(response.headers.get('location'),request.url),{method:request.method,headers:request.headers}));
+  return response;
+ };
+ for(const path of ['/openapi.json','/.well-known/x402'])for(const method of ['GET','HEAD'])
+  for(const header of ['X-Creator-Capability','X-Preparation-Capability','X-Referral-Capability','PAYMENT-SIGNATURE','Authorization','Cookie','Proxy-Authorization','X-Payment','X-Api-Key','X-Auth-Token']){
+   const response=await followingClient(new Request(site+path,{method,headers:{[header]:'private-sentinel'}}));
+   assert.equal(response.status,421,path+' '+method+' '+header);
+   assert.equal(response.headers.has('location'),false);
+   assert.equal(response.headers.get('cache-control'),'no-store');
+   assert.doesNotMatch(await response.text(),/private-sentinel/);
+  }
+ assert.equal(destinationCalls.length,0,'A redirect-following client must make zero destination calls.');
 });
 
 test('all canonical API calls are refused without reflecting, consuming or forwarding secrets',async t=>{

@@ -31,6 +31,11 @@ for(const tool of manifest.tools){
  checks.push({tool:tool.id,success_hash_verified:true,payment_hash_verified:true,canonical_resource_verified:true,static_fixtures:true});
 }
 for(const path of ['/openapi.json','/.well-known/x402']){const r=await request(origin+path);assert.equal(r.status,307);assert.equal(r.headers.get('location'),model.origin+path);}
+for(const path of ['/openapi.json','/.well-known/x402'])for(const method of ['GET','HEAD'])
+ for(const header of ['X-Creator-Capability','X-Preparation-Capability','X-Referral-Capability','PAYMENT-SIGNATURE','Authorization','Cookie']){
+  const r=await request(origin+path,{method,headers:{[header]:'synthetic-noncredential'}});
+  assert.equal(r.status,421);assert.equal(r.headers.get('location'),null);
+ }
 for(const path of ['/mcp','/v1/products/contract-cases/invoke']){const r=await request(origin+path,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});assert.equal(r.status,421);assert.equal(r.headers.get('location'),null);}
 const rpc=await request(model.machine.mcp,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/list',params:{}})});
 assert.equal(rpc.status,200);const names=(await rpc.json()).result.tools.map(p=>p.name);for(const name of ['get_product','get_creator_terms','submit_tool','submit_tool_update'])assert(names.includes(name));
@@ -38,7 +43,7 @@ const seller=await read(model.origin+'/v1/creator-terms');assert.deepEqual(selle
 const referral=await read(model.origin+'/v1/referral-terms');assert.deepEqual(referral.terms,model.referralTerms.terms);
 const after=await read(model.origin+'/v1/stats');
 const evidence={verified_at:new Date().toISOString(),origin,canonical_api_origin:model.origin,checks,mcp_tools:names.length,
- canonical_terms_match:true,stats_before:before,stats_after:after,old_site_status:(await request(model.origin+'/')).status,
+ canonical_terms_match:true,credential_bearing_discovery_rejected:true,stats_before:before,stats_after:after,old_site_status:(await request(model.origin+'/')).status,
  positive_proposals:0,positive_updates:0,referral_registrations:0,preparations:0,payment_signatures:0,settlements:0,refunds:0,payouts:0};
 if(process.argv[3])await writeFile(process.argv[3],JSON.stringify(evidence,null,2)+'\n');
 console.log(JSON.stringify(evidence,null,2));

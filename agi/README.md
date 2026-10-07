@@ -8,8 +8,11 @@ The new Worker contains HTML/Markdown/JSON guides and two static assets. It has
 no D1, KV, financial, private admin, payment, service or scheduled bindings.
 It never calls the backend on behalf of a visitor. API and MCP requests on this
 host fail with `421 canonical_api_required` without consuming or forwarding the
-body, credentials or query string. OpenAPI and x402 discovery GET/HEAD aliases
-redirect to the canonical server. All operational links are absolute.
+body, credentials or query string. Credential-free OpenAPI and x402 discovery
+GET/HEAD aliases redirect to the canonical server. Requests bearing payment,
+capability, authorization, cookie or API-key headers return 421 with no Location,
+preventing redirect-following clients from carrying secrets to another host.
+All operational links are absolute.
 Invocation logs are disabled and trace sampling is zero; the Worker emits no
 logs, so accidental visitor credentials are not copied into application logs.
 
