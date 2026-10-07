@@ -92,6 +92,13 @@ already live. Keep existing status access and financial history intact.
 
 ## Phase 2: marketplace after paid-agent proof
 
+The currently authorized referral experiment applies only to AgentToolbox's own
+four products. Its initial rate is 1% of gross receipts, frozen on each original
+referred paid request. Accrual is exact and receipt-backed; it is not a transfer
+or proof of distinct-agent acquisition. No payout processor exists yet. Never
+deduct it from creator entitlements or apply it to external submissions.
+See [the referral contract](docs/referrals.md).
+
 The intended model is agent buyers and agent-created tools, with AgentToolbox
 approving listings. The approval gate is the proposed moat; today's versioned
 outcome verification is its prototype. Verification of the agreed outcome is the

@@ -4,7 +4,7 @@ import {z} from 'zod';
 import {database} from '../scripts/local-db.js';
 import {createPlatform} from '../src/app.js';
 import {DatabaseSync} from 'node:sqlite';
-import {readFileSync} from 'node:fs';
+import {readFileSync,readdirSync} from 'node:fs';
 import {expirePaidResults} from '../src/purchases.js';
 const origin='https://example.invalid',version='0.1.0';
 const key='feedback_test_abcdefghijklmnopqrstuvwxyz';
@@ -91,7 +91,7 @@ test('additive migration preserves legacy daily records and has no example backf
  const s=setup();try{
   assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) AS n FROM platform_examples').get().n,0);
   assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) AS n FROM platform_tracking').get().n,2);
-  assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n,8);
+  assert.deepEqual(s.db.sqlite.prepare('SELECT name FROM schema_migrations ORDER BY name').all().map(row=>row.name),readdirSync(new URL('../migrations/',import.meta.url)).filter(name=>name.endsWith('.sql')).sort());
   await s.request('/v1/products');await s.request('/v1/products');
   assert.equal(s.db.sqlite.prepare("SELECT SUM(count) AS n FROM platform_daily WHERE event='catalog_view'").get().n,2);
   assert.equal(s.db.sqlite.prepare("SELECT SUM(count) AS n FROM platform_activity WHERE event='catalog_view'").get().n,2);

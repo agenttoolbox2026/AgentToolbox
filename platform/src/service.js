@@ -4,14 +4,22 @@ import { hash, telemetry } from './telemetry.js';
 import {isAtomicAmount,minimumAmount,MAX_UINT256} from './payment-config.js';
 import {submitFeedback} from './feedback.js';
 import {listReviews,readReview,listReplies,submitReview,submitReply} from './reviews.js';
+import {successContractPin} from './contract-pins.js';
+import {referralCodeSchema} from './referral-schema.js';
 export class PlatformError extends Error {
   constructor(status,code,message,details={}) { super(message); this.status=status;this.code=code;this.details=details; }
 }
+export function assertContractPins(expected,actual){
+ for(const field of ['success_contract_sha256','payment_requirements_sha256'])if(expected[field]!==undefined&&expected[field]!==null&&expected[field]!==actual[field])
+  throw new PlatformError(409,field==='success_contract_sha256'?'success_contract_mismatch':'payment_requirements_pin_mismatch','The pinned contract differs. Inspect current discovery before authorizing a new request.',{field,expected:expected[field],actual:actual[field]});
+}
 export const searchSchema=z.strictObject({q:z.string().max(120).default(''),status:z.enum(['active','validation','retired','all']).default('active')});
 export const atomicAmountSchema=z.string().regex(/^(0|[1-9][0-9]{0,77})$/).refine(isAtomicAmount).describe('Canonical decimal USDC atomic-unit string (6 decimals). Protocol uint256 maximum '+MAX_UINT256+'. No business maximum.');
-export const prepareSchema=z.strictObject({version:z.string().regex(/^\d+\.\d+\.\d+$/),input:z.record(z.string(),z.unknown()),request_id:z.string().regex(/^[A-Za-z0-9_-]{32,128}$/),prepare_secret_hash:z.string().regex(/^[0-9a-f]{64}$/)});
-export const quoteSchema=z.strictObject({version:z.string().regex(/^\d+\.\d+\.\d+$/),payment_amount_atomic:atomicAmountSchema,input:z.record(z.string(),z.unknown()).optional(),prepared_id:z.uuid().optional()}).refine(v=>!!v.input!==!!v.prepared_id);
-export const invokeSchema=z.strictObject({version:z.string().regex(/^\d+\.\d+\.\d+$/),input:z.record(z.string(),z.unknown()).optional(),prepared_id:z.uuid().optional(),quote_id:z.uuid().optional(),payment_amount_atomic:atomicAmountSchema.optional(),max_charge_usdc_atomic:z.union([atomicAmountSchema,z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)]).describe('Caller spending cap. Canonical decimal string recommended; safe integer numbers accepted for compatibility. Does not select an amount.'),agent_id:z.uuid().optional(),review_secret_hash:z.string().regex(/^[0-9a-f]{64}$/).describe('Optional SHA-256 hex of caller-kept atbr_ secret (32 random bytes). Bound to this paid request; never send the raw secret here.').optional()}).refine(v=>!!v.input!==!!v.prepared_id);
+const sha256Schema=z.string().regex(/^[0-9a-f]{64}$/);
+const pinFields={success_contract_sha256:sha256Schema.describe('Optional SHA-256 of the published canonical success contract. Mismatch prevents new work or payment. Quotes inherit their stored success pin even when this field is omitted.').optional(),payment_requirements_sha256:sha256Schema.describe('Optional SHA-256 of the complete canonical PaymentRequirements object under agenttoolbox-json-v1. Exact string/address case is significant.').optional()};
+export const prepareSchema=z.strictObject({version:z.string().regex(/^\d+\.\d+\.\d+$/),input:z.record(z.string(),z.unknown()),request_id:z.string().regex(/^[A-Za-z0-9_-]{32,128}$/),prepare_secret_hash:sha256Schema,success_contract_sha256:pinFields.success_contract_sha256});
+export const quoteSchema=z.strictObject({version:z.string().regex(/^\d+\.\d+\.\d+$/),payment_amount_atomic:atomicAmountSchema,input:z.record(z.string(),z.unknown()).optional(),prepared_id:z.uuid().optional(),...pinFields}).refine(v=>!!v.input!==!!v.prepared_id);
+export const invokeSchema=z.strictObject({version:z.string().regex(/^\d+\.\d+\.\d+$/),input:z.record(z.string(),z.unknown()).optional(),prepared_id:z.uuid().optional(),quote_id:z.uuid().optional(),referral_code:referralCodeSchema.optional(),payment_amount_atomic:atomicAmountSchema.optional(),max_charge_usdc_atomic:z.union([atomicAmountSchema,z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)]).describe('Caller spending cap. Canonical decimal string recommended; safe integer numbers accepted for compatibility. Does not select an amount.'),agent_id:z.uuid().describe('Optional random UUID pseudonym (e.g. crypto.randomUUID()); not authenticated identity. Omit if unavailable.').optional(),review_secret_hash:z.string().regex(/^[0-9a-f]{64}$/).describe('Optional SHA-256 hex of caller-kept atbr_ secret (32 random bytes). Bound to this paid request; never send the raw secret here.').optional(),...pinFields}).refine(v=>!!v.input!==!!v.prepared_id);
 export const outcomeSchema=z.strictObject({outcome:z.enum(['success','failure','unverifiable'])});
 export function service({db,catalog=products,handlers={},channel='http',sampleKind='unclassified',feedbackAllowed=async()=>true,now=()=>new Date()}) {
   const metrics=telemetry(db,{channel,sampleKind,now});
@@ -38,7 +46,7 @@ export function service({db,catalog=products,handlers={},channel='http',sampleKi
       if(!/^[A-Za-z0-9_-]{32,128}$/.test(key??'')) throw new PlatformError(400,'idempotency_key_required','Send an Idempotency-Key of 32–128 letters, digits, underscores or hyphens.');
       const handler=handlers[id], parsed=handler.input.safeParse(body.input);
       if(!parsed.success) throw new PlatformError(400,'invalid_input','Input does not match the product schema.');
-      const inputHash=await hash(JSON.stringify({version:body.version,input:parsed.data,max_charge_usdc_atomic:body.max_charge_usdc_atomic,agent_id:body.agent_id??null}));
+      const inputHash=await hash(JSON.stringify({version:body.version,input:parsed.data,max_charge_usdc_atomic:body.max_charge_usdc_atomic,agent_id:body.agent_id??null,...(body.success_contract_sha256?{success_contract_sha256:body.success_contract_sha256}:{}),...(body.payment_requirements_sha256?{payment_requirements_sha256:body.payment_requirements_sha256}:{})}));
       const keyHash=await hash(key), date=now().toISOString(), runId=crypto.randomUUID();
       await db.prepare('DELETE FROM platform_runs WHERE expires_at < ?').bind(date).run();
       const prior=await db.prepare('SELECT * FROM platform_runs WHERE product_id=? AND version=? AND idempotency_hash=?').bind(p.id,p.version,keyHash).first();
@@ -48,6 +56,8 @@ export function service({db,catalog=products,handlers={},channel='http',sampleKi
         return JSON.parse(row.result_json);
       };
       if(prior) return replay(prior);
+      if(body.payment_requirements_sha256)throw new PlatformError(400,'payment_not_required','This free invocation has no PaymentRequirements object to pin.');
+      const successPin=await successContractPin(p);assertContractPins(body,{success_contract_sha256:successPin.sha256});
       const callerHash=body.agent_id?await hash(body.agent_id):null;
       const inserted=await db.prepare(`INSERT OR IGNORE INTO platform_runs(id,product_id,version,idempotency_hash,input_hash,caller_hash,created_at,expires_at,state,sample_kind) VALUES(?,?,?,?,?,?,?,?,'running',?)`)
         .bind(runId,p.id,p.version,keyHash,inputHash,callerHash,date,new Date(now().getTime()+86400000).toISOString(),sampleKind).run();
@@ -57,6 +67,7 @@ export function service({db,catalog=products,handlers={},channel='http',sampleKi
         const output=await handler.run(parsed.data);
         const checked=handler.output.safeParse(output);
         if(!checked.success || !(await handler.success(checked.data))) throw new PlatformError(422,'outcome_not_met','The product success criterion was not met. No charge.');
+        assertContractPins({success_contract_sha256:successPin.sha256},{success_contract_sha256:(await successContractPin(p)).sha256});
         const result={api_version:'1',run_id:runId,product_id:p.id,version:p.version,execution:'completed',
           success_criterion:p.outcome.success_criterion,evidence:'server_validated',output:checked.data,
           payment:{status:'not_required',amount_settled_atomic:0},outcome_url:`/v1/runs/${runId}/outcome`};

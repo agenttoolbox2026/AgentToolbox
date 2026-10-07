@@ -9,6 +9,7 @@ import {CONTRACT_CASES_LIMITS,CONTRACT_CASES_SUBSET,contractCasesInput,contractC
 import {MCP_WIRE_ENDPOINTS,MCP_WIRE_ENDPOINT_SCOPE,MCP_WIRE_VERSIONS,MCP_WIRE_LIMITS,MCP_WIRE_AUTHORITY,mcpWireCheckInput,mcpWireCheckOutput} from './mcp-wirecheck.js';
 const newTool=(id,name,summary,input,output,example,limits,criterion,preview)=>Object.freeze({
  id,name,version:'0.1.0',status:'active',experimental:true,summary,problem:summary,tags:[id,'experimental'],
+ provider:{id:'agenttoolbox',name:'AgentToolbox',type:'first_party'},examples_url:'/v1/products/'+id+'/examples',
  outcome:{description:summary,success_criterion:criterion,criteria:criteriaFor(id),evidence:'server_validated',verified:true},
  pricing:{model:'buyer_chosen_per_success',payment_protocol:'x402-v2-exact',currency:'USDC',network:BASE_NETWORK,minimum_amount_atomic:'10000',decimals:6,business_maximum:null,payments_enabled:true,price_status:'experimental; willingness to pay unproven',live_payment_verified:false},
  preview:{supported:preview,path:preview?'/v1/products/'+id+'/prepare':null,page:preview?'/products/'+id+'/preview':null,unpaid_ttl_seconds:900,limits:preview?PREPARATION_LIMITS:null},
@@ -19,11 +20,12 @@ const newTool=(id,name,summary,input,output,example,limits,criterion,preview)=>O
  failure_policy:'Invalid input, failed criterion or unavailable decisive evidence never settles. Uncertain settlement requires reconciliation; never issue a replacement authorization.',
 });
 export const API_VERSION = '1';
-export const REGISTRY_VERSION = '2026-10-07.1';
+export const REGISTRY_VERSION = '2026-10-07.2';
 export const products = Object.freeze([
   Object.freeze({
     id:'docs-pack',version:'0.1.0',name:'Docs Pack',status:'active',experimental:true,
-    summary:'Up to 5 documentation URLs + query → matching excerpts, hashes and offsets.',
+    summary:'Get query-matched excerpts from up to 5 documentation pages.',
+    provider:{id:'agenttoolbox',name:'AgentToolbox',type:'first_party'},examples_url:'/v1/products/docs-pack/examples',
     problem:'Inspect several documentation pages without putting all their contents into context.',
     tags:['documentation','excerpts','context','batch'],
     outcome:{description:'Exact excerpts with source URLs, titles, hashes, offsets and matching terms.',success_criterion:'Every requested source returns HTTP 200 and at least one literal query-term match; excerpts respect the requested character budget and preserve complete fenced code blocks. The full output passes its schema and 14,000-byte product bound.',criteria:criteriaFor('docs-pack'),evidence:'server_validated',verified:true},
@@ -38,13 +40,13 @@ export const products = Object.freeze([
     example_input:{urls:['https://developers.cloudflare.com/workers/platform/limits/index.md','https://developers.cloudflare.com/workers/platform/pricing/index.md'],query:'CPU limits',max_excerpt_chars:3000},
     example_url:'/v1/products/docs-pack/example',
   }),
-  newTool('quote-proof','QuoteProof','Check quotes on 8 supported documentation hosts; return matches, ambiguity and evidence.',quoteProofInput,quoteProofOutput,
+  newTool('quote-proof','QuoteProof','Check quotes against supported documentation, with source evidence.',quoteProofInput,quoteProofOutput,
    {urls:['https://developers.cloudflare.com/workers/platform/limits/index.md'],quotes:[{source_index:0,quote:'CPU time'}]},
    {...QUOTE_PROOF_LIMITS,supported_hosts:QUOTE_PROOF_HOSTS,preview:'Disabled: a verdict is the paid result.'},'At least one decisive quotation result with schema-validated evidence; unknown results remain explicit. Textual fidelity only, never claim truth.',false),
-  newTool('contract-cases','ContractCases','Turn a bounded JSON Schema and valid example into checked boundary and negative cases.',contractCasesInput,contractCasesOutput,
+  newTool('contract-cases','ContractCases','Generate checked boundary and negative cases for supported JSON Schemas.',contractCasesInput,contractCasesOutput,
    {schema:{$schema:'https://json-schema.org/draft/2020-12/schema',type:'object',properties:{count:{type:'integer',minimum:1,maximum:10}},required:['count'],additionalProperties:false},valid_example:{count:3},max_cases:12},
    {...CONTRACT_CASES_LIMITS,subset:CONTRACT_CASES_SUBSET},'At least one valid boundary case and one negative case failing exactly its intended keyword and instance; every case revalidated against the complete accepted schema. Coverage gaps explicit; not certification.',true),
-  newTool('mcp-wirecheck','MCP WireCheck for Cloudflare Workers','Check MCP discovery and tools/list on your public workers.dev endpoint.',mcpWireCheckInput,mcpWireCheckOutput,
+  newTool('mcp-wirecheck','MCP WireCheck','Check MCP discovery and tools/list on your public workers.dev endpoint.',mcpWireCheckInput,mcpWireCheckOutput,
    {endpoint:MCP_WIRE_ENDPOINTS[0],protocol_versions:[...MCP_WIRE_VERSIONS],authority:MCP_WIRE_AUTHORITY},
    {...MCP_WIRE_LIMITS,endpoint_scope:MCP_WIRE_ENDPOINT_SCOPE,protocol_versions:MCP_WIRE_VERSIONS,preview:'Disabled: wire verdicts are the paid result.'},'At least one decisive compatible/incompatible wire-shape verdict. Authentication, blocking, unsupported versions and unknown outcomes alone are nonchargeable. No tools/call; not conformance or security certification.',false),
   Object.freeze({
@@ -69,7 +71,7 @@ export function searchProducts({ q = '', status = 'active' } = {}, catalog = pro
 }
 export function summary(p) {
   return { id:p.id, version:p.version, name:p.name, status:p.status, summary:p.summary,
-    tags:p.tags, pricing:p.pricing, preview:p.preview??{supported:false,path:null,page:null}, criteria_version:p.outcome.criteria?.criteria_version??null,detail_url:`/v1/products/${p.id}` };
+    tags:p.tags, provider:p.provider??null,pricing:p.pricing, preview:p.preview??{supported:false,path:null,page:null},examples_url:p.examples_url??null,criteria_url:p.outcome.criteria?`/v1/products/${p.id}/criteria`:null,criteria_version:p.outcome.criteria?.criteria_version??null,detail_url:`/v1/products/${p.id}` };
 }
 export function catalogResult(params, catalog = products) {
   const matches = searchProducts(params,catalog);

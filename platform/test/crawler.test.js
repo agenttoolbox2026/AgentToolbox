@@ -35,7 +35,8 @@ test('cheap body, route, method and rate limits remain before payment challenge'
   for(const init of [{method:'POST',headers:{'Content-Length':'20000'}},{method:'POST',body:'x'.repeat(16385)}]){const r=await s.request(path,init);assert.equal(r.status,413);assert.equal(r.headers.get('PAYMENT-REQUIRED'),null);}
   const stream=new ReadableStream({start(controller){controller.enqueue(new Uint8Array(10000));controller.enqueue(new Uint8Array(7000));controller.close();}});
   assert.equal((await s.request(path,{method:'POST',body:stream,duplex:'half'})).status,413);
-  for(const method of ['GET','HEAD','PUT']){const r=await s.request(path,{method});assert([404,405].includes(r.status));assert.equal(r.headers.get('PAYMENT-REQUIRED'),null);}
+  for(const method of ['GET','HEAD']){const r=await s.request(path,{method});assert.equal(r.status,402);assert(r.headers.has('PAYMENT-REQUIRED'));if(method==='HEAD')assert.equal(await r.text(),'');}
+  const unsupported=await s.request(path,{method:'PUT'});assert.equal(unsupported.status,405);assert.equal(unsupported.headers.get('PAYMENT-REQUIRED'),null);
   assert.equal((await s.request('/v1/products/missing/invoke',{method:'POST'})).status,404);
   assert.equal((await s.request(path+'-extra',{method:'POST'})).status,404);
   assert.deepEqual(s.calls,{factory:0,execute:0,verify:0,settle:0});

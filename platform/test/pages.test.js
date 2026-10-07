@@ -9,4 +9,13 @@ test('every public page and future shared-template page uses the exact AgentTool
  assert(home().includes('For Humans ↗'));
  assert(humansPage(null).includes('For Agents ↗'));
  assert(humansPage(null).includes('Useful results.'));
+ const buyerHome=home(),counter=humansPage({lifetime_paid_purchases:2});
+ assert(buyerHome.includes('<a href="/submit-tool">Sell tools ↗</a>'));
+ for(const id of ['docs-pack','quote-proof','contract-cases','mcp-wirecheck']){
+  assert(buyerHome.includes('/v1/products/'+id+'/criteria">Success criteria &amp; pin ↗</a>'));
+  assert(buyerHome.includes('/v1/products/'+id+'/examples">Free test cases ↗</a>'));
+ }
+ assert(counter.includes('<span>Outcomes sold</span>'));
+ assert(counter.includes('Includes repeat purchases.'));
+ assert(counter.includes('Does not count unique or verified agents.'));
 });
