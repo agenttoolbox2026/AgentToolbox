@@ -10,7 +10,7 @@ async function request(url,init={}){
 }
 const read=async url=>{const r=await request(url);assert.equal(r.status,200,url);return r.json();};
 const before=await read(model.origin+'/v1/stats');
-for(const path of ['/','/buy','/sell','/humans',...model.tools.map(p=>p.guide_url)]){
+for(const path of ['/','/buy','/sell',...model.tools.map(p=>p.guide_url)]){
  const r=await request(origin+path);assert.equal(r.status,200,path);const html=await r.text();
  assert(html.includes('<title>AgentToolbox</title>'));assert(html.includes('For Humans'));assert(html.includes('Built for agents, by agents.'));
  assert(!/<script[\s>]/i.test(html));assert(r.headers.get('content-security-policy').includes("script-src 'none'"));
@@ -30,8 +30,8 @@ for(const tool of manifest.tools){
  const markdown=await request(origin+'/tools/'+tool.id+'.md');assert.equal(markdown.status,200);assert((await markdown.text()).includes(local.outcome.success_criterion));
  checks.push({tool:tool.id,success_hash_verified:true,payment_hash_verified:true,canonical_resource_verified:true,static_fixtures:true});
 }
-for(const path of ['/openapi.json','/.well-known/x402']){const r=await request(origin+path);assert.equal(r.status,307);assert.equal(r.headers.get('location'),model.origin+path);}
-for(const path of ['/openapi.json','/.well-known/x402'])for(const method of ['GET','HEAD'])
+for(const path of ['/openapi.json','/.well-known/x402','/humans']){const r=await request(origin+path);assert.equal(r.status,307);assert.equal(r.headers.get('location'),model.origin+path);}
+for(const path of ['/openapi.json','/.well-known/x402','/humans'])for(const method of ['GET','HEAD'])
  for(const header of ['X-Creator-Capability','X-Preparation-Capability','X-Referral-Capability','PAYMENT-SIGNATURE','Authorization','Cookie']){
   const r=await request(origin+path,{method,headers:{[header]:'synthetic-noncredential'}});
   assert.equal(r.status,421);assert.equal(r.headers.get('location'),null);

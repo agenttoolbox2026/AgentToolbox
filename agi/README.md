@@ -39,10 +39,12 @@ links. Rebuild whenever canonical contracts change. A source hash is explicitly
 a snapshot, never authorization. The buyer guide requires verification of
 current success and payment hashes before authorization.
 
-The white branded header, black readable content and separate human mission
-page follow the owner's design. Essential content is server-rendered with no
-JavaScript. Original icon bytes are preserved. The branded human page describes
-the marketplace vision and current experimental/manual activation stage.
+The white branded header leads into a single syntax-colored Markdown document:
+15px monospace text, literal heading markers, compact lists and visible examples.
+HTML and Markdown use exactly the same instructions; there are no cards, large
+marketing sections or disclosures. Original icon bytes are preserved. For Humans
+links directly to the original canonical /humans page; the local /humans alias
+uses the same credential-rejecting redirect guard as discovery aliases.
 
 Seller forms live on the canonical origin, retaining its capability checks and
 request export/import implementation. This Worker collects no capabilities.

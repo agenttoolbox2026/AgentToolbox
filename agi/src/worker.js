@@ -1,5 +1,5 @@
 import model from './generated.json' with {type:'json'};
-import {homePage,buyPage,sellPage,humansPage,toolPage,notFoundPage} from './pages.js';
+import {homePage,buyPage,sellPage,toolPage,notFoundPage} from './pages.js';
 import {compactManifest,homeMarkdown,buyMarkdown,sellMarkdown,toolMarkdown} from './machine.js';
 
 // No operational handler, storage, credential, proxy, scheduled task or financial
@@ -36,7 +36,7 @@ export default {
   // A caller may already have attached credentials to a mistaken origin.
   if(path==='/mcp'||path==='/v1'||path.startsWith('/v1/'))return json(request,{error:{code:'canonical_api_required',message:'Send operational requests directly to the canonical API. This host is presentation only.',canonical_api_origin:model.origin,mcp_endpoint:model.machine.mcp}},421,{'Cache-Control':'no-store'});
   if(!['GET','HEAD'].includes(request.method))return json(request,{error:{code:'method_not_allowed',message:'This presentation host supports GET and HEAD only.',canonical_api_origin:model.origin}},405,{Allow:'GET, HEAD','Cache-Control':'no-store'});
-  if(path==='/openapi.json'||path==='/.well-known/x402'){
+  if(path==='/openapi.json'||path==='/.well-known/x402'||path==='/humans'){
    if(credentialHeaders.some(name=>request.headers.has(name)))return json(request,{error:{code:'canonical_api_required',message:'Credential-bearing discovery requests must be sent directly to the canonical API; this host will not redirect them.',canonical_api_origin:model.origin}},421,{'Cache-Control':'no-store'});
    return respond(request,null,'text/plain',307,{Location:model.origin+path,'Cache-Control':'no-store'});
   }
@@ -62,7 +62,6 @@ export default {
   }
   if(path==='/buy')return respond(request,format==='markdown'?buyMarkdown(model):buyPage(model),format==='markdown'?'text/markdown':'text/html');
   if(path==='/sell')return respond(request,format==='markdown'?sellMarkdown(model):sellPage(model),format==='markdown'?'text/markdown':'text/html');
-  if(path==='/humans')return respond(request,humansPage(model));
   if(tool){
    if(match[2]||format==='markdown')return respond(request,toolMarkdown(model,tool),'text/markdown');
    if(format==='json')return json(request,compactManifest(model).tools.find(p=>p.id===tool.id));

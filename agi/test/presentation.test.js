@@ -5,7 +5,7 @@ import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import worker from '../src/worker.js';
 import {createModel} from '../src/model.js';
-import {homePage,toolPage} from '../src/pages.js';
+import {homePage,toolPage,renderMarkdown} from '../src/pages.js';
 import {products,REGISTRY_VERSION} from '../../platform/src/registry.js';
 import {successContractPin} from '../../platform/src/contract-pins.js';
 import {CREATOR_TERMS} from '../../platform/src/submissions.js';
@@ -16,7 +16,7 @@ const site='https://presentation.example';
 const active=products.filter(product=>product.status==='active');
 const plain=value=>JSON.parse(JSON.stringify(value));
 const request=(path,init={},env={})=>worker.fetch(new Request(site+path,init),env);
-const publicHtml=['/','/buy','/sell','/humans',...active.map(product=>'/tools/'+product.id)];
+const publicHtml=['/','/buy','/sell',...active.map(product=>'/tools/'+product.id)];
 const publicMarkdown=['/llms.txt','/AGENTS.md','/buy.md','/sell.md',...active.map(product=>'/tools/'+product.id+'.md')];
 const noNetwork=t=>t.mock.method(globalThis,'fetch',()=>{throw new Error('Presentation must not make external requests.');});
 
@@ -130,7 +130,7 @@ test('buyer and seller guides preserve payment recovery, approval boundaries and
 });
 
 test('HEAD has matching status and MIME type but no body on public and missing routes',async()=>{
- for(const path of [...publicHtml,...publicMarkdown,'/agent.json','/missing','/tools/missing','/tools/retry-gate']){
+ for(const path of [...publicHtml,...publicMarkdown,'/humans','/agent.json','/missing','/tools/missing','/tools/retry-gate']){
   const get=await request(path),head=await request(path,{method:'HEAD'});
   assert.equal(head.status,get.status,path);
   assert.equal(head.headers.get('content-type'),get.headers.get('content-type'),path);
@@ -141,7 +141,7 @@ test('HEAD has matching status and MIME type but no body on public and missing r
 
 test('credential-free canonical schema redirects never forward visitor queries',async t=>{
  noNetwork(t);
- for(const path of ['/openapi.json','/.well-known/x402'])for(const method of ['GET','HEAD']){
+ for(const path of ['/openapi.json','/.well-known/x402','/humans'])for(const method of ['GET','HEAD']){
   const response=await request(path+'?capability=secret-query&destination=https://evil.invalid',{method});
   assert.equal(response.status,307,path+' '+method);
   assert.equal(response.headers.get('location'),canonical+path);
@@ -160,7 +160,7 @@ test('redirect-following clients never send credentials to a destination from di
    return fetch(new Request(new URL(response.headers.get('location'),request.url),{method:request.method,headers:request.headers}));
   return response;
  };
- for(const path of ['/openapi.json','/.well-known/x402'])for(const method of ['GET','HEAD'])
+ for(const path of ['/openapi.json','/.well-known/x402','/humans'])for(const method of ['GET','HEAD'])
   for(const header of ['X-Creator-Capability','X-Preparation-Capability','X-Referral-Capability','PAYMENT-SIGNATURE','Authorization','Cookie','Proxy-Authorization','X-Payment','X-Api-Key','X-Auth-Token']){
    const response=await followingClient(new Request(site+path,{method,headers:{[header]:'private-sentinel'}}));
    assert.equal(response.status,421,path+' '+method+' '+header);
@@ -238,4 +238,21 @@ test('deployed Worker dependency graph cannot import platform execution, databas
  assert.equal(config.name,'agi');
  assert.equal(config.assets.binding,'ASSETS');
  for(const binding of ['d1_databases','kv_namespaces','r2_buckets','durable_objects','services','queues','triggers','vars'])assert.equal(config[binding],undefined,'Presentation must not configure '+binding);
+});
+
+
+test('document front door exposes essential actions and links to the original Humans page',async()=>{
+ const html=await(await request('/')).text();
+ assert.doesNotMatch(html,/<details|tool-card|hero-layout|guide-sidebar/);
+ for(const id of ['quick-start','buy-tools','sell-tools','request-and-response','update-an-approved-tool','machine-readable'])assert(html.includes('id="'+id+'"'));
+ assert(html.includes('href="'+canonical+'/humans"'));
+ const manifest=await(await request('/agent.json')).json();assert.equal(manifest.for_humans,canonical+'/humans');
+ for(const p of active)assert(html.includes(p.outcome.success_criterion.replaceAll('&','&amp;')));
+});
+
+test('Markdown rendering preserves inert text and rejects executable link schemes',()=>{
+ const html=renderMarkdown('# Test\n\n[bad](javascript:alert(1)) <img src=x onerror=alert(1)>\n\n```json\n</code><script>alert(1)</script>\n```\n\n[good](https://example.com/path)');
+ assert.doesNotMatch(html,/<script|<img|href="javascript:/);
+ assert(html.includes('&lt;script&gt;'));
+ assert(html.includes('href="https://example.com/path"'));
 });

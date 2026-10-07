@@ -2,7 +2,7 @@ const json=value=>JSON.stringify(value,null,2);
 export function compactManifest(m){
  return {name:m.name,format:'agenttoolbox-frontdoor-v1',catalog_version:m.registryVersion,
   canonical_api_origin:m.origin,presentation_only:true,contract_policy:m.contract_policy,
-  buy_guide:m.siteOrigin+'/buy.md',sell_guide:m.siteOrigin+'/sell.md',for_humans:m.siteOrigin+'/humans',
+  buy_guide:m.siteOrigin+'/buy.md',sell_guide:m.siteOrigin+'/sell.md',for_humans:m.origin+'/humans',
   ...m.machine,
   tools:m.tools.map(p=>({id:p.id,name:p.name,version:p.version,provider:p.provider,experimental:p.experimental,
    use_when:p.fit,scope:p.scope,minimum_amount_atomic:p.pricing.minimum_amount_atomic,decimals:p.pricing.decimals,
@@ -17,49 +17,96 @@ export function compactManifest(m){
  };
 }
 export function homeMarkdown(m){
+ const sample=m.tools.find(p=>p.id==='contract-cases')??m.tools[0];
+ const seller=m.sellerTerms.terms;
  return `# AgentToolbox
 
-Buy tools. Sell tools. Pay for a published outcome.
+> Tools for agents. Pay when the published outcome checks pass.
 
-For Humans: ${m.siteOrigin}/humans
-Canonical API: ${m.origin}
-${m.contract_policy}
+${m.tools.length} experimental tools by AgentToolbox. Buyer-chosen prices from $0.01 USDC on Base, paid through x402. Buy a result or propose a tool for review.
+
+[Buy tools](#buy-tools) · [Sell tools](#sell-tools) · [Machine-readable](#machine-readable)
+
+API base: ${m.origin}
+All API calls, signatures and capabilities go directly to this origin.
+
+## Quick start
+
+1. Choose a tool below. Read its contract, success checks and free static examples.
+2. Fetch \`GET /v1/products/{id}/criteria\` and \`GET /v1/products/{id}/invoke\` (402 expected; discovery only).
+3. Verify both SHA-256 pins from the decoded \`canonical_json\` UTF-8 bytes, with no trailing newline. Save the exact input, version, pins and a fresh 32–128 character \`Idempotency-Key\`.
+4. Authorize the disclosed amount with an x402 v2 exact client. Send \`POST /v1/products/{id}/invoke\` with that body, key and \`PAYMENT-SIGNATURE\`. The direct minimum-price call needs no quote.
+5. Save the output, \`operation_id\`, \`contract_pins\`, \`payment\` and \`PAYMENT-RESPONSE\`. Settlement is attempted only after the published checks pass.
+6. After an uncertain response, replay the identical request and original authorization. Completed output is replayable for 24 hours. Unknown settlement needs reconciliation; never create a replacement authorization.
 
 ## Buy tools
 
+Each tool starts at $0.01 USDC (\`10000\` atomic units). A passing check establishes its defined outcome, not truth, usefulness or proven buyer value. All fixtures are synthetic; \`input_valid\` covers the full runtime contract, not JSON Schema alone.
+
 ${m.tools.map(p=>`### ${p.name}
-${p.fit}
-Scope: ${p.scope}.
-Cost: from ${p.price_label} per qualifying outcome on Base; buyer chooses the amount. No qualifying outcome means no settlement, though latency and agent token costs remain.
+
+${p.problem} ${p.scope}. Version \`${p.version}\`.
+
 Success: ${p.outcome.success_criterion}
-Guide: ${m.siteOrigin+p.markdown_url}
-Contract and schemas: ${p.links.detail}
-Checks and success pin: ${p.links.criteria}
-Free static fixtures: ${p.links.examples}
-${p.preview.supported?'Limited real-input preview: '+p.links.preview:'Real-input preview: unavailable; the verdict is the paid output.'}
-Read-only payment/pin discovery: GET ${p.links.invoke} (HTTP 402 expected)
-Call: POST ${p.links.invoke}
+
+[Contract + schemas](${p.links.detail}) · [Success checks + pin](${p.links.criteria}) · [Free examples](${p.links.examples}) · [Tool guide](${p.guide_url})
+${p.preview.supported?`[Limited real-input preview](${p.links.preview})`:'No real-input preview; the verdict is the paid output.'}
+Call: \`POST /v1/products/${p.id}/invoke\`
 `).join('\n')}
-Buyer quickstart: ${m.siteOrigin}/buy.md
+## Request and response
+
+Example: ContractCases at the minimum. Fetch its [success pin](${sample.links.criteria}) and [unsigned payment challenge](${sample.links.invoke}) first. Fill in the two verified hashes; save the final body and headers before authorization.
+
+\`\`\`http
+POST ${sample.links.invoke}
+Content-Type: application/json
+Idempotency-Key: <your-saved-32-to-128-character-key>
+PAYMENT-SIGNATURE: <client-authorized-exact-challenge>
+
+${json({version:sample.version,input:sample.example_input,max_charge_usdc_atomic:sample.pricing.minimum_amount_atomic,success_contract_sha256:'<verified-success-sha256>',payment_requirements_sha256:'<verified-payment-sha256>'})}
+\`\`\`
+
+Successful response excerpt (illustrative; the full response includes output, contract pins and payment details):
+
+\`\`\`json
+{"operation_id":"<operation-id>","execution":"completed",
+ "payment":{"status":"facilitator_confirmed",
+ "amount_settled_atomic":"10000","onchain_reconciled":false}}
+\`\`\`
+
+There is no public receipt GET route; retain the response and use identical POST replay. Facilitator confirmation is not independent on-chain reconciliation. [Complete buyer guide](/buy).
+
+## Prices, quotes and previews
+
+- To pay more, \`POST /v1/products/{id}/quote\` with \`version\`, \`input\`, \`payment_amount_atomic\` and the verified success pin. Verify the returned payment pin and authorize the quote's challenge. Invoke with its \`quote_id\`, exact input, amount and pins. Do not reuse the minimum-price payment hash for a higher quote.
+- Quotes freeze input, version, amount and pins. \`max_charge_usdc_atomic\` is a ceiling, not a price selector. Failed outcome checks do not trigger settlement; latency and agent token costs remain.
+- Docs Pack and ContractCases offer limited previews: 10/client/day, 50 globally/day, 16 active, up to 2,000 preview bytes, 15-minute unpaid expiry. Full results are withheld. A prepared purchase needs a quote even at the minimum, \`prepared_id\` instead of \`input\`, and the same private \`X-Preparation-Capability\`. [Preparation instructions](/buy#optional-real-input-previews).
 
 ## Sell tools
 
-Propose a tool: ${m.origin}/submit-tool
-Update an approved tool: ${m.origin}/update-tool
-Seller guide: ${m.siteOrigin}/sell.md
-Current promotion: $0 actual fee ($0.50 USDC list, 100% off). Approved creator entitlement: 90% lifetime gross with no operating-cost or referral deductions. Approval is metadata-only; separate reviewed implementation is required before publication/execution. Nonzero fees, payout and refund transfers are disabled.
+Current fee: $0 ($0.50 list, 100% off). Approved creators retain 90% lifetime gross entitlement. Approval reviews metadata only; it does not install, publish or execute the submitted endpoint. A separately reviewed implementation and security/outcome review are still needed. Paid fees, payouts and refund transfers are disabled.
 
-## Connect
+1. Read [creator terms](${m.origin}/v1/creator-terms). Current terms: \`${seller.terms_version}\`.
+2. Generate and privately retain an \`atbc_\` capability from 32 random bytes. It controls both private status and future updates; there is no recovery grant.
+3. Save/export the exact \`request_id\` and JSON body before \`POST /v1/tool-submissions\`. Send the capability only in \`X-Creator-Capability\`; include its SHA-256 as \`creator_secret_hash\`, the \`terms_version\`, and \`proposal\` in the body. Never store the capability in URLs, public fields or browser web storage.
+4. Retain the returned \`submission_id\` and \`tool_id\`. Read status with \`GET /v1/tool-submissions/{submission_id}\` and the same capability. After a lost response, replay the saved body and capability unchanged.
 
-Compact JSON: ${m.siteOrigin}/agent.json
-OpenAPI: ${m.machine.openapi}
-MCP: ${m.machine.mcp} (discovery and supported workflows; paid calls use HTTP x402)
-All API requests, capability headers and payment authorizations go directly to the canonical API, never this presentation host.
-Outcomes sold: ${m.origin}/v1/stats (purchases including repeats, not unique agents)
-Referral terms: ${m.origin}/v1/referral-terms (1% first-party accrual; no payouts)
-Private feedback: POST ${m.origin}/v1/feedback with Idempotency-Key; schema in OpenAPI.
+[Submission form with export/import](${m.origin}/submit-tool) · [Exact seller requests + schemas](/sell)
 
-Built for agents, by agents.
+### Update an approved tool
+
+Read \`GET /v1/creator-tools/{tool_id}\`. Map \`current_version\` to \`base_version\` and \`head_revision\` to \`expected_head_revision\`. Save the exact update body with a new \`request_id\`, strictly higher \`proposed_version\`, \`proposal\`, \`creator_secret_hash\` and original frozen \`terms_version\`.
+
+\`POST /v1/creator-tools/{tool_id}/updates\` uses the same capability. Read \`GET /v1/tool-updates/{update_id}\` for status. Pending or rejected updates keep the last approved version. Approval preserves the original entitlement; activation is still separate. [Update form with export/import](${m.origin}/update-tool).
+
+## Machine-readable
+
+- This document: [llms.txt](/llms.txt) · [AGENTS.md](/AGENTS.md). Compact manifest: [agent.json](/agent.json).
+- [OpenAPI](${m.machine.openapi}) · MCP: ${m.machine.mcp}. Use MCP for discovery and supported workflows; paid invocations use HTTP x402.
+- [Outcomes sold](${m.origin}/v1/stats): purchases including repeats, not unique or verified agents.
+- [Feedback, reviews and outcome reports](/buy#after-the-result). [First-party referral terms](${m.origin}/v1/referral-terms): 1% accrual, creator tools excluded, no payouts.
+
+This document is a source-derived snapshot. Verify current canonical contracts before authorizing. External-agent paid-purchase proof remains unverified.
 `;
 }
 export function buyMarkdown(m){
@@ -88,14 +135,14 @@ Idempotency-Key: <save-a-fresh-32-to-128-character-key>
 PAYMENT-SIGNATURE: <your-client-authorized-exact-challenge>
 
 \`\`\`json
-${json({version:p.version,input:p.example_input,max_charge_usdc_atomic:p.pricing.minimum_amount_atomic})}
+${json({version:p.version,input:p.example_input,max_charge_usdc_atomic:p.pricing.minimum_amount_atomic,success_contract_sha256:'<verified-success-sha256>',payment_requirements_sha256:'<verified-payment-sha256>'})}
 \`\`\`
 
-Add success_contract_sha256 and payment_requirements_sha256 using the hashes you just verified. Preserve the resulting body unchanged for retries. A pin mismatch rejects new work/payment; inspect current terms before deciding on a new operation.
+Fill success_contract_sha256 and payment_requirements_sha256 with the hashes you just verified. Preserve the resulting body unchanged for retries. A pin mismatch rejects new work/payment; inspect current terms before deciding on a new operation.
 
 ## Choose a higher amount
 
-POST ${m.origin}/v1/products/{id}/quote with version, input, payment_amount_atomic and verified pins. Use decimal USDC atomic-unit strings (6 decimals). For a higher amount use the quote's payment requirements and pins, not the minimum-price payment hash. Then invoke with quote_id, input, exact payment_amount_atomic and matching max_charge_usdc_atomic. Quotes freeze input, version, amount and pins; inspect their expiry. A quote never settles.
+POST ${m.origin}/v1/products/{id}/quote with version, input, payment_amount_atomic and the verified success_contract_sha256. Omit payment_requirements_sha256 unless you have independently derived it for the chosen-amount requirements; the minimum-price payment hash does not apply to a higher amount. Use decimal USDC atomic-unit strings (6 decimals). Independently verify the returned payment_requirements_pin.canonical_json hash and inspect payment.accepts[0]. Authorize that quote challenge; an unsigned invoke still returns minimum-price discovery, so do not authorize its challenge for a higher-price quote. Then invoke with the published version, quote_id, input, exact payment_amount_atomic, sufficient max_charge_usdc_atomic, success_contract_sha256 and the quote's verified payment_requirements_sha256. Quotes freeze input, version, amount and pins; inspect their expiry. A quote never settles.
 
 ## Optional real-input previews
 
@@ -198,7 +245,7 @@ GET ${m.origin+t.approved_tool_path}
 POST ${m.origin+t.update_path}
 GET ${m.origin+t.update_status_path}
 
-Use the same capability and stable tool_id. Read the approved base_version and expected_head_revision; propose a strictly higher canonical semantic version with request_id and proposal. Save/export the exact update body before POST; retry it unchanged after uncertainty. An update requires owner review and retains the last approved version while pending or rejected. Approval preserves the original 90% gross entitlement and frozen terms; it does not install an adapter. A stale head returns a conflict; reread before consciously creating a new proposal.
+Use the same capability and stable tool_id. Read current_version and head_revision from the approved tool; map them to base_version and expected_head_revision in the update body. Include a strictly higher canonical semantic proposed_version, request_id, proposal, creator_secret_hash and the original frozen terms_version. Save/export the exact update body before POST; retry it unchanged after uncertainty. An update requires owner review and retains the last approved version while pending or rejected. Approval preserves the original 90% gross entitlement and frozen terms; it does not install an adapter. A stale head returns a conflict; reread before consciously creating a new proposal.
 
 MCP discovery/workflows: ${m.machine.mcp}. Use submit_tool, get_tool_submission, get_creator_tool, submit_tool_update and get_tool_update according to their schemas. Preserve the same private capability and request identity.
 
