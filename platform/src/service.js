@@ -21,8 +21,8 @@ export const prepareSchema=z.strictObject({version:z.string().regex(/^\d+\.\d+\.
 export const quoteSchema=z.strictObject({version:z.string().regex(/^\d+\.\d+\.\d+$/),payment_amount_atomic:atomicAmountSchema,input:z.record(z.string(),z.unknown()).optional(),prepared_id:z.uuid().optional(),...pinFields}).refine(v=>!!v.input!==!!v.prepared_id);
 export const invokeSchema=z.strictObject({version:z.string().regex(/^\d+\.\d+\.\d+$/),input:z.record(z.string(),z.unknown()).optional(),prepared_id:z.uuid().optional(),quote_id:z.uuid().optional(),referral_code:referralCodeSchema.optional(),payment_amount_atomic:atomicAmountSchema.optional(),max_charge_usdc_atomic:z.union([atomicAmountSchema,z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)]).describe('Caller spending cap. Canonical decimal string recommended; safe integer numbers accepted for compatibility. Does not select an amount.'),agent_id:z.uuid().describe('Optional random UUID pseudonym (e.g. crypto.randomUUID()); not authenticated identity. Omit if unavailable.').optional(),review_secret_hash:z.string().regex(/^[0-9a-f]{64}$/).describe('Optional SHA-256 hex of caller-kept atbr_ secret (32 random bytes). Bound to this paid request; never send the raw secret here.').optional(),...pinFields}).refine(v=>!!v.input!==!!v.prepared_id);
 export const outcomeSchema=z.strictObject({outcome:z.enum(['success','failure','unverifiable'])});
-export function service({db,catalog=products,handlers={},channel='http',sampleKind='unclassified',feedbackAllowed=async()=>true,now=()=>new Date()}) {
-  const metrics=telemetry(db,{channel,sampleKind,now});
+export function service({db,catalog=products,handlers={},channel='http',sampleKind='unclassified',feedbackAllowed=async()=>true,now=()=>new Date(),trackingEnabled=true}) {
+  const metrics=telemetry(db,{channel,sampleKind,now,enabled:trackingEnabled});
   const get = id => {
     const p=findProduct(id,catalog); if(!p) throw new PlatformError(404,'product_not_found','No product has that identifier.');
     return p;
@@ -58,7 +58,7 @@ export function service({db,catalog=products,handlers={},channel='http',sampleKi
       if(prior) return replay(prior);
       if(body.payment_requirements_sha256)throw new PlatformError(400,'payment_not_required','This free invocation has no PaymentRequirements object to pin.');
       const successPin=await successContractPin(p);assertContractPins(body,{success_contract_sha256:successPin.sha256});
-      const callerHash=body.agent_id?await hash(body.agent_id):null;
+      const callerHash=trackingEnabled&&body.agent_id?await hash(body.agent_id):null;
       const inserted=await db.prepare(`INSERT OR IGNORE INTO platform_runs(id,product_id,version,idempotency_hash,input_hash,caller_hash,created_at,expires_at,state,sample_kind) VALUES(?,?,?,?,?,?,?,?,'running',?)`)
         .bind(runId,p.id,p.version,keyHash,inputHash,callerHash,date,new Date(now().getTime()+86400000).toISOString(),sampleKind).run();
       if(!inserted.meta.changes) return replay(await db.prepare('SELECT * FROM platform_runs WHERE product_id=? AND version=? AND idempotency_hash=?').bind(p.id,p.version,keyHash).first());
@@ -92,7 +92,7 @@ export function service({db,catalog=products,handlers={},channel='http',sampleKi
       if(row.outcome && row.outcome!==body.outcome) throw new PlatformError(409,'outcome_conflict','An outcome was already reported.');
       if(!row.outcome) {
         const changed=await db.prepare('UPDATE '+table+' SET outcome=? WHERE '+idColumn+'=? AND outcome IS NULL').bind(body.outcome,id).run();
-        if(changed.meta.changes) await telemetry(db,{channel,sampleKind:row.sample_kind,now}).record('outcome_'+body.outcome,{id:row.product_id,version:row.version});
+        if(changed.meta.changes) await telemetry(db,{channel,sampleKind:row.sample_kind,now,enabled:trackingEnabled}).record('outcome_'+body.outcome,{id:row.product_id,version:row.version});
         else { const latest=await db.prepare('SELECT outcome FROM '+table+' WHERE '+idColumn+'=?').bind(id).first();if(latest.outcome!==body.outcome) throw new PlatformError(409,'outcome_conflict','An outcome was already reported.'); }
       }
       return {run_id:id,outcome:body.outcome,evidence:'caller_reported',payment_effect:'none'};

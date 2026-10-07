@@ -1,6 +1,6 @@
 import {products,findProduct} from './registry.js';
 import {service,searchSchema,invokeSchema,outcomeSchema,PlatformError} from './service.js';
-import {home,humansPage,notFoundPage,reviewsPage,reviewPage,previewPage,submissionPage,updatePage} from './pages.js';
+import {home,humansPage,notFoundPage,reviewsIndexPage,feedbackPage,reviewsPage,reviewPage,previewPage,submissionPage,updatePage} from './pages.js';
 import {publicPurchases} from './purchases.js';
 import {markdown,openapi} from './discovery.js';
 import {mcp} from './mcp.js';
@@ -37,7 +37,9 @@ async function jsonBody(request){
 }
 function validate(schema,value) {const parsed=schema.safeParse(value);if(!parsed.success){if(schema===invokeSchema&&parsed.error.issues.some(issue=>issue.path[0]==='agent_id'))throw new PlatformError(400,'invalid_agent_id','agent_id must be a random UUID pseudonym (for example crypto.randomUUID()). Omit it if unavailable; it does not prove agent identity.');throw new PlatformError(400,'invalid_input','Request does not match the published schema.');}return parsed.data;}
 function html(content,status=200){return new Response(content,{status,headers:{'Content-Type':'text/html; charset=utf-8'}});}
-export function createPlatform({db,origin,catalog:sourceCatalog=products,handlers={},limit=async()=>true,feedbackLimit=async()=>true,assets,payments={enabled:false},paymentAdapterFactory,index402VerificationHash}) {
+export function createPlatform({db,origin,catalog:sourceCatalog=products,handlers={},limit=async()=>true,feedbackLimit=async()=>true,assets,payments={enabled:false},paymentAdapterFactory,index402VerificationHash,trackingEnabled=true,telemetryEnabled=true}) {
+ // Accept the early AGI integration name too; either server option can defer tracking.
+ trackingEnabled=trackingEnabled&&telemetryEnabled;
  const catalog=runtimeCatalog(sourceCatalog,handlers,payments);
  return async function app(request,client='unknown') {
   const url=new URL(request.url),path=url.pathname,method=request.method;
@@ -54,11 +56,14 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
     if(path==='/health' && ['GET','HEAD'].includes(method))return finish(Response.json({ok:true,service:'agenttoolbox',api_version:'1'}));
     if(path.startsWith('/agenttoolbox-icon')||['/style.css','/site.js','/retry-envelope.js'].includes(path)) {
       if(!['GET','HEAD'].includes(method))throw new PlatformError(405,'method_not_allowed','Use GET.');
-      return finish(assets?await assets.fetch(request):new Response(null,{status:404}));
+      // Asset bindings receive only a path and safe method, never payment,
+      // capability, authorization, cookie or query-string data.
+      const assetUrl=new URL(path,origin);
+      return finish(assets?await assets.fetch(new Request(assetUrl,{method})):new Response(null,{status:404}));
     }
     const channel=path==='/mcp'?'mcp':(path.startsWith('/v1')||path==='/openapi.json'||path==='/llms.txt'||request.headers.get('Accept')?.includes('application/json')?'http':'html');
     const sampleKind=request.headers.get('X-AgentToolbox-Sample')==='synthetic'?'synthetic':'unclassified';
-    const api=service({db,catalog,handlers,channel,sampleKind,feedbackAllowed:()=>feedbackLimit(client)});
+    const api=service({db,catalog,handlers,channel,sampleKind,feedbackAllowed:()=>feedbackLimit(client),trackingEnabled});
     api.creatorTerms=creatorTerms;
     api.submitTool=async(body,capability)=>{if(!await feedbackLimit(client))throw new PlatformError(429,'rate_limited','Wait before submitting another proposal.');return submitTool({db,body,capability,client});};
     api.getSubmission=(id,capability)=>getSubmission({db,id,capability});
@@ -89,6 +94,14 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
       if(path==='/v1/referrals/me')return finish(Response.json(await getReferral({db,capability:request.headers.get('X-Referral-Capability')})));
       if(path==='/submit-tool')return finish(html(submissionPage()));
       if(path==='/update-tool')return finish(html(updatePage()));
+      if(path==='/reviews')return finish(html(reviewsIndexPage(catalog)));
+      if(path==='/feedback'){
+        const selected=url.searchParams.getAll('tool');
+        if(!selected.length)return finish(html(feedbackPage(catalog)));
+        const product=selected.length===1?findProduct(selected[0],catalog):null;
+        if(!product||product.status!=='active')throw new PlatformError(404,'product_not_found','No active tool has that identifier.');
+        return finish(html(feedbackPage(catalog,product)));
+      }
       const creatorTool=path.match(/^\/v1\/creator-tools\/([a-z0-9-]{1,64})$/);
       if(creatorTool)return finish(Response.json(await api.getCreatorTool(creatorTool[1],request.headers.get('X-Creator-Capability'),Object.fromEntries(url.searchParams))));
       const toolUpdate=path.match(/^\/v1\/tool-updates\/([0-9a-f-]{36})$/);
@@ -151,10 +164,10 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
         if(!product)throw new PlatformError(404,'product_not_found','No product has that identifier.');
         if(['active','validation'].includes(product.status)&&product.pricing.payments_enabled&&!request.headers.get('PAYMENT-SIGNATURE')){
           await boundedBody(request);
-          return finish(await paidInvocation({request,product,handler:handlers[product.id],db,config:payments,origin}));
+          return finish(await paidInvocation({request,product,handler:handlers[product.id],db,config:payments,origin,trackingEnabled}));
         }
         const body=validate(invokeSchema,await jsonBody(request));
-        if(request.headers.has('PAYMENT-SIGNATURE')||(['active','validation'].includes(product.status)&&product.pricing.payments_enabled)) return finish(await paidInvocation({request,body,key:request.headers.get('Idempotency-Key'),product,handler:handlers[product.id],db,config:payments,origin,adapterFactory:paymentAdapterFactory}));
+        if(request.headers.has('PAYMENT-SIGNATURE')||(['active','validation'].includes(product.status)&&product.pricing.payments_enabled)) return finish(await paidInvocation({request,body,key:request.headers.get('Idempotency-Key'),product,handler:handlers[product.id],db,config:payments,origin,adapterFactory:paymentAdapterFactory,trackingEnabled}));
         return finish(Response.json(await api.invoke(invoke[1],body,request.headers.get('Idempotency-Key'))));}
       const outcome=path.match(/^\/v1\/runs\/([0-9a-f-]{36})\/outcome$/);
       if(outcome)return finish(Response.json(await api.outcome(outcome[1],validate(outcomeSchema,await jsonBody(request)))));
