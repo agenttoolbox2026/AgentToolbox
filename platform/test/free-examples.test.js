@@ -7,12 +7,23 @@ import {createDocsPack} from '../src/docs-pack.js';
 import {createQuoteProof} from '../src/quote-proof.js';
 import {createContractCases} from '../src/contract-cases.js';
 import {createMcpWireCheck} from '../src/mcp-wirecheck.js';
+import {products} from '../src/registry.js';
 
 const require=createRequire(import.meta.url),sdkRequire=createRequire(require.resolve('@modelcontextprotocol/sdk/package.json'));
 const Ajv=sdkRequire('ajv/dist/2020.js').default;
 const ajv=new Ajv({allErrors:true,strict:false,ownProperties:true});
 const sha=value=>createHash('sha256').update(value).digest('hex');
 const atPointer=(value,pointer)=>pointer===''?value:pointer.slice(1).split('/').reduce((v,part)=>v[part.replaceAll('~1','/').replaceAll('~0','~')],value);
+
+test('fixture input_valid distinguishes runtime restrictions from the published JSON Schema',()=>{
+ for(const [id,caseId] of [['docs-pack','unsupported_host'],['contract-cases','unsupported_keyword'],['contract-cases','invalid_seed']]){
+  const manifest=freeExampleManifest(id),example=manifest.cases.find(c=>c.id===caseId);
+  assert.equal(ajv.compile(products.find(p=>p.id===id).input_schema)(example.input),true);
+  assert.equal(example.expected.input_valid,false);
+  assert.match(manifest.expected_format,/complete handler input validation/);
+  assert.match(manifest.expected_format,/not just validation against the published JSON Schema/);
+ }
+});
 
 function fixtureHandler(productId,example,fixedClock){
  const calls=[];
