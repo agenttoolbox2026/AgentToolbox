@@ -246,6 +246,9 @@ test('document front door exposes essential actions and links to the original Hu
  assert.doesNotMatch(html,/<details|tool-card|hero-layout|guide-sidebar/);
  for(const id of ['quick-start','buy-tools','sell-tools','request-and-response','update-an-approved-tool','machine-readable'])assert(html.includes('id="'+id+'"'));
  assert(html.includes('href="'+canonical+'/humans"'));
+ const css=await readFile(new URL('../public/style.css',import.meta.url));
+ const cssVersion=createHash('sha256').update(css).digest('hex').slice(0,12);
+ assert(html.includes('href="/style.css?v='+cssVersion+'"'),'Changed stylesheet must have a new browser cache key');
  const manifest=await(await request('/agent.json')).json();assert.equal(manifest.for_humans,canonical+'/humans');
  for(const p of active)assert(html.includes(p.outcome.success_criterion.replaceAll('&','&amp;')));
 });
