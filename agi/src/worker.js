@@ -44,7 +44,8 @@ export function createAgi({model:sourceModel=generated,platformOptions={},compil
   ctx.waitUntil(Promise.all([expirePaidResults(env.METRICS_DB),expirePreparations(env.METRICS_DB,new Date(),{preserveRecords:true})]));
  },
  async fetch(request,env={}){
-  let model=sourceModel,dynamicDocument=false;
+  const payoutRequestsEnabled=env.PUBLIC_PAYOUT_REQUESTS_ENABLED==='true';
+  let model={...sourceModel,payoutRequestsEnabled},dynamicDocument=false;
   const respond=(...args)=>{const response=responseFor(...args);if(dynamicDocument)response.headers.set('Cache-Control','no-store');return response;};
   const json=(request,body,status=200,extra={})=>respond(request,JSON.stringify(body,null,2)+'\n','application/json',status,extra);
   const url=new URL(request.url),path=url.pathname,read=['GET','HEAD'].includes(request.method);
@@ -64,9 +65,10 @@ export function createAgi({model:sourceModel=generated,platformOptions={},compil
   }
   if(path==='/creator-wallet'||path==='/referrals'){
    if(!read)return json(request,{error:{code:'method_not_allowed'}},405,{Allow:'GET, HEAD','Cache-Control':'no-store'});
-   return respond(request,path==='/referrals'?referralPage():creatorWalletPage(),'text/html',200,{'Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; style-src 'self'; img-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});
+   return respond(request,path==='/referrals'?referralPage({payoutRequestsEnabled}):creatorWalletPage({payoutRequestsEnabled}),'text/html',200,{'Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; style-src 'self'; img-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});
   }
   const documentPath=['/','/buy','/sell','/humans','/tools','/tools.md','/tools.json','/sell/terms','/sell/terms.md','/agent.json','/llms.txt','/AGENTS.md','/index.md','/buy.md','/sell.md','/robots.txt','/sitemap.xml'].includes(path)||/^\/tools\/[a-z0-9-]+(?:\/(?:contract|checks|examples))?(?:\.md)?$/.test(path);
+  if(read&&documentPath&&!['/humans','/robots.txt','/sitemap.xml'].includes(path))dynamicDocument=true;
   if(documentPath&&!read&&request.method!=='OPTIONS')return json(request,{error:{code:'method_not_allowed'}},405,{Allow:'GET, HEAD','Cache-Control':'no-store'});
   const compiled=await(compiledRuntime??getCompiledRuntime());
   const catalog=platformOptions.catalog??compiled.catalog,handlers=platformOptions.handlers??compiled.handlers;
@@ -87,7 +89,7 @@ export function createAgi({model:sourceModel=generated,platformOptions={},compil
      return json(request,{error:{code:'rate_limited',message:'Wait before retrying.'}},429);
     const current=await creatorRuntimeCatalog({db:env.METRICS_DB,catalog:runtimeCatalog(catalog,handlers,payments),handlers});
     const eligible=new Map(current.filter(isPublishedTool).map(product=>[product.id,product]));
-    model={...sourceModel,tools:sourceModel.tools.filter(tool=>{
+    model={...model,tools:sourceModel.tools.filter(tool=>{
      if(!creatorCandidate(tool))return true;
      const product=eligible.get(tool.id);
      return product?.version===tool.version&&handlers[tool.id]?.creatorContractSha256===tool.success_pin?.sha256;
@@ -166,7 +168,7 @@ export function createAgi({model:sourceModel=generated,platformOptions={},compil
    feedbackLimit:async client=>!!env.FEEDBACK_LIMIT&&(await env.FEEDBACK_LIMIT.limit({key:client})).success,
    payments,
    limit:async client=>(await env.SERVICE_LIMIT.limit({key:'catalog'})).success&&(await env.CLIENT_LIMIT.limit({key:client})).success,
-   ...platformOptions});
+   ...platformOptions,payoutRequestsEnabled});
   // Execute locally: never proxy an authorization or capability to another host.
   const response=await app(request,request.headers.get('CF-Connecting-IP')??'unknown');
   if(read&&request.method!=='HEAD'&&response.headers.get('Content-Type')?.startsWith('text/html')){

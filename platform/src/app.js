@@ -40,7 +40,7 @@ async function jsonBody(request){
 }
 function validate(schema,value) {const parsed=schema.safeParse(value);if(!parsed.success){if(schema===invokeSchema&&parsed.error.issues.some(issue=>issue.path[0]==='agent_id'))throw new PlatformError(400,'invalid_agent_id','agent_id must be a random UUID pseudonym (for example crypto.randomUUID()). Omit it if unavailable; it does not prove agent identity.');throw new PlatformError(400,'invalid_input','Request does not match the published schema.');}return parsed.data;}
 function html(content,status=200){return new Response(content,{status,headers:{'Content-Type':'text/html; charset=utf-8'}});}
-export function createPlatform({db,origin,catalog:sourceCatalog=products,handlers={},limit=async()=>true,feedbackLimit=async()=>true,assets,payments={enabled:false},paymentAdapterFactory,index402VerificationHash,trackingEnabled=true,telemetryEnabled=true}) {
+export function createPlatform({db,origin,catalog:sourceCatalog=products,handlers={},limit=async()=>true,feedbackLimit=async()=>true,assets,payments={enabled:false},paymentAdapterFactory,index402VerificationHash,trackingEnabled=true,telemetryEnabled=true,payoutRequestsEnabled=false}) {
  // Accept the early AGI integration name too; either server option can defer tracking.
  trackingEnabled=trackingEnabled&&telemetryEnabled;
  const configuredCatalog=runtimeCatalog(sourceCatalog,handlers,payments);
@@ -69,7 +69,7 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
     const sampleKind=request.headers.get('X-AgentToolbox-Sample')==='synthetic'?'synthetic':'unclassified';
     const api=service({db,catalog,handlers,channel,sampleKind,feedbackAllowed:()=>feedbackLimit(client),trackingEnabled});
     attachCreatorPayoutApi(api,{db,origin,writeAllowed:()=>feedbackLimit(client)});
-    attachBeneficiaryPayoutApi(api,{db,origin,client,writeAllowed:()=>feedbackLimit(client)});
+    attachBeneficiaryPayoutApi(api,{db,origin,client,writeAllowed:()=>feedbackLimit(client),payoutRequestsEnabled:payoutRequestsEnabled===true});
     api.creatorTerms=creatorTerms;
     api.submitTool=async(body,capability)=>{if(!await feedbackLimit(client))throw new PlatformError(429,'rate_limited','Wait before submitting another proposal.');return submitTool({db,body,capability,client});};
     api.getSubmission=(id,capability)=>getSubmission({db,id,capability});

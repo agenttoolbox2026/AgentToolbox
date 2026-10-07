@@ -1,7 +1,8 @@
-export function payoutRequestSection({kind='creator'}={}){
+export function payoutRequestSection({kind='creator',payoutRequestsEnabled=false}={}){
  if(!['creator','referral'].includes(kind))throw new Error('Unsupported payout kind.');
  const prefix=`${kind}-payout`,header=kind==='creator'?'X-Creator-Capability':'X-Referral-Capability';
- return `<section class="workflow" data-payout-requests aria-labelledby="${prefix}-heading"><h2 id="${prefix}-heading">Request a payout</h2>
+ return `<section class="workflow" data-payout-requests data-payout-requests-enabled="${payoutRequestsEnabled===true}" aria-labelledby="${prefix}-heading"><h2 id="${prefix}-heading">Request a payout</h2>
+${payoutRequestsEnabled?'':'<p data-payout-unavailable><strong>Payout requests are temporarily unavailable while owner operations are being verified.</strong> You can manage your wallet, read earnings and inspect any existing request. Keep saved request JSON unchanged.</p>'}
 <p>Read your current wallet and available earnings, then choose an exact USDC amount. A request holds no funds and sends no payment. Before the owner reserves funds, your current wallet needs an EOA ownership proof and separate owner approval. The owner reviews and signs the transfer externally; paid status requires verified finalized Base USDC evidence.</p>
 ${kind==='creator'?`<label for="${prefix}-tool">Creator tool ID<input id="${prefix}-tool" data-payout-tool placeholder="creator-…" autocomplete="off" spellcheck="false" maxlength="44"></label>`:'<p class="footnote">Your referral account is resolved privately from the existing capability above. Eligible earnings come from first-party tools only.</p>'}
 <div class="workflow-actions"><button type="button" data-payout-read hidden>Read wallet and available earnings</button><button type="button" data-payout-history hidden>Read request history</button></div><pre class="workflow-result" data-payout-current hidden></pre>

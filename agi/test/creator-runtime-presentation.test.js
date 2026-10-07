@@ -86,7 +86,7 @@ test('production compiled registry remains empty of creators and first-party doc
  const forbidden=()=>{throw new Error('Static first-party documents must not read D1 or consume admission.');};
  const worker=createAgi(),env={METRICS_DB:{prepare:forbidden},PUBLIC_ORIGIN:origin,CLIENT_LIMIT:{limit:forbidden},SERVICE_LIMIT:{limit:forbidden}};
  for(const path of ['/tools','/tools.md','/tools.json','/agent.json','/tools/docs-pack/checks','/sitemap.xml']){
-  const response=await worker.fetch(new Request(origin+path),env);assert.equal(response.status,200,path);assert.equal(response.headers.get('cache-control'),'public, max-age=60');
+  const response=await worker.fetch(new Request(origin+path),env);assert.equal(response.status,200,path);assert.equal(response.headers.get('cache-control'),path==='/sitemap.xml'?'public, max-age=60':'no-store');
  }
 });
 

@@ -48,7 +48,7 @@ async function fixture(t,kind){
  }
  const payments={enabled:true,live:true,receiverConfirmed:true,network:BASE_NETWORK,asset:BASE_USDC,payTo:sourceAddress};
  const worker=createAgi({compiledRuntime:compiled,platformOptions:{payments,paymentAdapterFactory:async({amount})=>({requirements:paymentRequirements(product,payments,amount),verify:async()=>{counts.verify++;return {isValid:true,payer};},settle:async()=>{counts.settle++;return {success:true,network:BASE_NETWORK,transaction:'0x'+'cc'.repeat(32),payer,amount};}})}});
- const allow={limit:async()=>({success:true})},env={METRICS_DB:db,PUBLIC_ORIGIN:origin,CLIENT_LIMIT:allow,SERVICE_LIMIT:allow,FEEDBACK_LIMIT:allow},request=(path,init={})=>worker.fetch(new Request(origin+path,init),env),privateRequest=(path,body)=>request(path,body===undefined?{headers:{[header]:capability}}:json(body,{[header]:capability}));
+ const allow={limit:async()=>({success:true})},env={METRICS_DB:db,PUBLIC_ORIGIN:origin,PUBLIC_PAYOUT_REQUESTS_ENABLED:'true',CLIENT_LIMIT:allow,SERVICE_LIMIT:allow,FEEDBACK_LIMIT:allow},request=(path,init={})=>worker.fetch(new Request(origin+path,init),env),privateRequest=(path,body)=>request(path,body===undefined?{headers:{[header]:capability}}:json(body,{[header]:capability}));
  let referralCode;
  if(kind==='creator'){
   assert.equal((await request(`/v1/products/${toolId}/invoke`)).status,404);
@@ -64,8 +64,25 @@ async function fixture(t,kind){
  const challenge=await result(await privateRequest(walletPath+'/challenge',{request_id:key(),claim_revision:1}));
  const proof=await result(await privateRequest(walletPath+'/verify',{challenge_id:challenge.challenge_id,signature:await account.signMessage({message:challenge.message})}));assert.equal(proof.ownership_status,'eoa_signature_verified');
  await operator.approvePayoutWallet({db,kind,claimId:claim.claim_id,reviewer,requestId:key()});
- return {db,kind,capability,header,request,privateRequest,claim,toolId,subject:toolId??referralCode,counts,amount:kind==='creator'?'9000':'100',decimal:kind==='creator'?'0.009000':'0.000100'};
+ return {db,kind,capability,header,request,privateRequest,claim,env,toolId,subject:toolId??referralCode,counts,amount:kind==='creator'?'9000':'100',decimal:kind==='creator'?'0.009000':'0.000100'};
 }
+for(const kind of ['creator','referral'])test(`staged AGI ${kind} requests stay disabled through HTTP and MCP with honest readiness and intact capabilities`,async t=>{
+ const f=await fixture(t,kind);f.env.PUBLIC_PAYOUT_REQUESTS_ENABLED='false';
+ const path=kind==='creator'?`/v1/creator-tools/${f.toolId}/payout-requests`:'/v1/referrals/me/payout-requests',body={request_id:key(),amount_atomic:f.amount,claim_revision:f.claim.revision};
+ const held=await result(await f.privateRequest(path,body),503);assert.equal(held.error.code,'payout_requests_unavailable');
+ for(const headers of [{},{[f.header]:(kind==='creator'?'atbc_':'atbf_')+Buffer.alloc(32,88).toString('base64url')},{[kind==='creator'?'X-Referral-Capability':'X-Creator-Capability']:f.capability}])assert.equal((await f.request(path,json(body,headers))).status,403);
+ const args={...body,[kind==='creator'?'creator_capability':'referral_capability']:f.capability,...(kind==='creator'?{tool_id:f.toolId}:{})};
+ const mcpResponse=await f.request('/mcp',json({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:kind==='creator'?'request_creator_payout':'request_referral_payout',arguments:args}},{Accept:'application/json, text/event-stream'}));
+ const mcp=await result(mcpResponse);assert.equal(mcp.result.isError,true);assert.equal(JSON.parse(mcp.result.content[0].text).error.code,'payout_requests_unavailable');
+ assert.equal(f.db.sqlite.prepare('SELECT count(*) n FROM platform_payout_requests').get().n,0);assert.equal(f.db.sqlite.prepare('SELECT count(*) n FROM platform_payout_request_links').get().n,0);
+ assert.equal((await result(await f.privateRequest(path))).requests.length,0);
+ const earnings=await result(await f.privateRequest(kind==='creator'?`/v1/creator-tools/${f.toolId}/earnings`:'/v1/referrals/me/earnings'));assert.equal(earnings.available_atomic,f.amount);assert.equal(earnings.reserved_atomic,'0');assert.equal(earnings.confirmed_paid_atomic,'0');
+ for(const page of ['/creator-wallet','/referrals']){const html=await(await f.request(page)).text();assert(html.includes('data-payout-requests-enabled="false"'));assert(html.includes('Payout requests are temporarily unavailable'));}
+ for(const page of ['/sell.md','/buy.md','/sell/terms.md']){const response=await f.request(page);assert.equal(response.headers.get('cache-control'),'no-store');assert((await response.text()).includes('Payout requests are temporarily unavailable'));}
+ const manifest=await result(await f.request('/agent.json'));assert.equal(manifest.seller.payouts.requests_enabled,false);assert.equal(manifest.referrals.payout_processing.requests_enabled,false);
+ f.env.PUBLIC_PAYOUT_REQUESTS_ENABLED='true';assert.equal((await result(await f.privateRequest(path,body))).state,'requested');assert.equal(f.db.sqlite.prepare('SELECT count(*) n FROM platform_payout_requests').get().n,1);
+ assert.deepEqual(f.db.sqlite.prepare('PRAGMA foreign_key_check').all(),[]);
+});
 function syntheticChain(manifest){
  const transactionHash='0x'+'33'.repeat(32),blockHash='0x'+'44'.repeat(32),finalHash='0x'+'55'.repeat(32),topic=a=>'0x'+a.slice(2).padStart(64,'0'),data='0x'+BigInt(manifest.amount_atomic).toString(16).padStart(64,'0');
  const tx={hash:transactionHash,chainId:'0x2105',nonce:'0x7',from:manifest.from,to:manifest.asset,value:'0x0',input:manifest.transaction.data,blockNumber:'0x10',blockHash,transactionIndex:'0x0'},log={address:manifest.asset,topics:['0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',topic(manifest.from),topic(manifest.to)],data,transactionHash,blockNumber:'0x10',blockHash,transactionIndex:'0x0',logIndex:'0x2',removed:false};

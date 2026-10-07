@@ -1,5 +1,6 @@
 import {selectCatalog,CATALOG_LIMITS} from './catalog.js';
 const json=value=>JSON.stringify(value,null,2);
+const payoutAvailability=m=>m.payoutRequestsEnabled===true?'':'\n\nPayout requests are temporarily unavailable while owner operations are being verified. Wallet proof, earnings and existing request status remain available.';
 export const markdownText=value=>String(value??'').replace(/\s+/gu,' ').trim()
  .replace(/[\\`*_[\]<>#!]/g,'\\$&').replace(/^(\d+)([.)])(?=\s)/,'$1\\$2').replace(/^[-+](?=\s)/,'\\$&');
 export function toolManifest(m,p){
@@ -22,8 +23,8 @@ export function compactManifest(m){
   seller:{terms:m.origin+'/v1/creator-terms',submit:m.origin+'/v1/tool-submissions',browser_submit:m.origin+'/submit-tool',
    browser_update:m.origin+'/update-tool',charged_fee_atomic:m.sellerTerms.terms.charged_fee_atomic,
    share_bps:m.sellerTerms.terms.share_bps,approval_effect:m.sellerTerms.terms.approval_effect,transfers_enabled:false,
-   payouts:{browser:m.origin+'/creator-wallet',wallet:m.origin+'/v1/creators/me/payout-wallet',earnings:m.origin+'/v1/creator-tools/{tool_id}/earnings',requests:m.origin+'/v1/creator-tools/{tool_id}/payout-requests',mode:'owner_reviewed_external_signature',automatic_transfers:false,paid_basis:'finalized_canonical_base_usdc_transfer'}},
-  referrals:{terms:m.origin+'/v1/referral-terms',first_party_only:true,share_bps:m.referralTerms.terms.share_bps,transfers_enabled:false,browser:m.origin+'/referrals',payout_processing:m.referralTerms.payout_processing??null},
+   payouts:{browser:m.origin+'/creator-wallet',wallet:m.origin+'/v1/creators/me/payout-wallet',earnings:m.origin+'/v1/creator-tools/{tool_id}/earnings',requests:m.origin+'/v1/creator-tools/{tool_id}/payout-requests',requests_enabled:m.payoutRequestsEnabled===true,mode:'owner_reviewed_external_signature',automatic_transfers:false,paid_basis:'finalized_canonical_base_usdc_transfer'}},
+  referrals:{terms:m.origin+'/v1/referral-terms',first_party_only:true,share_bps:m.referralTerms.terms.share_bps,transfers_enabled:false,browser:m.origin+'/referrals',payout_processing:{...m.referralTerms.payout_processing,requests_enabled:m.payoutRequestsEnabled===true}},
   outcomes_sold:m.origin+'/v1/stats',outcomes_sold_meaning:'Completed live purchases, including repeats; not unique agents or independently reconciled revenue.',
  };
 }
@@ -49,7 +50,7 @@ After uncertain delivery, replay the identical body, key and original authorizat
 
 ## Sell tools
 
-Submit a private proposal for free. Approved creators retain 90% lifetime gross entitlement under frozen terms. Approval covers metadata; publication and execution need a separately reviewed implementation, security review and outcome checks. Manage wallet proof, earnings and payout requests in [Creator payouts](/creator-wallet). Payouts require owner approval and an externally signed transfer. Retain your private capability to read status and propose updates; there is no recovery grant.
+Submit a private proposal for free. Approved creators retain 90% lifetime gross entitlement under frozen terms. Approval covers metadata; publication and execution need a separately reviewed implementation, security review and outcome checks. Manage wallet proof, earnings and request history in [Creator payouts](/creator-wallet). Payouts require owner approval and an externally signed transfer. Retain your private capability to read status and propose updates; there is no recovery grant.${payoutAvailability(m)}
 
 [Submit proposal](${m.origin}/submit-tool) · [Seller guide](/sell)
 
@@ -165,7 +166,7 @@ Use preparation only when the tool publishes preview and preparation routes. Ins
 
 Private feedback: POST ${m.origin}/v1/feedback with a stable Idempotency-Key; include no secrets. Self-reported outcome: POST ${m.origin}/v1/runs/{operation_id}/outcome; it does not alter payment. Public reviews require explicit publication consent; see ${m.origin}/v1/products/{id}/reviews and OpenAPI. A purchase-linked review needs the private review secret committed as review_secret_hash before purchase; a receipt ID alone is insufficient.
 
-First-party referral pilot: [detailed terms](${m.origin}/v1/referral-terms). Generate and retain an atbf_ capability; register via POST ${m.origin}/v1/referrals with X-Referral-Capability and the exact terms_version. Retrying with the same capability returns the same account. Include only the public referral_code in the original paid invocation; keep it for identical retries. Private accrual: GET ${m.origin}/v1/referrals/me with that capability. Rate: 1% gross; creator tools excluded. [Referral account](/referrals) supports registration, destination proof, earnings and payout requests. Payouts require owner review and an externally signed transfer; only verified finalized receipts count as paid. The original financial terms remain frozen; current payout operations are documented separately in the terms response.
+First-party referral pilot: [detailed terms](${m.origin}/v1/referral-terms). Generate and retain an atbf_ capability; register via POST ${m.origin}/v1/referrals with X-Referral-Capability and the exact terms_version. Retrying with the same capability returns the same account. Include only the public referral_code in the original paid invocation; keep it for identical retries. Private accrual: GET ${m.origin}/v1/referrals/me with that capability. Rate: 1% gross; creator tools excluded. [Referral account](/referrals) supports registration, destination proof, earnings and request history. Payouts require owner review and an externally signed transfer; only verified finalized receipts count as paid. The original financial terms remain frozen; current payout operations are documented separately in the terms response.${payoutAvailability(m)}
 
 [Full schemas](${m.machine.openapi}) · [MCP discovery and workflows](${m.machine.mcp}); use HTTP for paid invocations.
 `;
@@ -257,7 +258,7 @@ Updates retain the last approved version while pending or rejected. Approval pre
 
 ## Earnings and payouts
 
-[Creator payouts](/creator-wallet) uses your existing creator capability. Save a public Base address, prove control with the exact five-minute EOA message, and read your approved tool's earnings. ERC-1271 is unsupported. Wallet proof authorizes no payment.
+[Creator payouts](/creator-wallet) uses your existing creator capability. Save a public Base address, prove control with the exact five-minute EOA message, and read your approved tool's earnings. ERC-1271 is unsupported. Wallet proof authorizes no payment.${payoutAvailability(m)}
 
 Read the current wallet and earnings before requesting an amount. Save the exact request ID and body before POST; after uncertainty, replay unchanged or GET the retained request. Request acceptance holds no funds. The owner rechecks the current proof-verified destination and available earnings, approves the reservation and signs externally. Submitted or unknown transfers stay reserved until reconciliation; a transaction hash alone is not proof of payment.
 

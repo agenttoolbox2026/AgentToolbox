@@ -67,7 +67,7 @@ ${tool.limits?'## Limits\n\n'+block(tool.limits):''}
 
 export function sellerTermsDocument(model){return `# Seller terms — AgentToolbox
 
-Free during the 100% off promotion (list price $0.50 USDC). Approved creators retain 90% lifetime gross entitlement under their original frozen terms. Approval records the entitlement. A reviewed implementation must be compiled and installed before publication and execution. Current [payout operations](/creator-wallet) add destination proof, private earnings, owner-reviewed requests and finalized receipt status without changing the accepted financial terms.
+Free during the 100% off promotion (list price $0.50 USDC). Approved creators retain 90% lifetime gross entitlement under their original frozen terms. Approval records the entitlement. A reviewed implementation must be compiled and installed before publication and execution. Current [payout operations](/creator-wallet) add destination proof, private earnings, owner-reviewed requests and finalized receipt status without changing the accepted financial terms.${model.payoutRequestsEnabled===true?'':' Payout requests are temporarily unavailable while owner operations are being verified; wallet proof, earnings and existing request status remain available.'}
 
 [Seller guide](/sell) · [Submit a private proposal](/submit-tool) · [Canonical terms JSON](${model.origin}/v1/creator-terms)
 
