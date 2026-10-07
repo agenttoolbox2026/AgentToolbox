@@ -1,3 +1,4 @@
+import {requiresCreatorBinding,resolveCreatorInstallation} from './creator-installations.js';
 import {z} from 'zod';
 import {PlatformError} from './service.js';
 import {hash} from './telemetry.js';
@@ -46,11 +47,10 @@ export async function submitTool({db,body,capability,client,now=()=>new Date()})
 
 // Internal server helper only. Metadata approval alone can never bind a beneficiary.
 export async function creatorBeneficiary(db,product,handler){
- if(typeof handler.creatorAdapterId!=='string')return {tool_id:null,creator_id:null,share_bps:null};
- const row=await db.prepare('SELECT tool_id,creator_id,share_bps FROM platform_creator_entitlements WHERE tool_id=? AND installed_adapter=?').bind(product.id,handler.creatorAdapterId).first();
- if(!row)throw new PlatformError(503,'creator_adapter_unavailable','No reviewed creator entitlement matches this installed adapter.');
- return row;
+ if(!requiresCreatorBinding(product,handler))return {tool_id:null,creator_id:null,share_bps:null};
+ return resolveCreatorInstallation({db,product,handler});
 }
+
 export function creatorAccrual(rows){
  let gross=0n;const operations=new Set(),entitlement=rows[0]&&[rows[0].tool_id,rows[0].creator_id].join(':');
  for(const row of rows){if(!row.tool_id||!row.creator_id||[row.tool_id,row.creator_id].join(':')!==entitlement||operations.has(row.operation_id)||row.share_bps!==9000||typeof row.gross_atomic!=='string'||!/^(0|[1-9][0-9]*)$/.test(row.gross_atomic))throw new Error('Invalid, mixed or duplicate allocation; refusing inaccurate accrual.');operations.add(row.operation_id);gross+=BigInt(row.gross_atomic);}

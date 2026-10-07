@@ -2320,6 +2320,17 @@
       "transfers_enabled": false,
       "recovery": "Keep the original capability privately. There is no recovery grant."
     },
+    "payout_processing": {
+      "version": "payout-operations-2026-10-07.v1",
+      "wallet_path": "/v1/referrals/me/payout-wallet",
+      "earnings_path": "/v1/referrals/me/earnings",
+      "requests_path": "/v1/referrals/me/payout-requests",
+      "automatic_transfers": false,
+      "signup_requires_signature": false,
+      "ownership_proof": "Optional at registration; current destination proof and separate owner approval required before payout reservation.",
+      "processing": "Requests hold no funds. Owner-reviewed reservations retain the exact earned amount; an externally signed transfer is marked paid only after finalized receipt verification through the configured trusted RPC. No payment date is promised.",
+      "terms_note": "The frozen v1 financial terms retain the launch-time processor limitation as history. These current operations add requests and receipt processing without changing rate, attribution, eligibility or existing earned rights."
+    },
     "limits": {
       "client_daily": 4,
       "global_daily": 40

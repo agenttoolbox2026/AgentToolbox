@@ -1,5 +1,7 @@
 # Creator destination and payout contract
 
+This document describes the original wallet and payout foundation (migrations 0011/0012). The subsequent [seller/referrer operator integration](payout-operator-contract.md) adds capability-owned payout requests, protected operator helpers, a fixed read-only RPC adapter, referral payouts and reviewed creator installation. Its additional migrations and deployment gates apply to the combined release.
+
 This additive implementation preserves `creator-promo-2026-10-07.v1`, the original receiver, and every existing receipt, allocation and 90% lifetime gross entitlement. It collects a private payout address, verifies optional EOA ownership proof, and provides owner-only payout planning and independent receipt reconciliation. It contains no treasury key, signer, transfer broadcast, autonomous payout, or public payout-initiation endpoint.
 
 Apply `0011_creator_wallets.sql` then `0012_creator_payouts.sql` before deploying this backend. Both are additive; there is no receipt backfill or historical rewrite. Parent audit and coordinated deployment are still required. All tests use local synthetic records. No production wallet, payout, or customer-purchase verification has been performed for this change.

@@ -70,7 +70,7 @@ test('actual SQL receipt transition accrues exactly once including synthetic-mar
   db.sqlite.prepare("UPDATE platform_payments SET state='settled' WHERE operation_id=?").run(first);
   const second=payment(db,code,{product_id:'quote-proof',version:'0.2.0'});settle(db,second);
   assert.equal(count(db,'platform_referral_allocations'),2);assert.equal(count(db,'platform_live_receipts'),2);
-  const status=await getReferral({db,capability});assert.equal(status.accrual.gross_atomic,'20002');assert.equal(status.accrual.accrued_atomic,'200');assert.equal(status.accrual.fractional_atom_numerator,'200');assert.equal(status.accrual.fractional_atom_denominator,'10000');assert.equal(status.accrual.paid_atomic,null);assert.equal(status.accrual.unpaid_atomic,null);assert(!JSON.stringify(status).includes('payer'));
+  const status=await getReferral({db,capability});assert.equal(status.accrual.gross_atomic,'20002');assert.equal(status.accrual.accrued_atomic,'200');assert.equal(status.accrual.fractional_atom_numerator,'200');assert.equal(status.accrual.fractional_atom_denominator,'10000');assert.equal(status.accrual.paid_atomic,'0');assert.equal(status.accrual.unpaid_atomic,'200');assert(!JSON.stringify(status).includes('payer'));
   db.sqlite.prepare("UPDATE platform_payments SET outcome='failure' WHERE operation_id=?").run(first);assert.equal((await getReferral({db,capability})).accrual.accrued_atomic,'200');
  }finally{db.close();}
 });
@@ -99,7 +99,9 @@ test('allocation persistence failure rolls back receipt and settled state instea
 test('SQL freezes attribution and prevents fabricated allocations, forged rates and creator-owned products',async()=>{
  const db=database();try{
   const {referral_code:code}=await register(db);
-  for(const extra of [{referral_code:'ref_'+crypto.randomUUID()},{referral_share_bps:200},{referral_terms_version:null},{referral_code:null},{product_id:'creator-fixture'},{creator_id:'forged'}])assert.throws(()=>payment(db,code,extra),/invalid_referral_beneficiary/);
+  for(const extra of [{referral_code:'ref_'+crypto.randomUUID()},{referral_share_bps:200},{referral_terms_version:null},{referral_code:null},{creator_id:'forged'}])assert.throws(()=>payment(db,code,extra),/invalid_referral_beneficiary/);
+  // Installation admission now rejects this fabricated creator before referral attribution.
+  assert.throws(()=>payment(db,code,{product_id:'creator-fixture'}),/invalid_creator_installation/);
   const id=payment(db,code);settle(db,id);
   for(const sql of ["UPDATE platform_referrers SET share_bps=200","DELETE FROM platform_referrers","UPDATE platform_payments SET referral_code=NULL","UPDATE platform_payments SET amount_atomic='100000000'","UPDATE platform_referral_allocations SET gross_atomic='999999'","DELETE FROM platform_referral_allocations"])assert.throws(()=>db.sqlite.exec(sql));
   const allocation=db.sqlite.prepare('SELECT * FROM platform_referral_allocations').get();
@@ -156,13 +158,13 @@ test('HTTP referral registration, private reads, CORS and discovery preserve cap
   const terms=await(await request('/v1/referral-terms')).json();assert.equal(terms.terms.share_bps,100);assert.equal(terms.terms.transfers_enabled,false);assert.match(terms.terms.payouts,/No payout or claim processor/);assert(!terms.instructions.includes('MCP'));
   const enrolled=await request('/v1/referrals',post());assert.equal(enrolled.status,200);assert.equal(enrolled.headers.get('Cache-Control'),'no-store');const saved=await enrolled.json();assert.equal(saved.transfers_enabled,false);assert.equal(saved.payment_effect,'none');assert(!JSON.stringify(saved).includes(capability));
   const again=await(await request('/v1/referrals',post())).json();assert.equal(again.referral_code,saved.referral_code);assert.equal(count(db,'platform_referrers'),1);
-  const read=await request('/v1/referrals/me',{headers:{'X-Referral-Capability':capability}});assert.equal(read.status,200);assert.equal(read.headers.get('Cache-Control'),'no-store');const status=await read.json();assert.equal(status.referral_code,saved.referral_code);assert.equal(status.accrual.accrued_atomic,'0');assert.equal(status.accrual.paid_atomic,null);assert.equal(status.accrual.transfer_status,'unavailable_no_payout_processor');assert(!JSON.stringify(status).includes('capability_hash'));
+  const read=await request('/v1/referrals/me',{headers:{'X-Referral-Capability':capability}});assert.equal(read.status,200);assert.equal(read.headers.get('Cache-Control'),'no-store');const status=await read.json();assert.equal(status.referral_code,saved.referral_code);assert.equal(status.accrual.accrued_atomic,'0');assert.equal(status.accrual.paid_atomic,'0');assert.equal(status.accrual.transfer_status,'owner_reviewed_requests_available');assert(!JSON.stringify(status).includes('capability_hash'));
   for(const init of [{},{headers:{'X-Referral-Capability':saved.referral_code}},{headers:{'X-Referral-Capability':'atbf_'+Buffer.alloc(32,9).toString('base64url')}}]){const denied=await request('/v1/referrals/me',init);assert.equal(denied.status,403);assert.equal((await denied.json()).error.code,'referral_capability_invalid');}
   assert.equal((await request('/v1/referrals/me?capability='+capability)).status,403);
   const cors=await request('/v1/referrals',{method:'OPTIONS',headers:{Origin:'https://buyer.example','Access-Control-Request-Headers':'X-Referral-Capability, Content-Type','Access-Control-Request-Method':'POST'}});assert.equal(cors.status,204);assert.equal(cors.headers.get('Access-Control-Allow-Origin'),'*');assert(cors.headers.get('Access-Control-Allow-Headers').includes('X-Referral-Capability'));
   assert.equal((await request('/v1/referrals',post(capability,{terms_version:REFERRAL_TERMS.terms_version,padding:'x'.repeat(17000)}))).status,413);
   for(const path of ['/v1/referrals/payout','/v1/referrals/claim'])assert.equal((await request(path,post())).status,404);
-  const spec=await(await request('/openapi.json')).json();assert(spec.paths['/v1/referrals'].post);assert(spec.paths['/v1/referrals/me'].get);assert(spec.paths['/v1/referral-terms'].get);assert((await(await request('/llms.txt')).text()).includes('No payout processor or transfer is enabled'));
+  const spec=await(await request('/openapi.json')).json();assert(spec.paths['/v1/referrals'].post);assert(spec.paths['/v1/referrals/me'].get);assert(spec.paths['/v1/referral-terms'].get);assert((await(await request('/llms.txt')).text()).includes('finalized chain evidence is required for paid status'));
   assert.equal(count(db,'platform_payments'),0);
  }finally{db.close();}
 });
