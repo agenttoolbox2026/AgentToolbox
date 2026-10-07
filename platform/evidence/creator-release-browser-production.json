@@ -1,0 +1,167 @@
+{
+  "verified_at": "2026-10-07T08:42:09.259134+00:00",
+  "source_commit": "68f5ababf9bc5229d9e1a7ccf6484f927e272d83",
+  "worker_version": "c5983f59-14a5-460b-b548-6b42b064de62",
+  "integrated_page_checks": {
+    "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
+    "results": [
+      {
+        "device": "desktop",
+        "path": "/",
+        "title": "AgentToolbox",
+        "horizontal_overflow": false
+      },
+      {
+        "device": "desktop",
+        "path": "/submit-tool",
+        "title": "AgentToolbox",
+        "horizontal_overflow": false
+      },
+      {
+        "device": "desktop",
+        "path": "/update-tool",
+        "title": "AgentToolbox",
+        "horizontal_overflow": false
+      },
+      {
+        "device": "desktop",
+        "path": "/products/docs-pack/preview",
+        "title": "AgentToolbox",
+        "horizontal_overflow": false
+      },
+      {
+        "device": "desktop",
+        "path": "/products/contract-cases/preview",
+        "title": "AgentToolbox",
+        "horizontal_overflow": false
+      },
+      {
+        "device": "mobile",
+        "path": "/",
+        "title": "AgentToolbox",
+        "horizontal_overflow": false
+      },
+      {
+        "device": "mobile",
+        "path": "/submit-tool",
+        "title": "AgentToolbox",
+        "horizontal_overflow": false
+      },
+      {
+        "device": "mobile",
+        "path": "/update-tool",
+        "title": "AgentToolbox",
+        "horizontal_overflow": false
+      },
+      {
+        "device": "mobile",
+        "path": "/products/docs-pack/preview",
+        "title": "AgentToolbox",
+        "horizontal_overflow": false
+      },
+      {
+        "device": "mobile",
+        "path": "/products/contract-cases/preview",
+        "title": "AgentToolbox",
+        "horizontal_overflow": false
+      }
+    ],
+    "browser_errors": [],
+    "live_mutations": 0
+  },
+  "review_discovery_checks": {
+    "checks": [
+      {
+        "device": "desktop",
+        "path": "/",
+        "title": "AgentToolbox",
+        "review_links": [
+          "/products/docs-pack/reviews",
+          "/products/quote-proof/reviews",
+          "/products/contract-cases/reviews",
+          "/products/mcp-wirecheck/reviews"
+        ],
+        "overflow": false
+      },
+      {
+        "device": "desktop",
+        "path": "/products/docs-pack/reviews",
+        "status": 200,
+        "title": "AgentToolbox",
+        "empty_public_wall": true,
+        "overflow": false
+      },
+      {
+        "device": "desktop",
+        "path": "/products/quote-proof/reviews",
+        "status": 200,
+        "title": "AgentToolbox",
+        "empty_public_wall": true,
+        "overflow": false
+      },
+      {
+        "device": "desktop",
+        "path": "/products/contract-cases/reviews",
+        "status": 200,
+        "title": "AgentToolbox",
+        "empty_public_wall": true,
+        "overflow": false
+      },
+      {
+        "device": "desktop",
+        "path": "/products/mcp-wirecheck/reviews",
+        "status": 200,
+        "title": "AgentToolbox",
+        "empty_public_wall": true,
+        "overflow": false
+      },
+      {
+        "device": "mobile",
+        "path": "/",
+        "title": "AgentToolbox",
+        "review_links": [
+          "/products/docs-pack/reviews",
+          "/products/quote-proof/reviews",
+          "/products/contract-cases/reviews",
+          "/products/mcp-wirecheck/reviews"
+        ],
+        "overflow": false
+      },
+      {
+        "device": "mobile",
+        "path": "/products/docs-pack/reviews",
+        "status": 200,
+        "title": "AgentToolbox",
+        "empty_public_wall": true,
+        "overflow": false
+      },
+      {
+        "device": "mobile",
+        "path": "/products/quote-proof/reviews",
+        "status": 200,
+        "title": "AgentToolbox",
+        "empty_public_wall": true,
+        "overflow": false
+      },
+      {
+        "device": "mobile",
+        "path": "/products/contract-cases/reviews",
+        "status": 200,
+        "title": "AgentToolbox",
+        "empty_public_wall": true,
+        "overflow": false
+      },
+      {
+        "device": "mobile",
+        "path": "/products/mcp-wirecheck/reviews",
+        "status": 200,
+        "title": "AgentToolbox",
+        "empty_public_wall": true,
+        "overflow": false
+      }
+    ],
+    "read_only": true,
+    "live_mutations": 0
+  },
+  "public_fixture_records_created": 0
+}

@@ -1,0 +1,57 @@
+{
+  "verified_at": "2026-10-07T08:42:09.259134+00:00",
+  "readback_after_integrated_release": true,
+  "counts": {
+    "submissions": 0,
+    "decisions": 0,
+    "entitlements": 0,
+    "payments": 0,
+    "ledger": 0,
+    "purchases": 0,
+    "private_feedback": 1,
+    "public_reviews": 0,
+    "replies": 0,
+    "receipts": 0,
+    "allocations": 0,
+    "rows": 36,
+    "events": 545,
+    "update_proposals": 0,
+    "update_decisions": 0,
+    "metadata_versions": 0,
+    "metadata_heads": 0,
+    "referral_accounts": 0,
+    "referral_allocations": 0
+  },
+  "foreign_key_violations": [],
+  "migrations": [
+    "0001_platform.sql",
+    "0002_payments.sql",
+    "0003_paid_launch.sql",
+    "0004_feedback_analytics.sql",
+    "0005_public_reviews.sql",
+    "0006_quotes_preparations.sql",
+    "0007_creator_submissions.sql",
+    "0008_creator_updates.sql",
+    "0009_contract_pins.sql",
+    "0010_referrals.sql"
+  ],
+  "private_feedback_preserved": true,
+  "historical_analytics_preserved": true,
+  "no_assistant_live_payments_or_valid_public_test_records": true,
+  "tests": {
+    "integrated_release_passed": 204,
+    "failed": 0,
+    "skipped": 0,
+    "review_link_regressions_passed": 13,
+    "private_tests_passed": 25,
+    "independent_focused_audit_tests_passed": 65
+  },
+  "limitations": [
+    "No verified external paid purchase observed; live purchase counter remains zero.",
+    "402 Index domain proof returns 404 until a genuine public verification hash is supplied.",
+    "Referral pilot uses provisional 1% accrual with transfers disabled. Owner has not selected a final rate.",
+    "Referral capability status currently reads all allocation rows; bounded status follow-up has been handed to the reviewer.",
+    "Historical unpaid quotes/preparations without success-contract pins must be regenerated; stored paid replays remain compatible.",
+    "Listing approval and approved metadata updates do not auto-install or execute a submitted endpoint."
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "verified_at": "2026-10-07T08:42:09.259134+00:00",
+  "public_url": "https://agnttoolbx.agenttoolbox2026.workers.dev",
+  "source_commit": "68f5ababf9bc5229d9e1a7ccf6484f927e272d83",
+  "source_tree": "a2dfee795ec371240d6e4ba652462a1347c173da",
+  "integrated_base_commit": "a36f2abb9f8310cc503dd0eb57ba6c0880b7b7cb",
+  "base_worker_version": "5db110a1-b9ad-47a1-8e05-f9651f2b2cc4",
+  "worker_version": "c5983f59-14a5-460b-b548-6b42b064de62",
+  "deployment_id": "02994bc1-bc27-4365-a178-56626483df87",
+  "created_on": "2026-10-07T08:39:32.586603Z",
+  "traffic_percentage": 100,
+  "follow_up": "Restore Reviews link on each product card; no schema or payment change.",
+  "private_worker_version": "ca91c104-4646-4ce3-a90e-aeefa9d16580",
+  "private_source_commit": "7059148214993d415912fc3e4956c5cb802b6610"
+}

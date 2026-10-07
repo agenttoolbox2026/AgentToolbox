@@ -1,0 +1,65 @@
+{
+  "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
+  "source_commit": "68f5ababf9bc5229d9e1a7ccf6484f927e272d83",
+  "worker_version": "c5983f59-14a5-460b-b548-6b42b064de62",
+  "checks": [
+    {
+      "product_id": "docs-pack",
+      "first_party": true,
+      "success_pin_reproduced": true,
+      "payment_pin_reproduced": true,
+      "free_fixture_manifest_read": true,
+      "get_402_discovery_only": true,
+      "unsigned_invalid_post_402": true,
+      "empty_public_reviews": true
+    },
+    {
+      "product_id": "quote-proof",
+      "first_party": true,
+      "success_pin_reproduced": true,
+      "payment_pin_reproduced": true,
+      "free_fixture_manifest_read": true,
+      "get_402_discovery_only": true,
+      "unsigned_invalid_post_402": true,
+      "empty_public_reviews": true
+    },
+    {
+      "product_id": "contract-cases",
+      "first_party": true,
+      "success_pin_reproduced": true,
+      "payment_pin_reproduced": true,
+      "free_fixture_manifest_read": true,
+      "get_402_discovery_only": true,
+      "unsigned_invalid_post_402": true,
+      "empty_public_reviews": true
+    },
+    {
+      "product_id": "mcp-wirecheck",
+      "first_party": true,
+      "success_pin_reproduced": true,
+      "payment_pin_reproduced": true,
+      "free_fixture_manifest_read": true,
+      "get_402_discovery_only": true,
+      "unsigned_invalid_post_402": true,
+      "empty_public_reviews": true
+    }
+  ],
+  "mcp_tools": 16,
+  "private_capability_gates": true,
+  "creator_share_preserved": true,
+  "referrals_first_party_only": true,
+  "transfers_enabled": false,
+  "purchase_counter_before": 0,
+  "purchase_counter_after": 0,
+  "domain_proof_status": 404,
+  "valid_submissions": 0,
+  "valid_updates": 0,
+  "referral_registrations": 0,
+  "free_examples_executed": 0,
+  "preparations": 0,
+  "payment_signatures": 0,
+  "settlements": 0,
+  "refunds": 0,
+  "payouts": 0,
+  "verified_at": "2026-10-07T08:42:09.259134+00:00"
+}
