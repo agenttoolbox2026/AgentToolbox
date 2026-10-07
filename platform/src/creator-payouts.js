@@ -6,6 +6,7 @@ import {BASE_NETWORK,BASE_USDC,isAtomicAmount} from './payment-config.js';
 import {hash} from './telemetry.js';
 import {canonical} from './x402.js';
 import {verifyBaseUsdcTransfer} from './payout-chain.js';
+import {readCreatorInstallation} from './creator-installations.js';
 
 export const PAYOUT_LIMITS=Object.freeze({snapshot_rows:5000,batch_items:20,transaction_candidates:20});
 const ASSET=BASE_USDC.toLowerCase(),ACTIVE=['reserved','awaiting_owner','submitted','unknown'];
@@ -39,7 +40,10 @@ export async function getCreatorEarnings({db,tool,capability}){
  const entitlement=await db.prepare('SELECT e.* FROM platform_creator_entitlements e JOIN platform_creators c USING(creator_id) WHERE e.tool_id=? AND c.capability_hash=?').bind(tool,commitment).first();
  if(!entitlement)throw new PlatformError(403,'creator_capability_invalid','No matching private creator entitlement.');
  const result=await accounting(db,tool);delete result.snapshot_hash;const payouts=result.payouts;delete result.payouts;
- return {api_version:'1',tool_id:tool,...result,payout_count:payouts.length,execution_status:entitlement.installed_adapter?'installed_adapter':'metadata_only_not_earning',payment_effect:'none'};
+ // This is audit state, not proof that matching compiled code is deployed.
+ const installation=await readCreatorInstallation({db,toolId:tool});
+ const installed=installation?.state==='active'&&installation.installed_adapter===installation.adapter_id;
+ return {api_version:'1',tool_id:tool,...result,payout_count:payouts.length,execution_status:installed?'installed_adapter':'metadata_only_not_earning',payment_effect:'none'};
 }
 async function batchView(db,batchId){
  const rows=(await db.prepare('SELECT * FROM platform_creator_payouts WHERE batch_id=? ORDER BY tool_id LIMIT 21').bind(batchId).all()).results;if(!rows.length||rows.length>20)throw unavailable();
@@ -47,9 +51,11 @@ async function batchView(db,batchId){
 }
 // Internal owner-only functions: callers must establish owner auth before calling.
 // They are deliberately absent from public HTTP and MCP route registries.
-export async function proposePayoutBatch({db,reviewer,requestId,items,sourceAddress,now=()=>new Date()}){
+export async function proposePayoutBatch({db,reviewer,requestId,items,sourceAddress,requestIds={},now=()=>new Date()}){
  actor(reviewer);const body=checked(z.strictObject({request_id:key,items:z.array(z.strictObject({tool_id:toolId,amount_atomic:amount})).min(1).max(20),source_address:z.string()}),{request_id:requestId,items,source_address:sourceAddress});
  const source=address(body.source_address);body.source_address=source;body.items.sort((a,b)=>a.tool_id.localeCompare(b.tool_id));if(new Set(body.items.map(x=>x.tool_id)).size!==body.items.length)throw conflict();
+ const links=checked(z.record(z.string(),id),requestIds);
+ if(Object.keys(links).length){if(Object.keys(links).length!==body.items.length||body.items.some(item=>!Object.hasOwn(links,item.tool_id)))throw new PlatformError(400,'invalid_payout_request','Request links must exactly match the batch subjects.');body.request_ids=links;}
  const keyHash=await hash(body.request_id),requestHash=await hash(canonical(body));
  const prior=()=>db.prepare('SELECT * FROM platform_creator_payout_batches WHERE reviewer_subject=? AND request_key_hash=?').bind(reviewer,keyHash).first();
  const replay=async row=>{if(row.request_hash!==requestHash)throw conflict();return batchView(db,row.batch_id);};
@@ -63,10 +69,12 @@ export async function proposePayoutBatch({db,reviewer,requestId,items,sourceAddr
   if(source===owner.address.toLowerCase())throw new PlatformError(409,'payout_self_transfer','The payout source and creator destination must differ.');
   const snapshot=await accounting(db,item.tool_id);
   if(snapshot.payouts.some(p=>ACTIVE.includes(p.state))||BigInt(item.amount_atomic)>BigInt(snapshot.available_atomic))throw conflict();
+  const payoutId=crypto.randomUUID();
   statements.push(db.prepare(`INSERT INTO platform_creator_payouts(payout_id,batch_id,tool_id,creator_id,share_bps,claim_id,claim_revision,network,asset,source_address,destination_address,amount_atomic,gross_snapshot_atomic,accrued_snapshot_atomic,paid_snapshot_atomic,paid_snapshot_count,snapshot_hash,snapshot_receipt_count,created_at)
- VALUES(?,?,?,?,9000,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(crypto.randomUUID(),batchId,item.tool_id,owner.creator_id,owner.claim_id,owner.revision,BASE_NETWORK,ASSET,source,owner.address.toLowerCase(),item.amount_atomic,snapshot.gross_atomic,snapshot.accrued_atomic,snapshot.confirmed_paid_atomic,snapshot.payouts.filter(p=>p.state==='paid').length,snapshot.snapshot_hash,snapshot.receipt_count,date));
+ VALUES(?,?,?,?,9000,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(payoutId,batchId,item.tool_id,owner.creator_id,owner.claim_id,owner.revision,BASE_NETWORK,ASSET,source,owner.address.toLowerCase(),item.amount_atomic,snapshot.gross_atomic,snapshot.accrued_atomic,snapshot.confirmed_paid_atomic,snapshot.payouts.filter(p=>p.state==='paid').length,snapshot.snapshot_hash,snapshot.receipt_count,date));
+  if(links[item.tool_id])statements.push(db.prepare("INSERT INTO platform_payout_request_links(request_id,beneficiary_kind,payout_id,created_at) VALUES(?,'creator',?,?)").bind(links[item.tool_id],payoutId,date));
  }
- try{await db.batch(statements);}catch(e){const raced=await prior();if(raced)return replay(raced);if(/UNIQUE constraint|invalid_payout_reservation/.test(String(e)))throw conflict();throw e;}
+ try{await db.batch(statements);}catch(e){const raced=await prior();if(raced)return replay(raced);if(/UNIQUE constraint|invalid_payout_reservation|payout_request_link_conflict/.test(String(e)))throw conflict();throw e;}
  return batchView(db,batchId);
 }
 async function eventContext({db,payoutId,reviewer,requestId,expectedRevision,event,extra={}}){
@@ -82,7 +90,7 @@ function eventStatement(db,{row,keyHash,requestHash},reviewer,event,date,{transa
 }
 async function commitEvent(args,context,event,{before=[],transactionHash=null,evidenceId=null}={}){
  try{await args.db.batch([...before,eventStatement(args.db,context,args.reviewer,event,(args.now??(()=>new Date()))().toISOString(),{transactionHash,evidenceId})]);}
- catch(e){const raced=await eventContext({...args,event,extra:args.eventExtra??{}});if(raced.replay)return raced.replay;if(/payout_revision_conflict|payout_transaction_conflict|UNIQUE constraint/.test(String(e)))throw conflict();throw e;}
+ catch(e){const raced=await eventContext({...args,event,extra:args.eventExtra??{}});if(raced.replay)return raced.replay;if(/payout_revision_conflict|payout_transaction_conflict|payout_transfer_conflict|payout_evidence_conflict|UNIQUE constraint/.test(String(e)))throw conflict();throw e;}
  return publicPayout(await rowFor(args.db,args.payoutId));
 }
 export async function authorizePayout(args){const context=await eventContext({...args,event:'authorize'});if(context.replay)return context.replay;if(context.row.state!=='reserved')throw conflict();return commitEvent(args,context,'authorize');}

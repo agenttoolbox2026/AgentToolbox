@@ -3,6 +3,7 @@ import {PlatformError} from './service.js';
 import {hash} from './telemetry.js';
 import {BASE_NETWORK,BASE_USDC,isAtomicAmount} from './payment-config.js';
 import {referralCodeSchema} from './referral-schema.js';
+import {getReferralEarnings} from './referral-payouts.js';
 export {referralCodeSchema} from './referral-schema.js';
 
 export const REFERRAL_PRODUCT_IDS=Object.freeze(['docs-pack','quote-proof','contract-cases','mcp-wirecheck']);
@@ -10,9 +11,10 @@ export const REFERRAL_TERMS=Object.freeze({terms_version:'first-party-referrals-
 export const REFERRAL_LIMITS=Object.freeze({client_daily:4,global_daily:40});
 export const referralCapabilitySchema=z.string().regex(/^atbf_[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/).describe('Private client-generated 32 random bytes, canonical base64url with atbf_ prefix. Retain privately; never put it in a URL or paid invocation.');
 export const referralRegistrationSchema=z.strictObject({terms_version:z.literal(REFERRAL_TERMS.terms_version)});
-export const referralTerms=()=>({api_version:'1',terms:REFERRAL_TERMS,limits:REFERRAL_LIMITS,register_path:'/v1/referrals',status_path:'/v1/referrals/me',instructions:'Generate and retain an atbf_ capability before registration; send it only in the X-Referral-Capability HTTP header. The returned ref_ code is public. Registration retry with the original capability returns the same account. Include only the public referral_code in paid invoke bodies.'});
+export const referralPayoutOperations=()=>({version:'payout-operations-2026-10-07.v1',wallet_path:'/v1/referrals/me/payout-wallet',earnings_path:'/v1/referrals/me/earnings',requests_path:'/v1/referrals/me/payout-requests',automatic_transfers:false,signup_requires_signature:false,ownership_proof:'Optional at registration; current destination proof and separate owner approval required before payout reservation.',processing:'Requests hold no funds. Owner-reviewed reservations retain the exact earned amount; an externally signed transfer is marked paid only after independent finalized-chain verification. No payment date is promised.',terms_note:'The frozen v1 financial terms retain the launch-time processor limitation as history. These current operations add requests and receipt processing without changing rate, attribution, eligibility or existing earned rights.'});
+export const referralTerms=()=>({api_version:'1',terms:REFERRAL_TERMS,payout_processing:referralPayoutOperations(),limits:REFERRAL_LIMITS,register_path:'/v1/referrals',status_path:'/v1/referrals/me',instructions:'Generate and retain an atbf_ capability before registration; send it only in the X-Referral-Capability HTTP header. The returned ref_ code is public. Registration retry with the original capability returns the same account. Include only the public referral_code in paid invoke bodies.'});
 async function capabilityHash(capability){if(!referralCapabilitySchema.safeParse(capability).success)throw new PlatformError(403,'referral_capability_invalid','No matching private referral capability.');return hash(capability);}
-function accountView(row){return {api_version:'1',referral_code:row.referral_code,terms:JSON.parse(row.terms_json),created_at:row.created_at,payment_effect:'none',transfers_enabled:false};}
+function accountView(row){return {api_version:'1',referral_code:row.referral_code,terms:JSON.parse(row.terms_json),payout_processing:referralPayoutOperations(),created_at:row.created_at,payment_effect:'none',transfers_enabled:false};}
 
 export async function registerReferral({db,body,capability,client,now=()=>new Date()}){
  const parsed=referralRegistrationSchema.safeParse(body);if(!parsed.success)throw new PlatformError(400,'invalid_referral_registration','Accept the published referral terms; no wallet, beneficiary or rate fields are accepted.');
@@ -55,6 +57,6 @@ export function referralAccrual(rows){
 export async function getReferral({db,capability}){
  const commitment=await capabilityHash(capability),row=await db.prepare('SELECT * FROM platform_referrers WHERE capability_hash=?').bind(commitment).first();
  if(!row)throw new PlatformError(403,'referral_capability_invalid','No matching private referral capability.');
- const allocations=await db.prepare('SELECT * FROM platform_referral_allocations WHERE referral_code=? ORDER BY operation_id').bind(row.referral_code).all();
- return {...accountView(row),accrual:referralAccrual(allocations.results)};
+ const earnings=await getReferralEarnings({db,capability});
+ return {...accountView(row),accrual:{...earnings,paid_atomic:earnings.confirmed_paid_atomic,unpaid_atomic:(BigInt(earnings.accrued_atomic)-BigInt(earnings.confirmed_paid_atomic)).toString(),transfer_status:'owner_reviewed_requests_available'}};
 }
