@@ -10,7 +10,7 @@ import {renderMarkdown} from '../src/pages.js';
 const get=(worker,path,headers={})=>worker.fetch(new Request(model.origin+path,{headers}));
 
 test('HTML, Markdown and JSON catalog routes stay bounded and preserve search across machine pagination',async()=>{
- const large={...model,tools:Array.from({length:1000},(_,i)=>({...model.tools[0],id:'published-'+i,name:'Tool '+String(i).padStart(4,'0')}))};
+ const large={...model,tools:Array.from({length:1000},(_,i)=>({...model.tools[0],id:'published-'+i,name:'Tool '+String(i).padStart(4,'0'),invocation:{method:'POST',path:'/v1/products/published-'+i+'/invoke'}}))};
  const worker=createAgi({model:large});
  const first=await get(worker,'/tools.json?limit=7&q=Tool');assert.equal(first.status,200);
  const page=await first.json();assert.equal(page.tools.length,7);assert.equal(page.total,1000);

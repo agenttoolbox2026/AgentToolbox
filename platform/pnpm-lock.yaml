@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      viem:
+        specifier: 2.57.3
+        version: 2.57.3(zod@3.25.76)
       '@modelcontextprotocol/sdk':
         specifier: 1.32.1
         version: 1.32.1(zod@4.6.5)
