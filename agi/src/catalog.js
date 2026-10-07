@@ -1,3 +1,4 @@
+import {minimumAmount} from '../../platform/src/payment-config.js';
 export const CATALOG_LIMITS=Object.freeze({query_chars:120,default_limit:20,max_limit:50});
 
 export class CatalogQueryError extends Error{
@@ -17,10 +18,18 @@ const text=value=>typeof value==='string'?value:'';
 const normalize=value=>text(value).normalize('NFKC').toLowerCase();
 // The canonical public registry is the only input. Approved private proposals
 // are not publication records and must never be joined into this selector.
-const available=tool=>tool.status==='active'&&tool.pricing?.payments_enabled===true&&
- tool.pricing.payments_configured!==false&&tool.invocation?.method==='POST'&&
- text(tool.invocation.path).startsWith('/v1/products/')&&tool.input_schema&&tool.output_schema&&
- tool.outcome?.criteria&&text(tool.provider?.id)&&text(tool.provider?.name)&&text(tool.provider?.type);
+const nonempty=value=>typeof value==='string'&&value.trim().length>0;
+const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
+export const isPublishedTool=tool=>!!(tool&&tool.status==='active'&&
+ /^[a-z0-9-]{1,64}$/.test(text(tool.id))&&nonempty(tool.name)&&nonempty(tool.summary)&&
+ /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(text(tool.version))&&
+ tool.pricing?.payments_enabled===true&&tool.pricing.payments_configured!==false&&
+ tool.pricing.currency==='USDC'&&tool.pricing.decimals===6&&tool.pricing.network==='eip155:8453'&&
+ tool.pricing.model==='buyer_chosen_per_success'&&tool.pricing.payment_protocol==='x402-v2-exact'&&minimumAmount(tool)!==null&&
+ tool.invocation?.method==='POST'&&tool.invocation.path===`/v1/products/${tool.id}/invoke`&&
+ object(tool.input_schema)&&object(tool.output_schema)&&object(tool.outcome?.criteria)&&
+ nonempty(tool.outcome.success_criterion)&&Array.isArray(tool.outcome.criteria.rules)&&tool.outcome.criteria.rules.length>0&&
+ nonempty(tool.provider?.id)&&nonempty(tool.provider?.name)&&nonempty(tool.provider?.type));
 
 function catalogUrl(query,page,limit){
  const params=new URLSearchParams();
@@ -41,7 +50,7 @@ export function selectCatalog(model,params=new URLSearchParams()){
   throw new CatalogQueryError(`q must be at most ${CATALOG_LIMITS.query_chars} characters.`);
  const requestedPage=integer(params,'page',1);
  const limit=Math.min(integer(params,'limit',CATALOG_LIMITS.default_limit),CATALOG_LIMITS.max_limit);
- const published=model.tools.filter(available);
+ const published=model.tools.filter(isPublishedTool);
  const terms=normalize(query).split(' ').filter(Boolean);
  const matches=published.filter(tool=>{
   const haystack=normalize([tool.id,tool.name,tool.summary,tool.problem,tool.fit,tool.scope,

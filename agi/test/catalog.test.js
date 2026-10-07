@@ -2,13 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createModel} from '../src/model.js';
 import {selectCatalog,CatalogQueryError,CATALOG_LIMITS} from '../src/catalog.js';
-import {homeMarkdown,catalogMarkdown,toolMarkdown,compactManifest,toolManifest} from '../src/machine.js';
-import {renderMarkdown} from '../src/pages.js';
+import {homeMarkdown,buyMarkdown,catalogMarkdown,toolMarkdown,compactManifest,toolManifest} from '../src/machine.js';
+import {renderMarkdown,toolPage} from '../src/pages.js';
+import {successContractPin} from '../../platform/src/contract-pins.js';
+import {contractDocument} from '../src/contract-documents.js';
 
 const params=value=>new URLSearchParams(value);
 const model=await createModel();
 const seed=model.tools.find(tool=>tool.id==='contract-cases');
-const clone=(id,extra={})=>({...seed,id,name:'Tool '+id,summary:'A bounded test helper.',...extra});
+const clone=(id,extra={})=>({...seed,id,name:'Tool '+id,summary:'A bounded test helper.',
+ invocation:{...seed.invocation,path:`/v1/products/${id}/invoke`},...extra});
 const large={...model,tools:Array.from({length:1000},(_,index)=>clone(String(index).padStart(4,'0')))};
 
 test('catalog admits current published tools and excludes private or unavailable records',()=>{
@@ -124,4 +127,82 @@ test('creator metadata stays literal Markdown even with brackets, newlines and b
  const detail=toolMarkdown(custom,tool);
  assert(detail.includes('# Parser \\[v2\\] \\`safe\\` — AgentToolbox'));
  assert(!/^`safe`/m.test(markdown));assert(!/^`B`/m.test(detail));
+});
+
+// Local presentation fixture only. It is not added to the production registry,
+// installed as an adapter, fetched, executed, submitted or published.
+const sellerContract={
+ id:'creator-presentation-fixture',name:'Boundary [helper]',version:'1.0.0',status:'active',experimental:true,
+ summary:'Check a bounded integer input against a fixed outcome.',
+ provider:{id:'fixture-lab',name:'Fixture [Lab]',type:'creator'},
+ pricing:{...seed.pricing},
+ invocation:{method:'POST',path:'/v1/products/creator-presentation-fixture/invoke',transport:'http'},
+ input_schema:{type:'object',properties:{value:{type:'integer',minimum:0,maximum:9}},required:['value'],additionalProperties:false},
+ output_schema:{type:'object',properties:{ok:{const:true}},required:['ok'],additionalProperties:false},
+ limits:{max_output_bytes:64},
+ outcome:{success_criterion:'The output passes its schema and ok equals true.',criteria:{
+  criteria_version:'1',rule_language:'agenttoolbox-predicate-v1',rules:[{id:'ok_required',test:{eq:[{path:'ok'},true]}}],
+ }},
+};
+
+test('a compiled seller contract renders without invented scope, examples, preview or execution',async t=>{
+ t.mock.method(globalThis,'fetch',()=>{throw new Error('Presentation must not fetch or execute a tool.');});
+ const compiled=await createModel({catalog:[sellerContract],registryVersion:'local-presentation-fixture'});
+ const seller=compiled.tools[0];
+ assert.equal(compiled.tools.length,1);assert.deepEqual(seller.provider,sellerContract.provider);
+ assert.equal(seller.fit,sellerContract.summary);assert.equal(seller.scope,null);
+ assert.deepEqual(seller.preview,{supported:false});
+ for(const link of ['examples','preview','prepare','quote'])assert.equal(seller.links[link],null);
+ assert.deepEqual(seller.success_pin,await successContractPin(sellerContract));
+ assert.equal(selectCatalog(compiled).total,1);
+ for(const document of [catalogMarkdown(compiled,selectCatalog(compiled)),toolMarkdown(compiled,seller),buyMarkdown(compiled)]){
+  assert(!document.includes('undefined'));assert(!document.includes('null'));
+  assert(!document.includes('Public canonical workers.dev endpoints'));
+  assert(!document.includes('/tools/'+seller.id+'/examples'));
+  assert(!document.includes('Limited real-input preview:'));
+ }
+ assert(!toolMarkdown(compiled,seller).includes('## Example input'));
+ assert(buyMarkdown(compiled).includes('No example input is published for the current catalog'));
+ const html=toolPage(compiled,seller);
+ assert(html.includes('Fixture [Lab]'));assert(html.includes('Boundary [helper]'));
+ assert(!html.includes('first-party'));
+ const manifest=compactManifest(compiled).tools[0];
+ assert.deepEqual(manifest.provider,sellerContract.provider);assert.equal(manifest.scope,null);
+ assert.equal(manifest.preview_supported,false);assert.equal(manifest.examples,null);
+ assert.equal(contractDocument(compiled,seller,'examples'),null);
+ assert.equal(contractDocument(compiled,{...seller,provider:null},'checks'),null);
+ for(const kind of ['checks','contract']){
+  const document=contractDocument(compiled,seller,kind).markdown;
+  assert(!document.includes('[Synthetic examples]'));assert.doesNotMatch(document,/(?:^|:\s*)undefined\b/m);assert(!document.includes('Scope: null'));
+  assert(document.includes('Created by: Fixture \\[Lab\\] (creator)'));
+ }
+ assert.equal((await createModel()).tools.length,4,'Local fixture must not alter the production registry.');
+});
+
+test('published seller metadata is preserved and optional routes fail closed',async()=>{
+ const source={...sellerContract,fit:'Use this exact published fit.',scope:'One integer from zero through nine.',
+  examples_url:'/v1/products/'+sellerContract.id+'/examples',example_input:{value:3},
+  preview:{supported:true,path:'https://private-proposal.example/run',page:'https://private-proposal.example/preview'},
+  quote:{path:'https://private-proposal.example/quote'},
+ };
+ const compiled=await createModel({catalog:[source]}),seller=compiled.tools[0];
+ assert.equal(seller.fit,source.fit);assert.equal(seller.scope,source.scope);
+ assert.equal(seller.links.examples,null,'An input sample does not create an available fixture route.');
+ assert.equal(seller.links.preview,null);assert.equal(seller.links.prepare,null);assert.equal(seller.links.quote,null);
+ const document=toolMarkdown(compiled,seller);
+ assert(document.includes('## Example input'));assert(!document.includes('private-proposal.example'));
+ assert(!catalogMarkdown(compiled,selectCatalog(compiled)).includes('[Synthetic examples]'));
+});
+
+test('incomplete or ambiguous compiled publication metadata cannot enter the model',async()=>{
+ const mutations=[{provider:null},{provider:{id:'lab',name:' ',type:'creator'}},{summary:''},
+  {pricing:{...seed.pricing,minimum_amount_atomic:null}},{pricing:{...seed.pricing,currency:'UNKNOWN'}},
+  {input_schema:null},{outcome:{success_criterion:'Unavailable',criteria:{rules:[]}}},
+  {invocation:{method:'POST',path:'https://private-proposal.example/run'}},{status:'approved'},
+ ];
+ const invalid=mutations.map((mutation,i)=>({...sellerContract,id:'invalid-'+i,
+  invocation:{method:'POST',path:'/v1/products/invalid-'+i+'/invoke'},...mutation}));
+ const compiled=await createModel({catalog:[sellerContract,...invalid]});
+ assert.deepEqual(compiled.tools.map(tool=>tool.id),[sellerContract.id]);
+ await assert.rejects(createModel({catalog:[sellerContract,{...sellerContract}]}),/unique/);
 });

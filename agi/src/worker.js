@@ -5,6 +5,7 @@ import {compactManifest,homeMarkdown,buyMarkdown,sellMarkdown,toolMarkdown,catal
 import {selectCatalog,CatalogQueryError} from './catalog.js';
 import {contractDocument,sellerTermsDocument} from './contract-documents.js';
 import {themeWorkflowHtml} from './workflow-theme.js';
+import {creatorWalletPage} from './creator-wallet-page.js';
 import {createPlatform} from '../../platform/src/app.js';
 import {createQuoteProof} from '../../platform/src/quote-proof.js';
 import {createContractCases} from '../../platform/src/contract-cases.js';
@@ -19,7 +20,7 @@ const security={
  'Permissions-Policy':'camera=(), microphone=(), geolocation=(), payment=()',
  'Strict-Transport-Security':'max-age=31536000',
 };
-const assetPaths=new Set(['/style.css','/humans.css','/header.css','/forms.css','/workflow.css','/site.js','/retry-envelope.js','/agenttoolbox-icon.png']);
+const assetPaths=new Set(['/style.css','/humans.css','/header.css','/forms.css','/workflow.css','/site.js','/retry-envelope.js','/creator-wallet.js','/agenttoolbox-icon.png']);
 const acceptType=request=>{
  const types=(request.headers.get('Accept')??'text/html').split(',').map((part,index)=>{
   const [mime,...params]=part.trim().toLowerCase().split(';');
@@ -55,8 +56,12 @@ export function createAgi({model=generated,platformOptions={}}={}){
    if(!read)return json(request,{error:{code:'method_not_allowed'}},405,{Allow:'GET, HEAD','Cache-Control':'no-store'});
    const asset=await assetFetch(request),headers=new Headers(asset.headers);
    for(const [k,v]of Object.entries(security))headers.set(k,v);
-   headers.set('Cache-Control',['/site.js','/retry-envelope.js','/workflow.css','/forms.css'].includes(path)?'no-store':'public, max-age=3600');
+   headers.set('Cache-Control',['/site.js','/retry-envelope.js','/creator-wallet.js','/workflow.css','/forms.css'].includes(path)?'no-store':'public, max-age=3600');
    return new Response(request.method==='HEAD'?null:asset.body,{status:asset.status,headers});
+  }
+  if(path==='/creator-wallet'){
+   if(!read)return json(request,{error:{code:'method_not_allowed'}},405,{Allow:'GET, HEAD','Cache-Control':'no-store'});
+   return respond(request,creatorWalletPage(),'text/html',200,{'Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; style-src 'self'; img-src 'self'; script-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"});
   }
   const documentPath=['/','/buy','/sell','/humans','/tools','/tools.md','/tools.json','/sell/terms','/sell/terms.md','/agent.json','/llms.txt','/AGENTS.md','/index.md','/buy.md','/sell.md','/robots.txt','/sitemap.xml'].includes(path)||/^\/tools\/[a-z0-9-]+(?:\/(?:contract|checks|examples))?(?:\.md)?$/.test(path);
   if(documentPath&&!read&&request.method!=='OPTIONS')return json(request,{error:{code:'method_not_allowed'}},405,{Allow:'GET, HEAD','Cache-Control':'no-store'});

@@ -2291,6 +2291,9 @@
     "approved_tool_path": "/v1/creator-tools/{tool_id}",
     "update_path": "/v1/creator-tools/{tool_id}/updates",
     "update_status_path": "/v1/tool-updates/{id}",
+    "payout_wallet_path": "/v1/creators/me/payout-wallet",
+    "earnings_path": "/v1/creator-tools/{tool_id}/earnings",
+    "wallet_policy": "Optional destination collection; private and unverified until EOA ownership proof, then separate owner approval. No automatic transfer.",
     "instructions": "Generate and retain an atbc_ capability before submitting; commit SHA-256(capability) as creator_secret_hash. Submit only non-sensitive private metadata; URLs/schemas are untrusted and never executed. Reuse the same request_id/body/capability for replay. Approval creates an entitlement, not a published or installed tool."
   },
   "referralTerms": {
