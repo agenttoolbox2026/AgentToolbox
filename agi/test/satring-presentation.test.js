@@ -7,6 +7,8 @@ import {homeMarkdown,buyMarkdown,sellMarkdown,catalogMarkdown} from '../src/mach
 import {selectCatalog} from '../src/catalog.js';
 import {submissionPage} from '../../platform/src/pages.js';
 import {themeWorkflowHtml} from '../src/workflow-theme.js';
+import {referralPage} from '../src/referral-page.js';
+import {REFERRAL_TERMS} from '../../platform/src/referrals.js';
 
 const links=html=>[...html.matchAll(/href="([^"]+)"/g)].map(match=>match[1]);
 const code=html=>[...html.matchAll(/<pre>[\s\S]*?<code>([\s\S]*?)<\/code>[\s\S]*?<\/pre>/g)].map(match=>match[1]);
@@ -62,4 +64,14 @@ test('seller groups preserve form controls, authorization boundaries and explici
  for(const name of ['name','summary','endpoint_url','input_schema','output_schema','capability','consent'])assert(html.includes('name="'+name+'"'),name);
  assert(html.includes('type="password"'));assert(html.includes('method="post" action="/v1/tool-submissions"'));
  assert(html.includes('<button type="submit" hidden>Prepare submission'));
+});
+test('referral terms consent keeps its sentence and link in one text item beside the unchanged checkbox',()=>{
+ const html=referralPage({payoutRequestsEnabled:true});
+ const label=html.match(/<label class="public-consent"><input type="checkbox" data-referral-terms-accepted[\s\S]*?<\/label>/)?.[0];
+ assert(label);
+ assert.match(label,/^<label class="public-consent"><input type="checkbox" data-referral-terms-accepted data-referral-account-control><span>I accept the <a href="\/v1\/referral-terms">published first-party referral terms<\/a> \([^)]+\)\.<\/span><\/label>$/);
+ assert(label.includes(REFERRAL_TERMS.terms_version));
+ assert(!label.includes('checked'));
+ assert(html.includes('data-terms-version="'+REFERRAL_TERMS.terms_version+'"'));
+ assert(html.includes('data-referral-registration method="post" action="/v1/referrals"'));
 });
