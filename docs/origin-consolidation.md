@@ -1,0 +1,42 @@
+# Consolidated public origin
+
+The coordinated target is `https://agi.agenttoolbox2026.workers.dev`. AGI calls the same `createPlatform` runtime against the existing production D1 database, payment configuration, rate limit namespaces and installed first-party handlers. Product IDs, capabilities, creator entitlements, financial ledgers and migration history stay intact. This backend change needs no D1 migration and does not itself deploy or retire either Worker.
+
+## Runtime and retention
+
+Pass `trackingEnabled: false` to `createPlatform`. The early integration name `telemetryEnabled: false` is also accepted; either false value disables tracking. Both default to `true` for compatibility. False disables new `platform_daily` metrics and free-invocation caller pseudonym tracking; it does not suppress operations, settlement ledgers, durable receipts, purchases, review verification, examples, explicit outcome reports or creator records. Existing metrics remain unchanged. It does not remove admission/rate-limit hashes needed to bound requests.
+
+The new scheduled handler can call `expirePaidResults(db)` and `expirePreparations(db, new Date(), {preserveRecords: true})` after scheduler ownership transfers. The latter retains expired unpaid quote/preparation rows, but clears their private result/preview JSON once both expiry and the former one-day cleanup threshold have passed. Identity, capability commitments, input/result hashes, pins and dates remain unchanged. Their original expiry still prevents purchases. The existing 24-hour paid-output retention clears bounded output while preserving financial tombstones and receipts; uncertain settlements retain their durable output. No permanent history purge or capability rewrite is part of consolidation.
+
+Static asset requests pass only the configured origin, asset pathname and GET/HEAD method to the asset binding. Incoming credentials, capabilities, payment headers, cookies, query strings and bodies are discarded. Workflow stylesheet retargeting belongs to the AGI wrapper; scripted form behavior and retry envelopes remain unchanged.
+
+Workflow forms now declare explicit same-origin POST actions. If JavaScript is disabled or fails before intercepting submission, a native form submission cannot serialize capabilities, proposal text or private preview input into a GET URL. The native URL-encoded fallback is rejected by the JSON-only API or the workflow page's unsupported POST route without creating a proposal/preparation. No-JavaScript guides link to AGI's buyer and seller protocol pages; the scripted request/retry-envelope implementation stays intact.
+
+## Exact cross-origin obligations
+
+An origin change does not change `PaymentRequirements` or its hash when network, asset, recipient, amount, timeout and extra fields remain identical. New unsigned challenges and quotes advertise the configured AGI resource URL. In pinned `@x402/core` 2.28.0, the payment payload's resource field is optional metadata. EIP-3009 authorizes the token transfer parameters; it does not sign a website URL.
+
+The stored operation binds the complete original payment payload digest, original body and idempotency key. A prepared purchase additionally requires its original preparation capability. An exact delivery replay at AGI checks this frozen state before current configuration, quote expiry or product validation and makes no adapter, handler or settlement call. Keep an old resource URL inside an original payload unchanged. Changing or dropping that resource field conflicts with the stored digest. Do not rewrite an authorization, extend an expiry, automatically requote or create a replacement charge. Unknown/in-progress settlement remains unresolved at both origins.
+
+Unclaimed preparations and quotes remain product/version/input/capability/amount/pin/expiry bound in the same D1. They can be explicitly submitted at AGI with the unchanged original authorization while still valid. Their transfer does not refetch a prepared result or extend a TTL. Legacy unpinned unpaid obligations remain rejected. Current HTTP CORS has no credential grant; MCP accepts only its configured Origin header (or an agent request without Origin). No old-origin credential proxy or automatic cross-origin redirect is introduced.
+
+## Coordinated release gate
+
+1. Keep AGI staging cron-free. Verify both origins against local mock adapters and the exact same D1/schema/config contract; public production checks stay read-only.
+2. Refresh the production aggregate baseline immediately before cutover. The recorded initial baseline contains zero unexpired quotes/preparations and zero payment operations/unresolved settlements. It contains two expired legacy quotes, one expired preparation, all ten migrations and unchanged financial/creator history. The private preservation counts remain in the local operator handoff. Historical rows do not store issuer origin; do not infer one from an ID.
+3. If active obligations appear, retain them and their original TTL; if unresolved operations appear, preserve them for reconciliation. Confirm the lead's drain/replay plan before stopping the old endpoint. Do not mutate those records or replace payment authorizations.
+4. Deploy and verify the consolidated AGI revision/bindings before retiring the old public Worker. Retirement needs parent migration-safety clearance plus explicit lead coordination. Record exact old and new Worker versions for rollback.
+5. Deploy the prepared `retiredOrigin` response as the old Worker's only fetch handler, with no scheduled handler and explicit `triggers.crons: []`. It returns 410, a canonical root address, exact-replay instructions and no Location header. It never forwards a request, body, query or credentials and never accesses D1. Keep D1, bindings, prior Worker versions and migration history recoverable.
+6. Verify scheduler removal propagation before transferring the old cron expression to AGI. Read back routes, Worker versions, D1 aggregate history and foreign-key integrity; verify desktop/mobile public flows and API/MCP without production fixtures, purchases, signatures, proposals or grants.
+
+Rollback restores a recorded Worker revision and keeps the same D1. It does not rewind financial rows, reset capabilities or attempt settlement again. Do not silently run two active schedulers or re-enable public admissions at both origins during rollback.
+
+The default `platform/wrangler.jsonc` now targets `src/retired-worker.js`, with no asset binding and explicit empty crons. The original runtime source remains in the repository/history, but the default old-public deploy cannot restore admissions or its former destructive maintenance. Do not use native rollback to an old scheduled revision such as `dedda843-b079-465e-be9b-1f23caa9241d`. Keep the old Worker retired and roll AGI back only to a reviewed preservation-safe revision. Any exceptional old-origin restoration must be rebuilt with `preserveRecords: true` maintenance and initial empty crons under lead coordination.
+
+The authorized old-public retirement is version `25fce34f-b3ef-4515-ab25-2af0b31916cd`. Its provider-downloaded bundle SHA-256 is `d38b94429cdc8fa8f1ee68ec1b859768b4f7e1cea7854a3c0e1cce6c75abf321`, identical to the reviewed temporary dry-run artifact. The committed entrypoint and configuration preserve that response and operational binding contract; bundled source-path comments can differ by checkout location. Native provider readback confirms no old cron, no assets and the original D1 binding. Public GET checks return 410 without redirects, including former assets. Operator preservation/readback evidence stays in the local handoff; owner-positive browser actions remain unverified.
+
+## Local regression evidence
+
+`platform/test/origin-migration.test.js` uses only in-memory D1 and mock adapters. It covers exact old-packet replay at AGI, modified-payload rejection, concurrent claims, unresolved settlement, preparation reuse, expiry without TTL extension, frozen terms/pins, telemetry deferral, asset credential exclusion and MCP/CORS. `platform/test/retired-origin.test.js` checks the pure retirement response. No real endpoint, wallet or facilitator participates in these payment fixtures.
+
+Protocol reference: [EIP-3009](https://eips.ethereum.org/EIPS/eip-3009). The pinned SDK schema is checked directly in the installed package rather than inferred from marketing documentation.
