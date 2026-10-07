@@ -48,6 +48,17 @@ test('shared header CSS retains the approved white header and page fonts match',
  }
 });
 
+test('only the current audience has a persistent underline, with visible hover and focus states',async()=>{
+ const css=await readFile(new URL('../public/header.css',import.meta.url),'utf8');
+ const base=css.match(/\.humans-link\{([^}]+)\}/)?.[1];
+ const current=css.match(/\.humans-link\[aria-current="page"\]\{([^}]+)\}/)?.[1];
+ assert.match(base,/(?:^|;)text-decoration:none(?:;|$)/);
+ assert.match(current,/(?:^|;)text-decoration:underline(?:;|$)/);
+ assert.match(css,/\.humans-link:hover\{color:#555\}/);
+ assert.match(css,/\.site-header a:focus-visible\{outline:2px solid #111;outline-offset:4px\}/);
+ assert.doesNotMatch(css,/\.humans-link:hover\{[^}]*text-decoration:underline/);
+});
+
 test('both page types reference shared and page CSS by current content hashes',async()=>{
  for(const html of [...agents,humans]){
   const styles=[...html.matchAll(/<link rel="stylesheet" href="\/(header|style|humans)\.css\?v=([0-9a-f]{12})">/g)];
