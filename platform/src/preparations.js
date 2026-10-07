@@ -82,10 +82,12 @@ export async function loadQuote({db,request,body,product,handler,config,now=new 
  if((prepared?.input_hash??await hash(canonical(input)))!==row.input_hash)throw new PlatformError(409,'quote_mismatch','Input differs from quote.');
  return {terms:JSON.parse(row.requirements_json),input,prepared,success_contract_sha256:row.success_contract_sha256??null};
 }
-export async function expirePreparations(db,now=new Date()){
+export async function expirePreparations(db,now=new Date(),{preserveRecords=false}={}){
  const iso=now.toISOString(),previousDay=new Date(now.getTime()-86400000).toISOString();
- await db.prepare('DELETE FROM platform_quotes WHERE operation_id IS NULL AND expires_at<? AND created_at<?').bind(iso,previousDay).run();
- await db.prepare('DELETE FROM platform_preparations WHERE operation_id IS NULL AND expires_at<? AND created_at<? AND NOT EXISTS(SELECT 1 FROM platform_quotes q WHERE q.prepared_id=platform_preparations.prepared_id)').bind(iso,previousDay).run();
+ if(!preserveRecords){
+  await db.prepare('DELETE FROM platform_quotes WHERE operation_id IS NULL AND expires_at<? AND created_at<?').bind(iso,previousDay).run();
+  await db.prepare('DELETE FROM platform_preparations WHERE operation_id IS NULL AND expires_at<? AND created_at<? AND NOT EXISTS(SELECT 1 FROM platform_quotes q WHERE q.prepared_id=platform_preparations.prepared_id)').bind(iso,previousDay).run();
+ }
  // Uncertain settlement keeps its durable result; settled/failed outputs follow paid retention.
  await db.prepare("UPDATE platform_preparations SET result_json=NULL,preview_json=NULL WHERE operation_id IN (SELECT operation_id FROM platform_payments WHERE state IN ('settled','failed') AND result_expires_at<?)").bind(iso).run();
 }

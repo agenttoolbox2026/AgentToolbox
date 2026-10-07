@@ -2,7 +2,7 @@
 // manifest never invokes a handler, fetches a URL or touches a payment ledger.
 const FIXED_TIME='2026-10-07T00:00:00.000Z';
 const DOC_URL='https://docs.python.org/3/agenttoolbox-fixture.txt';
-const ENDPOINT='https://agnttoolbx.agenttoolbox2026.workers.dev/mcp';
+const ENDPOINT='https://agi.agenttoolbox2026.workers.dev/mcp';
 const OLD='2025-11-25',MODERN='2026-07-28';
 const AUTHORITY='I own this endpoint or am authorized to request its anonymous read-only MCP discovery.';
 const DOC_TEXT='# Fixture guide\n\nRetries wait before the next request.\n';

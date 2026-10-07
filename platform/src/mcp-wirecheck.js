@@ -7,7 +7,7 @@ import {passesCriteria,WIRE_DECISIVE_REASONS} from './criteria.js';
 // provider-boundary evidence in docs/mcp-wirecheck.md. Custom domains remain
 // excluded: a DNS preflight cannot pin a subsequent Workers fetch connection.
 // This list contains examples, not an exhaustive endpoint allowlist.
-export const MCP_WIRE_ENDPOINTS=Object.freeze(['https://agnttoolbx.agenttoolbox2026.workers.dev/mcp']);
+export const MCP_WIRE_ENDPOINTS=Object.freeze(['https://agi.agenttoolbox2026.workers.dev/mcp']);
 export const MCP_WIRE_ENDPOINT_SCOPE=Object.freeze({provider:'Cloudflare Workers',hostname_format:'<worker>.<account>.workers.dev',paths:Object.freeze(['/mcp','/mcp/']),custom_domains:false,redirects:0});
 const workerLabel='[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?';
 const endpointPattern=new RegExp('^https://'+workerLabel+'\\.'+workerLabel+'\\.workers\\.dev/mcp/?$');
@@ -178,7 +178,7 @@ export function createMcpWireCheck({fetchImpl=fetch,now=()=>new Date(),requestTi
      if(state.requests>=MCP_WIRE_LIMITS.max_requests)fail('request_limit');
      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.min(perRequest,remaining));
      const entry={method,http_status:null,media_type:'none',response_kind:'incomplete',response_bytes:0,rpc_error_code:null,tool_count:null,session_present:false};row.transcript.push(entry);
-     const headers={'Content-Type':'application/json','Accept':'application/json, text/event-stream','User-Agent':'AgentToolbox-WireCheck/0.1 (+https://agnttoolbx.agenttoolbox2026.workers.dev/humans)'};
+     const headers={'Content-Type':'application/json','Accept':'application/json, text/event-stream','User-Agent':'AgentToolbox-WireCheck/0.1 (+https://agi.agenttoolbox2026.workers.dev/humans)'};
      if(modern){headers['MCP-Protocol-Version']=version;headers['Mcp-Method']=method;params={...(params??{}),_meta:modernMeta()};}
      else if(method!=='initialize'){headers['MCP-Protocol-Version']=row.effective_version;if(session)headers['Mcp-Session-Id']=session;}
      const message={jsonrpc:'2.0',...(id===undefined?{}:{id}),method,...(params===undefined?{}:{params})};

@@ -86,7 +86,7 @@ export async function quotedPayment(options){
  const {terms,...quote}=await createQuote(options);
  return {api_version:'1',...quote,payment:paymentChallenge(options.product,terms,options.origin),payment_requirements_pin:await paymentRequirementsPin(terms),payment_effect:'none',instructions:'Include quote_id and this exact payment_amount_atomic in invoke. Preserve body, capability, key and original authorization for retries. A quote does not settle or release a result.'};
 }
-export async function paidInvocation({request,body,key,product,handler,db,config,origin,adapterFactory=sdkAdapter,now=()=>new Date()}){
+export async function paidInvocation({request,body,key,product,handler,db,config,origin,adapterFactory=sdkAdapter,now=()=>new Date(),trackingEnabled=true}){
  if(request.method!=='POST'||new URL(request.url).pathname!=='/v1/products/'+product.id+'/invoke')
   throw new PlatformError(405,'method_not_allowed','Paid products use their exact POST invocation path.');
  const currentTerms=()=>{
@@ -99,7 +99,7 @@ export async function paidInvocation({request,body,key,product,handler,db,config
  let terms;
  const signature=request.headers.get('PAYMENT-SIGNATURE');
  const sampleKind=request.headers.get('X-AgentToolbox-Sample')==='synthetic'?'synthetic':'unclassified';
- const metrics=telemetry(db,{sampleKind,now});
+ const metrics=telemetry(db,{sampleKind,now,enabled:trackingEnabled});
  await metrics.record('invoke_attempt',product);
  if(!signature){
   terms=currentTerms();

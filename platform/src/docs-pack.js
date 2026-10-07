@@ -4,7 +4,7 @@ import {passesCriteria} from './criteria.js';
 
 export const DOC_HOSTS=Object.freeze(['developers.cloudflare.com','docs.payai.network','docs.x402.org','docs.python.org','nodejs.org','developer.mozilla.org','docs.github.com','www.typescriptlang.org']);
 export const MAX_SOURCE_BYTES=262144;
-export const USER_AGENT='AgentToolboxDocs/1.0 (+https://agnttoolbx.agenttoolbox2026.workers.dev/humans)';
+export const USER_AGENT='AgentToolboxDocs/1.0 (+https://agi.agenttoolbox2026.workers.dev/humans)';
 const fail=code=>{throw new Error(code);};
 export function publicDocUrl(value){
  let u;try{u=new URL(value);}catch{return null;}
