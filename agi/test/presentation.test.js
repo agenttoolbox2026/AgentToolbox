@@ -1,8 +1,9 @@
-import test from 'node:test';
+import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
-import {fileURLToPath} from 'node:url';
+import {database} from '../../platform/scripts/local-db.js';
+import {humansPage} from '../src/humans.js';
 import worker from '../src/worker.js';
 import {createModel} from '../src/model.js';
 import {homePage,toolPage,renderMarkdown} from '../src/pages.js';
@@ -11,11 +12,14 @@ import {successContractPin} from '../../platform/src/contract-pins.js';
 import {CREATOR_TERMS} from '../../platform/src/submissions.js';
 import {REFERRAL_TERMS} from '../../platform/src/referrals.js';
 
-const canonical='https://agnttoolbx.agenttoolbox2026.workers.dev';
+const canonical='https://agi.agenttoolbox2026.workers.dev';
 const site='https://presentation.example';
 const active=products.filter(product=>product.status==='active');
 const plain=value=>JSON.parse(JSON.stringify(value));
-const request=(path,init={},env={})=>worker.fetch(new Request(site+path,init),env);
+const db=database();after(()=>db.close());
+const allow={limit:async()=>({success:true})};
+const bindings={METRICS_DB:db,PUBLIC_ORIGIN:canonical,CLIENT_LIMIT:allow,SERVICE_LIMIT:allow,FEEDBACK_LIMIT:allow,PAYMENTS_MODE:'x402',RECEIVER_CONFIRMED:'true',PAYMENT_NETWORK:'eip155:8453',PAYMENT_ASSET:'0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',PAY_TO_ADDRESS:'0xD43350dD5a40Dd8689C644A0477Bb75e3A59129D'};
+const request=(path,init={},env={})=>worker.fetch(new Request(site+path,init),{...bindings,...env});
 const publicHtml=['/','/buy','/sell',...active.map(product=>'/tools/'+product.id)];
 const publicMarkdown=['/llms.txt','/AGENTS.md','/buy.md','/sell.md',...active.map(product=>'/tools/'+product.id+'.md')];
 const noNetwork=t=>t.mock.method(globalThis,'fetch',()=>{throw new Error('Presentation must not make external requests.');});
@@ -139,118 +143,104 @@ test('HEAD has matching status and MIME type but no body on public and missing r
  for(const path of ['/missing','/tools/missing','/tools/missing.md','/tools/retry-gate'])assert.equal((await request(path)).status,404,path);
 });
 
-test('credential-free canonical schema redirects never forward visitor queries',async t=>{
+test('same-origin discovery handles credential headers without forwarding or redirecting',async t=>{
  noNetwork(t);
  for(const path of ['/openapi.json','/.well-known/x402','/humans'])for(const method of ['GET','HEAD']){
-  const response=await request(path+'?capability=secret-query&destination=https://evil.invalid',{method});
-  assert.equal(response.status,307,path+' '+method);
-  assert.equal(response.headers.get('location'),canonical+path);
-  assert.doesNotMatch(await response.text(),/secret-query|secret-header|secret-creator|evil\.invalid/);
+  const response=await request(path+'?capability=secret-query&destination=https://evil.invalid',{method,headers:{Authorization:'secret-header','X-Creator-Capability':'secret-creator','PAYMENT-SIGNATURE':'private-signature'}});
+  assert.equal(response.status,200,path+' '+method);
+  assert.equal(response.headers.has('location'),false);
+  assert.doesNotMatch(await response.text(),/secret-query|secret-header|secret-creator|private-signature|evil\.invalid/);
  }
 });
 
-test('redirect-following clients never send credentials to a destination from discovery aliases',async t=>{
- const destinationCalls=[];
- t.mock.method(globalThis,'fetch',async request=>{destinationCalls.push(request);return new Response('Unexpected destination call');});
- // Model clients that follow 307s while retaining custom credential headers.
- // The previous implementation reached fetch here even with a fixed Location.
- const followingClient=async request=>{
-  const response=await worker.fetch(request,{});
-  if([301,302,303,307,308].includes(response.status)&&response.headers.has('location'))
-   return fetch(new Request(new URL(response.headers.get('location'),request.url),{method:request.method,headers:request.headers}));
-  return response;
- };
- for(const path of ['/openapi.json','/.well-known/x402','/humans'])for(const method of ['GET','HEAD'])
-  for(const header of ['X-Creator-Capability','X-Preparation-Capability','X-Referral-Capability','PAYMENT-SIGNATURE','Authorization','Cookie','Proxy-Authorization','X-Payment','X-Api-Key','X-Auth-Token']){
-   const response=await followingClient(new Request(site+path,{method,headers:{[header]:'private-sentinel'}}));
-   assert.equal(response.status,421,path+' '+method+' '+header);
-   assert.equal(response.headers.has('location'),false);
-   assert.equal(response.headers.get('cache-control'),'no-store');
-   assert.doesNotMatch(await response.text(),/private-sentinel/);
+test('missing or mismatched operational bindings fail closed without forwarding secrets',async t=>{
+ noNetwork(t);
+ for(const path of ['/v1/products','/v1/products/docs-pack/invoke','/v1/tool-submissions','/mcp']){
+  for(const method of ['GET','HEAD','POST']){
+   const req=new Request(site+path,{method,headers:{'Content-Type':'application/json','PAYMENT-SIGNATURE':'secret-payment','X-Creator-Capability':'secret-creator'},...(['GET','HEAD'].includes(method)?{}:{body:'secret-body'})});
+   const response=await worker.fetch(req,{});
+   assert.equal(response.status,503);assert.equal(response.headers.has('location'),false);
+   assert.equal(req.bodyUsed,false);assert.doesNotMatch(await response.text(),/secret-/);
   }
- assert.equal(destinationCalls.length,0,'A redirect-following client must make zero destination calls.');
+ }
+ const wrong=await request('/v1/products',{}, {PUBLIC_ORIGIN:'https://wrong.invalid'});
+ assert.equal(wrong.status,503);
 });
 
-test('all canonical API calls are refused without reflecting, consuming or forwarding secrets',async t=>{
+test('document and asset routes reject mutation methods without reflecting request bodies',async t=>{
  noNetwork(t);
- const forbiddenEnv=new Proxy({},{get(){throw new Error('API refusal must not access bindings.');}});
- for(const path of ['/v1/products/docs-pack/invoke','/v1/products/docs-pack/prepare','/v1/referrals','/v1/referrals/me','/v1/tool-submissions','/v1/creator-tools/creator-test/updates','/mcp']){
-  for(const method of ['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS']){
-   const init={method,headers:{'Content-Type':'application/json','PAYMENT-SIGNATURE':'secret-payment','X-Creator-Capability':'secret-creator','X-Preparation-Capability':'secret-preparation','X-Referral-Capability':'secret-referral',Authorization:'Bearer secret-authorization'}};
-   if(!['GET','HEAD'].includes(method))init.body='secret-body-not-json';
-   const req=new Request(site+path+'?secret-query=yes',init);
-   const response=await worker.fetch(req,forbiddenEnv);
-   assert.equal(response.status,421,path+' '+method);
-   assert.equal(response.headers.has('location'),false,path+' '+method);
-   assert.equal(req.bodyUsed,false,path+' '+method+': request body must remain untouched');
-   const body=await response.text();assert.doesNotMatch(body,/secret-|Bearer|PAYMENT-SIGNATURE/);
-   if(method==='HEAD')assert.equal(body,'');
-   else{const parsed=JSON.parse(body);assert.equal(parsed.error.code,'canonical_api_required');assert(body.includes(canonical));}
-  }
+ for(const path of ['/','/buy','/sell','/humans','/tools/docs-pack','/agent.json','/style.css'])for(const method of ['POST','PUT','PATCH','DELETE']){
+  const response=await request(path,{method,body:'private-request-body'});
+  assert.equal(response.status,405,path+' '+method);assert.equal(response.headers.has('location'),false);
+  assert.doesNotMatch(await response.text(),/private-request-body/);
  }
 });
 
-test('presentation and discovery paths reject mutation methods without redirection or bindings',async t=>{
- noNetwork(t);
- for(const path of ['/','/buy','/sell','/tools/docs-pack','/agent.json','/openapi.json','/.well-known/x402','/style.css','/missing']){
-  for(const method of ['POST','PUT','PATCH','DELETE']){
-   const response=await request(path,{method,body:'private-request-body'});
-   assert.equal(response.status,405,path+' '+method);
-   assert.equal(response.headers.has('location'),false,path+' '+method);
-   assert.doesNotMatch(await response.text(),/private-request-body/);
-  }
- }
-});
-
-test('only the two public asset paths can reach ASSETS and HEAD remains bodyless',async t=>{
- noNetwork(t);
- const seen=[];
- const model=await createModel();
+test('only public assets reach ASSETS with fresh credential-free requests',async t=>{
+ noNetwork(t);const seen=[];const model=await createModel();
  const env={ASSETS:{fetch:async req=>{
   const url=new URL(req.url);seen.push(url.pathname);
   assert.equal(url.origin,model.siteOrigin);assert.equal(url.search,'');
-  for(const header of ['Authorization','PAYMENT-SIGNATURE','X-Creator-Capability'])assert.equal(req.headers.has(header),false,header+' must not reach ASSETS');
-  return new Response('asset',{headers:{'Content-Type':url.pathname.endsWith('.css')?'text/css':'image/png'}});
+  assert.equal([...req.headers].length,0);assert.equal(req.body,null);
+  return new Response('asset',{headers:{'Content-Type':url.pathname.endsWith('.css')?'text/css':url.pathname.endsWith('.js')?'text/javascript':'image/png'}});
  }}};
- for(const path of ['/style.css','/agenttoolbox-icon.png']){
+ const paths=['/style.css','/humans.css','/workflow.css','/site.js','/retry-envelope.js','/agenttoolbox-icon.png'];
+ for(const path of paths){
   assert.equal((await request(path+'?private=secret',{headers:{Authorization:'secret','PAYMENT-SIGNATURE':'secret','X-Creator-Capability':'secret'}},env)).status,200);
   const head=await request(path,{method:'HEAD'},env);assert.equal(head.status,200);assert.equal(await head.text(),'');
  }
- for(const path of ['/site.js','/secret.json','/assets/private','/style.css/extra'])assert.equal((await request(path,{},env)).status,404,path);
- assert.deepEqual(seen,['/style.css','/style.css','/agenttoolbox-icon.png','/agenttoolbox-icon.png']);
+ for(const path of ['/secret.json','/assets/private','/style.css/extra','/agenttoolbox-icon-private'])assert.equal((await request(path,{},env)).status,404,path);
+ assert.deepEqual(seen,paths.flatMap(path=>[path,path]));
+ for(const [source,target]of [['style.css','workflow.css'],['site.js','site.js'],['retry-envelope.js','retry-envelope.js']])assert.deepEqual(await readFile(new URL('../public/'+target,import.meta.url)),await readFile(new URL('../../platform/public/'+source,import.meta.url)));
 });
 
-test('deployed Worker dependency graph cannot import platform execution, database, payment or accounting code',async()=>{
- const root=new URL('../src/',import.meta.url),seen=new Set();
- const visit=async url=>{
-  if(seen.has(url.href))return;seen.add(url.href);
-  assert(url.href.startsWith(root.href),'Runtime dependency escapes presentation source: '+fileURLToPath(url));
-  if(url.pathname.endsWith('.json'))return;
-  const source=await readFile(url,'utf8');
-  assert.doesNotMatch(source,/\b(?:METRICS_DB|PAY_TO_ADDRESS|PAYMENTS_MODE|paymentAdapterFactory|createPlatform)\b/,fileURLToPath(url));
-  for(const match of source.matchAll(/(?:\bfrom\s*|\bimport\s*(?:\(\s*)?)["']([^"']+)["']/g)){
-   assert(match[1].startsWith('.'),'Unexpected runtime package: '+match[1]);
-   await visit(new URL(match[1],url));
-  }
- };
- await visit(new URL('../src/worker.js',import.meta.url));
+test('AGI configuration uses the exact existing ledger and payment identities with shared limits',async()=>{
  const config=JSON.parse(await readFile(new URL('../wrangler.jsonc',import.meta.url),'utf8'));
- assert.equal(config.name,'agi');
- assert.equal(config.assets.binding,'ASSETS');
- for(const binding of ['d1_databases','kv_namespaces','r2_buckets','durable_objects','services','queues','triggers','vars'])assert.equal(config[binding],undefined,'Presentation must not configure '+binding);
+ const old=JSON.parse(await readFile(new URL('../../platform/wrangler.jsonc',import.meta.url),'utf8'));
+ assert.equal(config.name,'agi');assert.equal(config.assets.binding,'ASSETS');assert.equal(config.assets.run_worker_first,true);
+ assert.equal(config.d1_databases.length,1);assert.equal(config.d1_databases[0].database_id,'6b3da390-f6c4-4013-a0c6-cbf7b0170cca');
+ assert.deepEqual(config.ratelimits,old.ratelimits);
+ for(const key of ['PAY_TO_ADDRESS','PAYMENT_NETWORK','PAYMENT_ASSET','RECEIVER_CONFIRMED','PAYMENTS_MODE'])assert.equal(config.vars[key],old.vars[key],key);
+ assert.equal(config.vars.PUBLIC_ORIGIN,canonical);assert.equal(config.observability.enabled,false);
+ for(const binding of ['kv_namespaces','r2_buckets','durable_objects','services','queues'])assert.equal(config[binding],undefined);
 });
 
-
-test('document front door exposes essential actions and links to the original Humans page',async()=>{
+test('document front door stays compact and links to the new Humans page',async()=>{
  const html=await(await request('/')).text();
  assert.doesNotMatch(html,/<details|tool-card|hero-layout|guide-sidebar/);
- for(const id of ['quick-start','buy-tools','sell-tools','request-and-response','update-an-approved-tool','machine-readable'])assert(html.includes('id="'+id+'"'));
+ for(const id of ['buy-tools','sell-tools','machine-readable'])assert(html.includes('id="'+id+'"'));
  assert(html.includes('href="'+canonical+'/humans"'));
  const css=await readFile(new URL('../public/style.css',import.meta.url));
  const cssVersion=createHash('sha256').update(css).digest('hex').slice(0,12);
- assert(html.includes('href="/style.css?v='+cssVersion+'"'),'Changed stylesheet must have a new browser cache key');
+ assert(html.includes('href="/style.css?v='+cssVersion+'"'));
  const manifest=await(await request('/agent.json')).json();assert.equal(manifest.for_humans,canonical+'/humans');
- for(const p of active)assert(html.includes(p.outcome.success_criterion.replaceAll('&','&amp;')));
+ assert.equal(manifest.presentation_only,undefined);
+});
+
+test('Humans counter distinguishes unavailable data from zero and escapes all presentation',async()=>{
+ const model=await createModel();
+ for(const [value,expected]of [[0,'0'],[12,'12'],[12345,'12,345'],[null,'Unavailable'],[undefined,'Unavailable'],[-1,'Unavailable'],[1.5,'Unavailable'],['<img>','Unavailable']]){
+  const html=humansPage(model,{lifetime_paid_purchases:value});
+  assert(html.includes('>'+expected+'</p>'));assert(html.includes('Tools Sold'));
+  assert.doesNotMatch(html,/<script|<form|onerror=/);assert(html.includes('href="/"'));
+ }
+ const response=await request('/humans',{}, {METRICS_DB:{prepare(){throw new Error('offline');}}});
+ assert.equal(response.status,200);assert((await response.text()).includes('Unavailable'));assert.equal(response.headers.get('cache-control'),'no-store');
+ const css=await readFile(new URL('../public/humans.css',import.meta.url));
+ assert(humansPage(model,null).includes('v='+createHash('sha256').update(css).digest('hex').slice(0,12)));
+});
+
+test('Humans counter cannot bypass shared D1 admission limits',async()=>{
+ let reads=0,limits=0;
+ const databaseGuard={prepare(){reads++;throw new Error('A denied request must not query D1.');}};
+ const deny={limit:async()=>{limits++;return {success:false};}};
+ for(const env of [{METRICS_DB:databaseGuard,SERVICE_LIMIT:deny},{METRICS_DB:databaseGuard,CLIENT_LIMIT:deny}]){
+  const response=await request('/humans',{},env);
+  assert.equal(response.status,200);assert((await response.text()).includes('Unavailable'));
+ }
+ assert.equal(reads,0);assert.equal(limits,2);
+ const head=await request('/humans',{method:'HEAD'},{METRICS_DB:databaseGuard});
+ assert.equal(await head.text(),'');assert.equal(reads,0);
 });
 
 test('Markdown rendering preserves inert text and rejects executable link schemes',()=>{

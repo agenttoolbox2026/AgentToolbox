@@ -1,20 +1,22 @@
-import model from './generated.json' with {type:'json'};
+import generated from './generated.json' with {type:'json'};
 import {homePage,buyPage,sellPage,toolPage,notFoundPage} from './pages.js';
+import {humansPage} from './humans.js';
 import {compactManifest,homeMarkdown,buyMarkdown,sellMarkdown,toolMarkdown} from './machine.js';
+import {createPlatform} from '../../platform/src/app.js';
+import {createQuoteProof} from '../../platform/src/quote-proof.js';
+import {createContractCases} from '../../platform/src/contract-cases.js';
+import {createMcpWireCheck} from '../../platform/src/mcp-wirecheck.js';
+import {createDocsPack} from '../../platform/src/docs-pack.js';
+import {publicPurchases,expirePaidResults} from '../../platform/src/purchases.js';
+import {expirePreparations} from '../../platform/src/preparations.js';
 
-// No operational handler, storage, credential, proxy, scheduled task or financial
-// binding belongs in this Worker. Clients must address the canonical API directly.
 const security={
  'Content-Security-Policy':"default-src 'none'; style-src 'self'; img-src 'self'; script-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'",
  'X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer',
  'Permissions-Policy':'camera=(), microphone=(), geolocation=(), payment=()',
  'Strict-Transport-Security':'max-age=31536000',
 };
-// Fetch clients may retain custom headers across a cross-origin redirect.
-// Never issue even a discovery redirect when the incoming request has secrets.
-const credentialHeaders=['authorization','proxy-authorization','cookie',
- 'payment-signature','x-payment','x-creator-capability','x-preparation-capability',
- 'x-referral-capability','x-api-key','x-auth-token'];
+const assetPaths=new Set(['/style.css','/humans.css','/workflow.css','/site.js','/retry-envelope.js','/agenttoolbox-icon.png']);
 const acceptType=request=>{
  const types=(request.headers.get('Accept')??'text/html').split(',').map((part,index)=>{
   const [mime,...params]=part.trim().toLowerCase().split(';');
@@ -29,44 +31,85 @@ function respond(request,body,type='text/html',status=200,extra={}){
   'Content-Type':type+'; charset=utf-8','Cache-Control':'public, max-age=60','Vary':'Accept',...extra}});
 }
 const json=(request,body,status=200,extra={})=>respond(request,JSON.stringify(body,null,2)+'\n','application/json',status,extra);
-export default {
- async fetch(request,env){
-  const url=new URL(request.url),path=url.pathname;
-  // Do not redirect or forward bodies, signatures, capabilities or query strings.
-  // A caller may already have attached credentials to a mistaken origin.
-  if(path==='/mcp'||path==='/v1'||path.startsWith('/v1/'))return json(request,{error:{code:'canonical_api_required',message:'Send operational requests directly to the canonical API. This host is presentation only.',canonical_api_origin:model.origin,mcp_endpoint:model.machine.mcp}},421,{'Cache-Control':'no-store'});
-  if(!['GET','HEAD'].includes(request.method))return json(request,{error:{code:'method_not_allowed',message:'This presentation host supports GET and HEAD only.',canonical_api_origin:model.origin}},405,{Allow:'GET, HEAD','Cache-Control':'no-store'});
-  if(path==='/openapi.json'||path==='/.well-known/x402'||path==='/humans'){
-   if(credentialHeaders.some(name=>request.headers.has(name)))return json(request,{error:{code:'canonical_api_required',message:'Credential-bearing discovery requests must be sent directly to the canonical API; this host will not redirect them.',canonical_api_origin:model.origin}},421,{'Cache-Control':'no-store'});
-   return respond(request,null,'text/plain',307,{Location:model.origin+path,'Cache-Control':'no-store'});
-  }
-  if(['/style.css','/agenttoolbox-icon.png'].includes(path)){
-   if(!env?.ASSETS)return json(request,{error:{code:'asset_unavailable'}},503,{'Cache-Control':'no-store'});
-   const asset=await env.ASSETS.fetch(new Request(model.siteOrigin+path,{method:request.method}));
-   const headers=new Headers(asset.headers);for(const [k,v]of Object.entries(security))headers.set(k,v);
-   headers.set('Cache-Control','public, max-age=3600');return new Response(request.method==='HEAD'?null:asset.body,{status:asset.status,headers});
-  }
-  if(path==='/health')return json(request,{ok:true,service:'agenttoolbox-presentation',canonical_api_origin:model.origin,catalog_version:model.registryVersion,ledger:false,payments:false});
-  if(path==='/robots.txt')return respond(request,'User-agent: *\nAllow: /\nSitemap: '+model.siteOrigin+'/sitemap.xml\n','text/plain');
-  if(path==='/sitemap.xml')return respond(request,'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+['/','/buy','/sell','/humans',...model.tools.map(p=>p.guide_url)].map(path=>'<url><loc>'+model.siteOrigin+path+'</loc></url>').join('')+'</urlset>','application/xml');
-  if(path==='/agent.json')return json(request,compactManifest(model));
-  if(['/llms.txt','/AGENTS.md','/index.md'].includes(path))return respond(request,homeMarkdown(model),'text/markdown');
-  if(path==='/buy.md')return respond(request,buyMarkdown(model),'text/markdown');
-  if(path==='/sell.md')return respond(request,sellMarkdown(model),'text/markdown');
-  const match=path.match(/^\/tools\/([a-z0-9-]+)(\.md)?$/),tool=match&&model.tools.find(p=>p.id===match[1]);
-  const format=acceptType(request);
-  if(path==='/'){
-   if(format==='json')return json(request,compactManifest(model));
-   if(format==='markdown')return respond(request,homeMarkdown(model),'text/markdown');
-   return respond(request,homePage(model));
-  }
-  if(path==='/buy')return respond(request,format==='markdown'?buyMarkdown(model):buyPage(model),format==='markdown'?'text/markdown':'text/html');
-  if(path==='/sell')return respond(request,format==='markdown'?sellMarkdown(model):sellPage(model),format==='markdown'?'text/markdown':'text/html');
-  if(tool){
-   if(match[2]||format==='markdown')return respond(request,toolMarkdown(model,tool),'text/markdown');
-   if(format==='json')return json(request,compactManifest(model).tools.find(p=>p.id===tool.id));
-   return respond(request,toolPage(model,tool));
-  }
-  return respond(request,notFoundPage(model),'text/html',404,{'Cache-Control':'no-store'});
+
+// Injection is for local tests/dev. Production uses the same platform handlers,
+// D1 ledger, payment adapter and rate-limit namespaces as the prior origin.
+export function createAgi({model=generated,platformOptions={}}={}){
+ return {
+ async scheduled(controller,env,ctx){
+  ctx.waitUntil(Promise.all([expirePaidResults(env.METRICS_DB),expirePreparations(env.METRICS_DB,new Date(),{preserveRecords:true})]));
  },
-};
+ async fetch(request,env={}){
+  const url=new URL(request.url),path=url.pathname,read=['GET','HEAD'].includes(request.method);
+  const assetFetch=async source=>{
+   const assetPath=new URL(source.url).pathname;
+   if(!assetPaths.has(assetPath))return new Response(null,{status:404});
+   if(!env.ASSETS)return json(request,{error:{code:'asset_unavailable'}},503,{'Cache-Control':'no-store'});
+   // ASSETS receives no visitor query, headers, capability or request body.
+   return env.ASSETS.fetch(new Request(model.siteOrigin+assetPath,{method:source.method==='HEAD'?'HEAD':'GET'}));
+  };
+  if(assetPaths.has(path)){
+   if(!read)return json(request,{error:{code:'method_not_allowed'}},405,{Allow:'GET, HEAD','Cache-Control':'no-store'});
+   const asset=await assetFetch(request),headers=new Headers(asset.headers);
+   for(const [k,v]of Object.entries(security))headers.set(k,v);
+   headers.set('Cache-Control',['/site.js','/retry-envelope.js','/workflow.css'].includes(path)?'no-store':'public, max-age=3600');
+   return new Response(request.method==='HEAD'?null:asset.body,{status:asset.status,headers});
+  }
+  const documentPath=['/','/buy','/sell','/humans','/agent.json','/llms.txt','/AGENTS.md','/index.md','/buy.md','/sell.md','/robots.txt','/sitemap.xml'].includes(path)||/^\/tools\/[a-z0-9-]+(?:\.md)?$/.test(path);
+  if(documentPath&&!read&&request.method!=='OPTIONS')return json(request,{error:{code:'method_not_allowed'}},405,{Allow:'GET, HEAD','Cache-Control':'no-store'});
+  if(read){
+   if(path==='/humans'){
+    let stats=null;
+    try{
+     // The counter shares the API's D1 and quota boundary. Static documents do
+     // not need a binding, but missing/limited data must never become a false 0.
+     if(request.method==='GET'&&env.METRICS_DB&&env.PUBLIC_ORIGIN===model.origin&&env.CLIENT_LIMIT&&env.SERVICE_LIMIT&&
+       (await env.SERVICE_LIMIT.limit({key:'catalog'})).success&&
+       (await env.CLIENT_LIMIT.limit({key:request.headers.get('CF-Connecting-IP')??'unknown'})).success)
+       stats=await publicPurchases(env.METRICS_DB);
+    }catch{/* Unavailable is not zero. */}
+    return respond(request,humansPage(model,stats),'text/html',200,{'Cache-Control':'no-store'});
+   }
+   if(path==='/robots.txt')return respond(request,'User-agent: *\nAllow: /\nSitemap: '+model.siteOrigin+'/sitemap.xml\n','text/plain');
+   if(path==='/sitemap.xml')return respond(request,'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+['/','/buy','/sell','/humans',...model.tools.map(p=>p.guide_url)].map(path=>'<url><loc>'+model.siteOrigin+path+'</loc></url>').join('')+'</urlset>','application/xml');
+   if(path==='/agent.json')return json(request,compactManifest(model));
+   if(['/llms.txt','/AGENTS.md','/index.md'].includes(path))return respond(request,homeMarkdown(model),'text/markdown');
+   if(path==='/buy.md')return respond(request,buyMarkdown(model),'text/markdown');
+   if(path==='/sell.md')return respond(request,sellMarkdown(model),'text/markdown');
+   const match=path.match(/^\/tools\/([a-z0-9-]+)(\.md)?$/),tool=match&&model.tools.find(p=>p.id===match[1]);
+   const format=acceptType(request);
+   if(path==='/'){
+    if(format==='json')return json(request,compactManifest(model));
+    if(format==='markdown')return respond(request,homeMarkdown(model),'text/markdown');
+    return respond(request,homePage(model));
+   }
+   if(path==='/buy')return respond(request,format==='markdown'?buyMarkdown(model):buyPage(model),format==='markdown'?'text/markdown':'text/html');
+   if(path==='/sell')return respond(request,format==='markdown'?sellMarkdown(model):sellPage(model),format==='markdown'?'text/markdown':'text/html');
+   if(tool){
+    if(match[2]||format==='markdown')return respond(request,toolMarkdown(model,tool),'text/markdown');
+    if(format==='json')return json(request,compactManifest(model).tools.find(p=>p.id===tool.id));
+    return respond(request,toolPage(model,tool));
+   }
+   if(match)return respond(request,notFoundPage(model),'text/html',404,{'Cache-Control':'no-store'});
+  }
+  if(!env.METRICS_DB||env.PUBLIC_ORIGIN!==model.origin||!env.CLIENT_LIMIT||!env.SERVICE_LIMIT)
+   return json(request,{error:{code:'configuration_unavailable',message:'Service is not ready.'}},503,{'Cache-Control':'no-store'});
+  const app=createPlatform({db:env.METRICS_DB,origin:env.PUBLIC_ORIGIN,assets:{fetch:assetFetch},
+   handlers:{'docs-pack':createDocsPack(),'quote-proof':createQuoteProof(),'contract-cases':createContractCases(),'mcp-wirecheck':createMcpWireCheck()},
+   index402VerificationHash:env.INDEX402_VERIFICATION_HASH,
+   telemetryEnabled:false,
+   feedbackLimit:async client=>!!env.FEEDBACK_LIMIT&&(await env.FEEDBACK_LIMIT.limit({key:client})).success,
+   payments:{enabled:env.PAYMENTS_MODE==='x402',live:true,receiverConfirmed:env.RECEIVER_CONFIRMED==='true',network:env.PAYMENT_NETWORK,asset:env.PAYMENT_ASSET??null,payTo:env.PAY_TO_ADDRESS},
+   limit:async client=>(await env.SERVICE_LIMIT.limit({key:'catalog'})).success&&(await env.CLIENT_LIMIT.limit({key:client})).success,
+   ...platformOptions});
+  // Execute locally: never proxy an authorization or capability to another host.
+  const response=await app(request,request.headers.get('CF-Connecting-IP')??'unknown');
+  if(read&&request.method!=='HEAD'&&response.headers.get('Content-Type')?.startsWith('text/html')){
+   const html=(await response.text()).replace(/href="\/style\.css(?=[?"])/g,'href="/workflow.css').replaceAll('href="/#feedback"','href="/buy#after-the-result"');
+   return new Response(html,{status:response.status,headers:response.headers});
+  }
+  return response;
+ }
+ };
+}
+export default createAgi();

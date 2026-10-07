@@ -2,11 +2,11 @@
 // routes. No client script, form, wallet, capabilities or operational requests.
 import {homeMarkdown,buyMarkdown,sellMarkdown,toolMarkdown} from './machine.js';
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const safeLink=url=>/^(?:https:\/\/|\/(?!\/)|#)/.test(url)?escape(url):'#';
+const safeLink=url=>/^(?:https:\/\/|http:\/\/127\.0\.0\.1(?::[0-9]{1,5})?\/|\/(?!\/)|#)/.test(url)?escape(url):'#';
 // Deliberately small, inert Markdown subset. The original text is escaped, and
 // only known links/code/emphasis can create markup. Raw HTML is never accepted.
 function inline(text){
- const pattern=/(\[[^\]\n]+\]\((?:https:\/\/|\/(?!\/)|#)[^\s)]+\)|`[^`\n]+`|\*\*[^*\n]+\*\*|https:\/\/[^\s<>]+)/g;
+ const pattern=/(\[[^\]\n]+\]\((?:https:\/\/|http:\/\/127\.0\.0\.1(?::[0-9]{1,5})?\/|\/(?!\/)|#)[^\s)]+\)|`[^`\n]+`|\*\*[^*\n]+\*\*|https:\/\/[^\s<>]+)/g;
  let result='',start=0;
  for(const match of text.matchAll(pattern)){
   result+=escape(text.slice(start,match.index));const token=match[0];
@@ -39,9 +39,9 @@ export function renderMarkdown(markdown){
 }
 function shell(model,markdown,path='/'){
  return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="description" content="AgentToolbox: buy tools, verify published outcomes, and submit tools for review. HTTP, x402 and MCP instructions for agents."><title>AgentToolbox</title><link rel="canonical" href="${escape(model.siteOrigin+path)}"><link rel="icon" href="/agenttoolbox-icon.png" type="image/png"><link rel="stylesheet" href="/style.css?v=1cc760981a5c"><link rel="alternate" type="text/markdown" href="${path==='/'?'/llms.txt':escape(path+'.md')}" title="Markdown"><link rel="alternate" type="application/json" href="/agent.json" title="Agent manifest"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="description" content="AgentToolbox: buy tools, verify published outcomes, and submit tools for review. HTTP, x402 and MCP instructions for agents."><title>AgentToolbox</title><link rel="canonical" href="${escape(model.siteOrigin+path)}"><link rel="icon" href="/agenttoolbox-icon.png" type="image/png"><link rel="stylesheet" href="/style.css?v=6413892e2a4b"><link rel="alternate" type="text/markdown" href="${path==='/'?'/llms.txt':escape(path+'.md')}" title="Markdown"><link rel="alternate" type="application/json" href="/agent.json" title="Agent manifest"></head>
 <body><a class="skip-link" href="#main">Skip to content</a>
-<header class="site-header"><div class="header-inner"><a class="brand" href="/" aria-label="AgentToolbox home"><span class="brand-icon"><img src="/agenttoolbox-icon.png" alt="" width="2000" height="2000"></span><span>AgentToolbox</span></a><nav aria-label="Main navigation"><a class="humans-link" href="${escape(model.origin+'/humans')}">For Humans ↗</a></nav></div></header>
+<header class="site-header"><div class="header-inner"><a class="brand" href="/" aria-label="AgentToolbox home"><span class="brand-icon"><img src="/agenttoolbox-icon.png" alt="" width="2000" height="2000"></span><span>AgentToolbox</span></a><nav class="audience-nav" aria-label="Main navigation"><a class="humans-link" href="/" aria-current="page">For Agents</a><a class="humans-link" href="${escape(model.origin+'/humans')}">For Humans</a></nav></div></header>
 <main id="main" class="document">${path==='/'?'':`<p class="back-link"><a href="/">← AgentToolbox</a></p>`}${renderMarkdown(markdown)}</main>
 <footer class="document-footer">Built for agents, by agents.</footer></body></html>`;
 }

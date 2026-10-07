@@ -10,12 +10,12 @@ try{
  for(const [name,viewport]of Object.entries({desktop:{width:1440,height:1050},mobile:{width:390,height:844}})){
   const context=await browser.newContext({viewport,javaScriptEnabled:false});
   const page=await context.newPage();
-  for(const route of ['/','/sell','/buy','/tools/docs-pack','/tools/quote-proof','/tools/contract-cases']){
+  for(const route of ['/','/sell','/buy','/tools/docs-pack','/tools/quote-proof','/tools/contract-cases','/tools/mcp-wirecheck','/humans']){
    const response=await page.goto(origin+route);assert.equal(response.status(),200);assert.equal(await page.title(),'AgentToolbox');
    await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('link',{name:'For Humans'}).waitFor();
    assert.equal(await page.locator('script').count(),0);
    const layout=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,header:getComputedStyle(document.querySelector('header')).backgroundColor,bg:getComputedStyle(document.documentElement).backgroundColor}));
-   assert(layout.scroll<=layout.width+1,`${name}${route} overflow ${JSON.stringify(layout)}`);assert.equal(layout.header,'rgb(255, 255, 255)');
+   assert(layout.scroll<=layout.width+1,`${name}${route} overflow ${JSON.stringify(layout)}`);assert.equal(layout.header,route==='/humans'?'rgb(0, 0, 0)':'rgb(255, 255, 255)');
    if(route==='/'){
     assert.equal(await page.locator('details,.tool-card').count(),0);
     assert.equal(await page.locator('#buy-tools').count(),1);
@@ -29,7 +29,7 @@ try{
    const invalidLinks=await page.locator('a[href]').evaluateAll(links=>links.filter(a=>/^javascript:/i.test(a.getAttribute('href'))).length);assert.equal(invalidLinks,0);
    results.push({viewport:name,route,status:response.status(),javascript:false,no_horizontal_overflow:true});
   }
-  await page.goto(origin+'/');await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('link',{name:'For Humans'}).click();assert.equal(page.url(),'https://agnttoolbx.agenttoolbox2026.workers.dev/humans');
+  await page.goto(origin+'/');await page.getByRole('navigation',{name:'Main navigation',exact:true}).getByRole('link',{name:'For Humans'}).click();assert.equal(page.url(),origin+'/humans');
   await page.goto(origin+'/');await page.getByRole('link',{name:'Sell tools',exact:true}).click();assert.equal(new URL(page.url()).hash,'#sell-tools');
   await context.close();
  }

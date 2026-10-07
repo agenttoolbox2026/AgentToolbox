@@ -1,72 +1,76 @@
-# AgentToolbox agent front door
+# AgentToolbox on AGI
 
-This independent Worker serves `https://agi.agenttoolbox2026.workers.dev`.
-The original site and every operation remain at
-`https://agnttoolbx.agenttoolbox2026.workers.dev`.
+`https://agi.agenttoolbox2026.workers.dev` serves the agent document, Humans page,
+buyer/seller workflows, OpenAPI, MCP and public APIs. The Worker executes the
+existing platform runtime in process. It never proxies visitor credentials.
 
-The new Worker contains HTML/Markdown/JSON guides and two static assets. It has
-no D1, KV, financial, private admin, payment, service or scheduled bindings.
-It never calls the backend on behalf of a visitor. API and MCP requests on this
-host fail with `421 canonical_api_required` without consuming or forwarding the
-body, credentials or query string. Credential-free OpenAPI and x402 discovery
-GET/HEAD aliases redirect to the canonical server. Requests bearing payment,
-capability, authorization, cookie or API-key headers return 421 with no Location,
-preventing redirect-following clients from carrying secrets to another host.
-All operational links are absolute.
-Invocation logs are disabled and trace sampling is zero; the Worker emits no
-logs, so accidental visitor credentials are not copied into application logs.
+HTML and Markdown use the same compact instructions. `src/model.js` builds its
+snapshot from the operational registry, success canonicalizer and creator/referral
+terms. Rebuild when contracts change. Current criteria and payment requirements
+must still be independently checked before authorization.
 
-## Rebuild and verify
+The agent document has a white branded header and dark syntax-colored Markdown.
+`/humans` has a black background, audience navigation and a **Tools Sold** count
+read from the existing public purchase total. Repeats count; unique agents/tools
+are not claimed. Missing data displays Unavailable. Agent documents and Humans
+need no JavaScript. Existing operational forms keep their scripts and CSP.
+`build.js` copies their exact assets, renaming the stylesheet to avoid a collision.
+The Worker strips visitor headers/query/body before calling the asset binding.
 
-Use the pinned repository dependencies and Node 24:
+## Ledger and migration boundary
+
+Use the existing physical D1 database `6b3da390-f6c4-4013-a0c6-cbf7b0170cca`.
+Do not copy or reset it. Keep payment recipient/network/asset byte identities,
+rate-limit namespaces 1003/1004/1005, product IDs, migrations, tombstones, receipts,
+capabilities, creator rights and histories. Tracking is disabled; operational
+and financial provenance remains. There are no public admin or board routes.
+
+For an old-origin operation, change only the HTTP retry destination. Preserve
+the original body, idempotency key, capability and full PAYMENT-SIGNATURE,
+including the old resource URL embedded inside it. Do not requote or create a
+replacement authorization after uncertainty. Unknown settlement requires
+reconciliation. The old origin is retired separately only after review of deployed
+AGI bindings, local compatibility tests and live read-only discovery.
+
+Staging has `triggers.crons=[]`; the old Worker retains cleanup during this phase.
+At coordinated retirement, explicitly remove the old cron and assign `17 5 * * *`
+to AGI. Cloudflare cron propagation can take 15 minutes. Cleanup removes expired
+output, not financial tombstones. Both source and Worker version histories must
+remain recoverable. No database migrations or destructive data changes are needed.
+
+## Verification
+
+Use pinned dependencies and Node 24:
 
 ```sh
 npm run agi:build
 npm run agi:test
-npm run agi:check
 npm test
 npm run check
+npm run agi:check
 npm run agi:dev
 ```
 
-`agi/src/model.js` imports the actual platform registry, success contract
-canonicalizer, creator terms and referral terms at build time. Its generated
-snapshot contains no payment recipient or private configuration. The runtime
-does not import the platform service or payment SDK. HTML and machine routes
-use this same snapshot; current authoritative schemas, criteria, payment
-requirements, examples, previews, reviews, forms and MCP remain canonical API
-links. Rebuild whenever canonical contracts change. A source hash is explicitly
-a snapshot, never authorization. The buyer guide requires verification of
-current success and payment hashes before authorization.
+Local dev uses an in-memory migrated database, local-origin links and a payment
+adapter that cannot authorize or settle. It never connects to production D1.
+Browser QA uses Codex computer-use tools against that local preview. Verify
+390px/1440px layouts, audience navigation, forms and saved retry envelopes.
+The integration suite tests cross-origin frozen replay, nonce concurrency,
+capabilities, CORS, MCP, workflow assets and scheduled retention with local SQLite.
 
-The white branded header leads into a single syntax-colored Markdown document:
-15px monospace text, literal heading markers, compact lists and visible examples.
-HTML and Markdown use exactly the same instructions; there are no cards, large
-marketing sections or disclosures. Original icon bytes are preserved. For Humans
-links directly to the original canonical /humans page; the local /humans alias
-uses the same credential-rejecting redirect guard as discovery aliases.
-
-Seller forms live on the canonical origin, retaining its capability checks and
-request export/import implementation. This Worker collects no capabilities.
-Reviewed metadata does not imply a published/executable adapter or payout.
-
-## Deployment boundary
-
-Only run deployment with `--config agi/wrangler.jsonc`. The config names `agi`;
-never deploy the original `platform/wrangler.jsonc` as part of this task.
-Use the existing authorized account and normal encrypted Wrangler login.
-No account, grants, secrets, routes, domain purchases or migrations are needed.
+Only the AGI owner deploys `agi/wrangler.jsonc`, using normal encrypted Wrangler
+login. The old public Worker and private operational review API have separate
+owners. No new account, grants, credentials, payment transfers or database purge.
 
 ```sh
-npm run agi:build
-npm run agi:check
 wrangler deploy --config agi/wrangler.jsonc
 node agi/scripts/readback.js https://agi.agenttoolbox2026.workers.dev
 ```
 
-Readback performs synthetic/read-only discovery and inert requests rejected by
-the presentation Worker. MCP `tools/list` is read-only. It performs no paid
-invocation, live preview, positive proposal/update/referral registration or
-transfer. It recomputes all four live success/payment pins and verifies the
-original site remains reachable. Passing readback does not prove paid demand
-or independently verify a live settlement.
+Readback performs GET/HEAD/OPTIONS discovery and read-only MCP tools/list. It
+recomputes all four success/payment pins and verifies operational assets and
+current terms. No positive live proposal/update/referral/preview, signed purchase,
+refund or payout occurs. Tests do not establish external paid demand or prove a
+live settlement. Seller approval remains metadata-only; reviewed activation and
+payout processing are separate unfinished stages. Private owner review remains
+Access-protected after dashboard retirement.

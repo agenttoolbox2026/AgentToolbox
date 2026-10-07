@@ -1,6 +1,6 @@
 {
   "name": "AgentToolbox",
-  "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
+  "origin": "https://agi.agenttoolbox2026.workers.dev",
   "siteOrigin": "https://agi.agenttoolbox2026.workers.dev",
   "registryVersion": "2026-10-07.2",
   "tools": [
@@ -448,15 +448,15 @@
         "sha256": "f5e6b7ea58fcf1c599196a84053f668864c611f99b55f0bee3b48aa94bd7ebfc"
       },
       "links": {
-        "detail": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack",
-        "criteria": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack/criteria",
-        "payment_requirements": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack/invoke",
-        "examples": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack/examples",
-        "preview": "https://agnttoolbx.agenttoolbox2026.workers.dev/products/docs-pack/preview",
-        "prepare": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack/prepare",
-        "invoke": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack/invoke",
-        "quote": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack/quote",
-        "reviews": "https://agnttoolbx.agenttoolbox2026.workers.dev/products/docs-pack/reviews"
+        "detail": "https://agi.agenttoolbox2026.workers.dev/v1/products/docs-pack",
+        "criteria": "https://agi.agenttoolbox2026.workers.dev/v1/products/docs-pack/criteria",
+        "payment_requirements": "https://agi.agenttoolbox2026.workers.dev/v1/products/docs-pack/invoke",
+        "examples": "https://agi.agenttoolbox2026.workers.dev/v1/products/docs-pack/examples",
+        "preview": "https://agi.agenttoolbox2026.workers.dev/products/docs-pack/preview",
+        "prepare": "https://agi.agenttoolbox2026.workers.dev/v1/products/docs-pack/prepare",
+        "invoke": "https://agi.agenttoolbox2026.workers.dev/v1/products/docs-pack/invoke",
+        "quote": "https://agi.agenttoolbox2026.workers.dev/v1/products/docs-pack/quote",
+        "reviews": "https://agi.agenttoolbox2026.workers.dev/products/docs-pack/reviews"
       }
     },
     {
@@ -1011,15 +1011,15 @@
         "sha256": "aa895e3bd68339bc3dc1916380576374f790ba7b27d860777cacb3dae3776526"
       },
       "links": {
-        "detail": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/quote-proof",
-        "criteria": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/quote-proof/criteria",
-        "payment_requirements": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/quote-proof/invoke",
-        "examples": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/quote-proof/examples",
+        "detail": "https://agi.agenttoolbox2026.workers.dev/v1/products/quote-proof",
+        "criteria": "https://agi.agenttoolbox2026.workers.dev/v1/products/quote-proof/criteria",
+        "payment_requirements": "https://agi.agenttoolbox2026.workers.dev/v1/products/quote-proof/invoke",
+        "examples": "https://agi.agenttoolbox2026.workers.dev/v1/products/quote-proof/examples",
         "preview": null,
         "prepare": null,
-        "invoke": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/quote-proof/invoke",
-        "quote": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/quote-proof/quote",
-        "reviews": "https://agnttoolbx.agenttoolbox2026.workers.dev/products/quote-proof/reviews"
+        "invoke": "https://agi.agenttoolbox2026.workers.dev/v1/products/quote-proof/invoke",
+        "quote": "https://agi.agenttoolbox2026.workers.dev/v1/products/quote-proof/quote",
+        "reviews": "https://agi.agenttoolbox2026.workers.dev/products/quote-proof/reviews"
       }
     },
     {
@@ -1666,15 +1666,15 @@
         "sha256": "8a506482eeb855e3a974dced2c4d5255b6c78276da34eded1b0f6f7047761c4f"
       },
       "links": {
-        "detail": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/contract-cases",
-        "criteria": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/contract-cases/criteria",
-        "payment_requirements": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/contract-cases/invoke",
-        "examples": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/contract-cases/examples",
-        "preview": "https://agnttoolbx.agenttoolbox2026.workers.dev/products/contract-cases/preview",
-        "prepare": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/contract-cases/prepare",
-        "invoke": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/contract-cases/invoke",
-        "quote": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/contract-cases/quote",
-        "reviews": "https://agnttoolbx.agenttoolbox2026.workers.dev/products/contract-cases/reviews"
+        "detail": "https://agi.agenttoolbox2026.workers.dev/v1/products/contract-cases",
+        "criteria": "https://agi.agenttoolbox2026.workers.dev/v1/products/contract-cases/criteria",
+        "payment_requirements": "https://agi.agenttoolbox2026.workers.dev/v1/products/contract-cases/invoke",
+        "examples": "https://agi.agenttoolbox2026.workers.dev/v1/products/contract-cases/examples",
+        "preview": "https://agi.agenttoolbox2026.workers.dev/products/contract-cases/preview",
+        "prepare": "https://agi.agenttoolbox2026.workers.dev/v1/products/contract-cases/prepare",
+        "invoke": "https://agi.agenttoolbox2026.workers.dev/v1/products/contract-cases/invoke",
+        "quote": "https://agi.agenttoolbox2026.workers.dev/v1/products/contract-cases/quote",
+        "reviews": "https://agi.agenttoolbox2026.workers.dev/products/contract-cases/reviews"
       }
     },
     {
@@ -2202,7 +2202,7 @@
         "additionalProperties": false
       },
       "example_input": {
-        "endpoint": "https://agnttoolbx.agenttoolbox2026.workers.dev/mcp",
+        "endpoint": "https://agi.agenttoolbox2026.workers.dev/mcp",
         "protocol_versions": [
           "2025-11-25",
           "2026-07-28"
@@ -2242,15 +2242,15 @@
         "sha256": "a288920f0f267437b6d94b210bb307e1e5303385d2c9c5211d6ee1a7266ecbbb"
       },
       "links": {
-        "detail": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/mcp-wirecheck",
-        "criteria": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/mcp-wirecheck/criteria",
-        "payment_requirements": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/mcp-wirecheck/invoke",
-        "examples": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/mcp-wirecheck/examples",
+        "detail": "https://agi.agenttoolbox2026.workers.dev/v1/products/mcp-wirecheck",
+        "criteria": "https://agi.agenttoolbox2026.workers.dev/v1/products/mcp-wirecheck/criteria",
+        "payment_requirements": "https://agi.agenttoolbox2026.workers.dev/v1/products/mcp-wirecheck/invoke",
+        "examples": "https://agi.agenttoolbox2026.workers.dev/v1/products/mcp-wirecheck/examples",
         "preview": null,
         "prepare": null,
-        "invoke": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/mcp-wirecheck/invoke",
-        "quote": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/mcp-wirecheck/quote",
-        "reviews": "https://agnttoolbx.agenttoolbox2026.workers.dev/products/mcp-wirecheck/reviews"
+        "invoke": "https://agi.agenttoolbox2026.workers.dev/v1/products/mcp-wirecheck/invoke",
+        "quote": "https://agi.agenttoolbox2026.workers.dev/v1/products/mcp-wirecheck/quote",
+        "reviews": "https://agi.agenttoolbox2026.workers.dev/products/mcp-wirecheck/reviews"
       }
     }
   ],
@@ -2325,11 +2325,11 @@
     "status_path": "/v1/referrals/me",
     "instructions": "Generate and retain an atbf_ capability before registration; send it only in the X-Referral-Capability HTTP header. The returned ref_ code is public. Registration retry with the original capability returns the same account. Include only the public referral_code in paid invoke bodies."
   },
-  "contract_policy": "Build-time view of the canonical registry. Read and verify current canonical criteria and payment requirements before authorizing. This presentation host never processes operational requests.",
+  "contract_policy": "Built from the operational registry. Read and verify current criteria and payment requirements before authorizing.",
   "machine": {
-    "catalog": "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products",
-    "openapi": "https://agnttoolbx.agenttoolbox2026.workers.dev/openapi.json",
-    "mcp": "https://agnttoolbx.agenttoolbox2026.workers.dev/mcp",
-    "payments": "https://agnttoolbx.agenttoolbox2026.workers.dev/.well-known/x402"
+    "catalog": "https://agi.agenttoolbox2026.workers.dev/v1/products",
+    "openapi": "https://agi.agenttoolbox2026.workers.dev/openapi.json",
+    "mcp": "https://agi.agenttoolbox2026.workers.dev/mcp",
+    "payments": "https://agi.agenttoolbox2026.workers.dev/.well-known/x402"
   }
 }
