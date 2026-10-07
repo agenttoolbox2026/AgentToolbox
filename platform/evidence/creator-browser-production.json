@@ -1,0 +1,56 @@
+{
+  "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
+  "synthetic_header": true,
+  "results": [
+    {
+      "device": "desktop",
+      "path": "/",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "desktop",
+      "path": "/submit-tool",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "desktop",
+      "path": "/products/docs-pack/preview",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "desktop",
+      "path": "/products/contract-cases/preview",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "mobile",
+      "path": "/",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "mobile",
+      "path": "/submit-tool",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "mobile",
+      "path": "/products/docs-pack/preview",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "mobile",
+      "path": "/products/contract-cases/preview",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    }
+  ],
+  "browser_errors": [],
+  "live_mutations": 0
+}

@@ -1,0 +1,15 @@
+{
+  "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
+  "source_commit": "3286f6e66ff7328124b49f94ee98f334a0442fc4",
+  "draft_pr": "https://github.com/agenttoolbox2026/AgentToolbox/pull/6",
+  "worker_version": "6170122e-7107-40f2-89d7-2c9742e16de4",
+  "migration": "0007_creator_submissions.sql",
+  "migration_sha256": "d6759a372b2e728da940c19d72007398349aa428921a26440c27fd6902a49704",
+  "production_migration_confirmed": true,
+  "production_schema_readback_confirmed": true,
+  "legacy_history_preserved": true,
+  "private_review_dependency_ready": true,
+  "transfers_enabled": false,
+  "automatic_publication_enabled": false,
+  "live_payment_tests": 0
+}

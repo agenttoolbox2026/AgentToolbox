@@ -1,0 +1,27 @@
+{
+  "worker_version": "6170122e-7107-40f2-89d7-2c9742e16de4",
+  "migration": "0007_creator_submissions.sql",
+  "read_only": true,
+  "counts": {
+    "submissions": 0,
+    "decisions": 0,
+    "entitlements": 0,
+    "payments": 0,
+    "ledger": 0,
+    "purchases": 0,
+    "private_feedback": 1,
+    "public_reviews": 0,
+    "replies": 0,
+    "receipts": 0,
+    "allocations": 0,
+    "rows": 36,
+    "events": 545
+  },
+  "legacy_before_2026_10_07": {
+    "rows": 36,
+    "events": 545
+  },
+  "private_feedback_never_public": true,
+  "test_financial_writes": 0,
+  "test_valid_public_submissions": 0
+}

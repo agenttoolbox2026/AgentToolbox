@@ -1,107 +1,147 @@
-# AgentToolbox — multi-product validation platform
+# AgentToolbox — vision and current build brief
 
-Updated October 6, 2026 from Douglas's latest instructions. This supersedes the
-retry-gate-only brief preserved in archive/retry-gate/BUILD.original.md.
+Updated October 7, 2026 from Douglas's vision briefing and subsequent instruction
+to ship creator submissions and reviewed updates during Phase 1. This is the
+active brief; older launch instructions and retired retry-gate plans are historical
+context. Explicit later user instructions take precedence.
 
-## Objective
+## Vision
 
-Build a stable home where agents discover small tools for their current problem,
-inspect the promised outcome, success criterion and price, invoke with minimal
-setup, and choose whether to return. Human observers should see a polished,
-friendly red robot/toolbox identity without adding friction for machines.
+AgentToolbox helps agents find solutions to common problems and have a better
+experience in the digital world. The destination is a public marketplace where
+any agent can offer a tool, any agent can buy one, and every transaction is
+pay-per-outcome: no qualifying outcome, no charge. Agents sharing tools and
+resources should make useful exchanges possible that could not happen before.
 
-Do not invent products, useful outcomes, customer numbers, benchmarks, demand,
-revenue or payment readiness. The retry gate is retired after its controlled
-comparisons failed to show incremental value. Preserve its source and history;
-do not promote it as the flagship.
+## Phase 1: learn from real agent buyers
 
-## Latest launch instruction
+Four experimental tools are live with a default direct-call price of $0.01 USDC
+on Base using x402 v2: Docs Pack, QuoteProof, ContractCases and MCP WireCheck.
+Their published outcome checks determine whether settlement may begin. Passing
+those checks does not independently prove usefulness, truth or customer demand.
+Above-minimum quotes remain optional compatibility; a direct minimum-price call
+does not need a quote. Limited previews are optional where supported.
 
-Douglas now requests an ultra-concise agent-first home and one separate For Humans
-page, a large live Lifetime Agents Served counter of completed paid purchases
-(including repeats, with explicit identity limits), and the first real experimental
-product tonight. All profits will be reinvested into helping agents. Docs Pack is
-the chosen implemented utility at an initial $0.01 success price; acquisition is
-Douglas’s responsibility. Launch is explicitly experimental, without waiting for
-proven market demand or claiming an advantage over competent baselines.
+The immediate milestone is **one verified paid purchase by an external agent**.
+Phase 1 is evidence gathering, not a revenue target. Learn what agents value,
+how they discover tools, what makes them trust a paid API, where payment friction
+occurs, and why they return and pay again. Use the practical
+[Phase 1 learning protocol](docs/phase1-learning.md).
 
-## Latest measurement requirement
+Alongside the authorized creator supply experiment below, prioritize documented
+buyer blockers over speculative tools, integrations or social features. Keep the
+agent home concise: promised
+outcome, success criterion, price, free example or optional preview, and the
+shortest invocation path. Preserve one human observer page and the original icon.
+Assist discovery research and prepare useful materials; sending messages or
+publishing outreach still requires the user's authorization. Acquisition is not
+an excuse to leave observed onboarding problems unresolved.
+Douglas has authorized coordination with the active Codex agents on this work;
+share implementation contracts and avoid conflicting edits.
 
-Douglas requests direct agent feedback and a private live owner dashboard before
-starting more products. Track actual fixed-example attempts/results from the new
-tracking start; preserve earlier history without guessing or backfilling examples.
-Separate facilitator-confirmed purchases from chain-reconciled revenue, and exclude
-synthetic checks and recognized owner self-purchases from customer purchase metrics.
-Feedback is bounded, untrusted and self-reported; real execution linkage never
-proves identity or usefulness. Keep the public agent home terse and one For Humans
-page, with no public owner navigation or operational-data listing.
+Do not invent demand, revenue, unique-agent counts, benchmarks, savings or live
+payment readiness. Synthetic tests, free examples and unsigned 402 responses
+establish technical behavior, not willingness to pay. Preserve retired tools'
+identifiers and history without promoting them as active products.
 
-Owner-approved authentication: Cloudflare Zero Trust Free with exact-email
-One-time PIN for agenttoolbox@gmail.com and dashboard-only protection. Any payment
-details or new agreement must be completed by Douglas. No new API token, OAuth
-grant, browser security setting or unrelated security policy is authorized.
+## Verify the first paid-buyer milestone
 
-## Current authorized scope
+Keep a small private evidence record for the first qualifying purchase:
 
-- Publish on the existing Cloudflare Free plan. Use a short Worker name,
-  agnttoolbx, under the existing workers.dev subdomain. No domain purchase,
-  paid add-on, facilitator top-up or spending is approved.
-- Disable the old retry-gate public route recoverably. Preserve Worker source,
-  versions, D1 records, payment records and experiment findings.
-- Use the supplied original AgentToolbox icon, not a recreated substitute.
-- One data-driven product registry drives stable HTML, JSON, Markdown and MCP
-  discovery. Keep product IDs/versioning stable across launches and retirements.
-- Agents must be able to search by problem, inspect lifecycle/status, schemas,
-  outcome and success evidence, then see exact price/payment availability before
-  invocation. Return bounded, explicit machine-readable errors.
-- List the implemented experimental Docs Pack. Keep retired identifiers in the
-  machine registry without additional human navigation pages.
-- Record per-product/version usage, execution, outcomes, repeat pseudonyms and
-  payment states. Distinguish synthetic activity, unclassified traffic,
-  self-reported usefulness, facilitator reports and independently reconciled
-  on-chain revenue. Never call raw request volume customers.
-- Keep operational reporting read-only and private through authenticated
-  Wrangler/D1 access or the owner-authenticated dashboard. Fail closed until its
-  Access configuration and JWT verification are complete; no public admin data.
+- A retained operation and receipt identify the product/version, validated
+  outcome and completed live payment. Independently confirm the corresponding
+  Base USDC transaction and received amount; distinguish that check from a
+  facilitator's report.
+- Evidence establishes an external agent made the purchase for an actual task.
+  Record how that was established and any founder assistance. A different payer
+  wallet or a public counter increase alone does not establish this.
+- Exclude founder/self-purchases, controlled tests, mocks, free calls, replays,
+  failed and unresolved payments. Keep uncertainty explicit when evidence is
+  missing; do not infer external demand from unclassified traffic.
 
-## Latest payment requirement
+Record discovery, authorization friction and value feedback when available, with
+unknowns intact. These observations guide the next experiment; they are not
+invented prerequisites or claimed findings. One qualifying purchase satisfies
+the first milestone. It does not establish retention, pricing or marketplace
+readiness, and it must not automatically launch Phase 2.
 
-Douglas explicitly requested x402 integration now to test repeated willingness
-to pay. Implement the current official protocol and a concrete outcome-based
-execution boundary. Do not defer protocol implementation solely because the
-platform is new.
+## Phase 1: ship creator submissions and reviewed updates
 
-No agent-executed wallet signatures, cryptocurrency sends, private-key handling
-or real settlement tests. User-controlled live-money verification remains a
-handoff. Never claim paid-ready before actual facilitator and payment behavior
-are verified.
+Douglas explicitly requests shipping submissions now as a parallel supply
+experiment: agents building tools may attract buyers and reduce the need for
+AgentToolbox to build every tool. Do not defer creator intake until the first
+paid-buyer milestone. Measure submission interest and approved supply separately
+from buyer demand, useful purchases and revenue.
 
-The existing receiving configuration is
-0xD43350dD5a40Dd8689C644A0477Bb75e3A59129D. It is public configuration, not a
-secret. Douglas explicitly confirmed this recipient for Base native USDC on October 6,
-2026. The adapter is enabled for the concrete Docs Pack contract; actual payment
-behavior still requires user-controlled verification.
+Current frozen terms advertise a $0.50 USDC list submission fee with a 100%
+promotion: the actual charge is $0. Approved creators earn 90% of their tool's
+lifetime gross revenue, without operating-cost or referral deductions. Rejection
+refunds the actual fee paid; under this promotion no fee is paid and no refund is
+due. No nonzero fee, refund or payout transfers are enabled. Preserve accepted
+terms, entitlements, decisions and ledger history; future pricing cannot rewrite
+those commitments.
 
-For each paid tool: disclose a fixed success criterion and cap; verify
-authorization; execute and validate the terminal result; durably store result
+Approved external creators must be able to propose updates to their existing
+tool using the same private creator capability and stable tool identity. Updates
+require review; retain the last approved version until an update is accepted.
+Keep submission and update status private to the capability holder. Approval
+of metadata does not automatically publish or execute arbitrary code or URLs;
+publication and execution require the reviewed implementation path. Build and
+verify this update flow, and report deployment status without assuming it is
+already live. Keep existing status access and financial history intact.
+
+## Phase 2: marketplace after paid-agent proof
+
+The intended model is agent buyers and agent-created tools, with AgentToolbox
+approving listings. The approval gate is the proposed moat; today's versioned
+outcome verification is its prototype. Verification of the agreed outcome is the
+planned dispute-resolution mechanism. Define and test it before making broader
+guarantees about arbitrary tools.
+
+The proposed business model is a small flat submission fee plus a percentage of
+each sale. Future marketplace terms, including approximately 10%, remain subject
+to Phase 1 evidence. The current frozen creator promotion and approved 90%
+lifetime gross entitlements above remain binding to their accepted records;
+tentative future economics do not replace them. Payouts via x402 splits are
+future work and are not implemented transfers. Existing internal accrual records
+do not prove a creator was paid. Disclose current terms accurately without
+claiming enabled nonzero charging or payout availability.
+
+## Financial and operational safeguards
+
+For each paid tool: disclose a fixed success criterion and cap; verify payment
+authorization; execute and validate the terminal result; durably store the result
 and settlement intent; settle only then; release the result only after confirmed
 settlement and durable ledger recording. Failed outcomes must not trigger
-settlement. An ambiguous timeout must block fresh charges until reconciliation.
+settlement. An ambiguous timeout blocks fresh charges until reconciliation.
 Never promise refunds without implementing them.
 
-Use only an available free facilitator allowance; stop at exhaustion. No account,
-API key or paid upgrade is implied by public provider documentation. Preserve an
-append-only financial ledger separate from short-lived task/output records.
+Repository maintenance does not authorize wallet signing, cryptocurrency sends,
+private-key handling or live settlement tests. A buyer or user controls live-money
+authorization; prepare and inspect supporting evidence without handling secrets.
+The owner-confirmed Base native USDC receiver is
+`0xD43350dD5a40Dd8689C644A0477Bb75e3A59129D`; it is public configuration.
+
+Use the existing Cloudflare Free resources and available free facilitator
+allowance; stop at exhaustion. No domain purchase, paid add-on, top-up, new
+account, API token, OAuth grant or spending is implied. Keep the public Worker
+`agnttoolbx` and private `agnttoolbx-admin` reporting boundary. Missing owner
+Access configuration must deny admin access. Existing approved authentication is
+Cloudflare Zero Trust Free, exact-email One-time PIN for
+`agenttoolbox@gmail.com`; new payment details or agreements remain user-controlled.
+
+Preserve append-only financial records separately from expiring outputs. Keep
+reporting private and distinguish facilitator-confirmed purchases from
+independently reconciled revenue. Raw traffic, paying wallets, repeat pseudonyms
+and purchase counts do not identify unique agents. Do not backfill unknown usage
+or expose private feedback, proposals, capabilities or operational records.
 
 ## Validation and handoff
 
-Run relevant old and new tests, syntax/type checks applicable to the project,
-Worker builds and runtime checks. Verify public plain HTTP and official MCP
-client discovery; verify retired invocation rejection and old route takedown.
-Review desktop/mobile, repeated navigation, counter failure states and
-no-JavaScript use. Show the finished public page in the user's actual Chrome.
-Return exact URL, commits/PR, evidence, telemetry coverage and limitations.
-
-Use explicit latest user instructions over stale repository scope. Preserve
-unrelated work and avoid speculative product breadth. Label the authorized first
-product an experiment; do not turn synthetic checks into value or buyer claims.
+Run checks appropriate to the change, including relevant tests, syntax checks,
+Worker builds and runtime checks. Changes to discovery or payment must preserve
+plain HTTP/MCP compatibility, deterministic charge criteria, idempotent replay
+and unresolved-payment handling. Check changed public flows on desktop/mobile
+and without JavaScript as applicable. Report what changed, evidence, remaining
+uncertainty and deployment status. Preserve concurrent work and historical
+experiment results; move toward the next observed buyer problem.

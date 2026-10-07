@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {DOC_HOSTS,publicDocUrl,robotsPermit,USER_AGENT} from './docs-pack.js';
 import {hash} from './telemetry.js';
+import {passesCriteria} from './criteria.js';
 
 export const QUOTE_PROOF_HOSTS=DOC_HOSTS;
 export const QUOTE_PROOF_LIMITS=Object.freeze({urls:5,quotes:10,source_bytes:100000,robots_bytes:16384,redirects:2,deadline_ms:12000,context_words_per_source:200,output_bytes:14000});
@@ -124,7 +125,7 @@ function boundedContext(text,start,end,wordBudget,byteBudget){
 export function createQuoteProof({fetchImpl=fetch,fetcher=fetchImpl,htmlExtractor=quoteProofHtmlText,now=()=>new Date(),deadlineMs=QUOTE_PROOF_LIMITS.deadline_ms}={}){
  return {input:quoteProofInput,output:quoteProofOutput,previewSupported:false,
   failureReason:error=>reasons.includes(error?.message)?error.message:error?.message==='output_too_large'?'output_too_large':'quote_proof_failed',
-  success:output=>quoteProofOutput.safeParse(output).success&&output.summary.decisive>0&&output.summary.decisive===output.results.filter(r=>r.status!=='unknown').length,
+  success:output=>quoteProofOutput.safeParse(output).success&&passesCriteria('quote-proof',output),
   async run(rawInput){
    const input=quoteProofInput.parse(rawInput),control=new AbortController(),signal=control.signal,timer=setTimeout(()=>control.abort(),Math.max(1,Math.min(12000,deadlineMs))),policies=new Map();
    const request=(url,accept)=>{if(signal.aborted)fail('deadline_exceeded');return aborted(signal,fetcher(url,{method:'GET',redirect:'manual',credentials:'omit',headers:{'User-Agent':USER_AGENT,'Accept':accept},signal}));};

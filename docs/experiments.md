@@ -1,4 +1,10 @@
-# Retry-gate learning protocol
+# Historical retry-gate learning protocol
+
+The retry gate was retired on October 6, 2026 after the controlled comparisons
+did not show incremental value. This document preserves its original protocol,
+results and unrun proposal; it is not an active work plan. Do not restart the
+retry-gate trial from these instructions. Current experiments follow the
+[Phase 1 learning protocol](phase1-learning.md) and [active brief](../BUILD.md).
 
 Written before the local trial. Hypothesis: agents facing unfamiliar tool failures
 save time/tokens or avoid unsafe actions by using a deterministic gate. This is
@@ -46,7 +52,9 @@ counts are unavailable. This supplies no measured incremental gate benefit or
 gate-call overhead, and does not justify product expansion. The frozen private
 local audit bundle contains the runnable protocol and detailed logs.
 
-## Next organic external trial (proposed, not run)
+## Archived organic external trial proposal (not run; superseded)
+
+The following was proposed before retirement and is retained as history only.
 
 After public setup/access verification, invite one fresh agent to one real task
 and expose only the MCP description. Compare its existing retry approach on a

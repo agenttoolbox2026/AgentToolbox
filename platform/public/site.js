@@ -58,3 +58,74 @@ for(const button of document.querySelectorAll('[data-reply-to]'))button.addEvent
  form.elements.parent_reply_id.value=button.dataset.replyTo;form.querySelector('.reply-target').textContent='Replying to '+button.dataset.replyTo;
  form.elements.message.focus();
 });
+const newCapability=prefix=>prefix+btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+','-').replaceAll('/','_').replaceAll('=','');
+const commitment=async secret=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(secret))),v=>v.toString(16).padStart(2,'0')).join('');
+const showResult=(form,data)=>{const result=form.querySelector('.workflow-result');result.textContent=JSON.stringify(data,null,2);result.hidden=false;};
+const workflowError=error=>error.name==='TimeoutError'?'Response timed out. Keep the same input, capability and request ID for a safe retry.':error.message;
+for(const form of document.querySelectorAll('.preview-form')){
+ const button=form.querySelector('[type="submit"]'),status=form.querySelector('[role="status"]'),copy=form.querySelector('[data-copy-preparation]');button.hidden=false;
+ let previousInput=null,context=null,body=null;
+ form.addEventListener('submit',async event=>{
+  event.preventDefault();if(button.disabled||!form.reportValidity())return;button.disabled=true;status.textContent='Preparing limited preview…';
+  try{
+   const input=JSON.parse(form.elements.input.value),serialized=JSON.stringify(input);
+   if(serialized!==previousInput){const capability=newCapability('atbp_');context={product_id:form.dataset.product,version:form.dataset.version,capability};body={version:form.dataset.version,input,request_id:crypto.randomUUID(),prepare_secret_hash:await commitment(capability)};previousInput=serialized;copy.hidden=true;}
+   const response=await fetch('/v1/products/'+form.dataset.product+'/prepare',{method:'POST',headers:{'Content-Type':'application/json','X-Preparation-Capability':context.capability},body:JSON.stringify(body),signal:AbortSignal.timeout(25000)});
+   const data=await response.json();if(!response.ok)throw new Error(data.error?.message??'Preview unavailable.');
+   context.prepared_id=data.prepared_id;context.expires_at=data.expires_at;showResult(form,data);copy.hidden=false;status.textContent='Limited preview ready. No payment requested.';
+  }catch(error){status.textContent=workflowError(error);}finally{button.disabled=false;}
+ });
+ copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(JSON.stringify(context,null,2));status.textContent='Private context copied. Keep its capability secret.';}catch{status.textContent='Clipboard unavailable; keep this tab open or use the HTTP preparation workflow.';}});
+}
+for(const form of document.querySelectorAll('.submission-form')){
+ const button=form.querySelector('[type="submit"]'),status=form.querySelector('[role="status"]');button.hidden=false;
+ let requestId=null,previousBody=null;
+ form.querySelector('[data-generate-creator]').addEventListener('click',()=>{if(form.elements.capability.value){status.textContent='Keep the existing capability for retries. Clear it deliberately only to use a different creator capability.';return;}form.elements.capability.value=newCapability('atbc_');status.textContent='Capability generated in this tab only. Copy and save it privately before submitting.';});
+ form.querySelector('[data-copy-creator]').addEventListener('click',async()=>{try{if(!form.elements.capability.value)throw new Error();await navigator.clipboard.writeText(form.elements.capability.value);status.textContent='Capability copied. Save it privately; it cannot be recovered.';}catch{status.textContent='Copy failed. Generate or paste a capability, then copy it using your browser.';}});
+ form.addEventListener('submit',async event=>{
+  event.preventDefault();if(button.disabled||!form.reportValidity())return;button.disabled=true;status.textContent='Submitting private proposal…';
+  try{
+   const values=new FormData(form),capability=values.get('capability').trim();
+   const data={terms_version:form.dataset.terms,creator_secret_hash:await commitment(capability),proposal:{name:values.get('name').trim(),summary:values.get('summary').trim(),endpoint_url:values.get('endpoint_url').trim(),input_schema:JSON.parse(values.get('input_schema')),output_schema:JSON.parse(values.get('output_schema'))}};
+   const serialized=JSON.stringify(data);if(serialized!==previousBody){requestId=crypto.randomUUID();previousBody=serialized;}
+   const response=await fetch('/v1/tool-submissions',{method:'POST',headers:{'Content-Type':'application/json','X-Creator-Capability':capability},body:JSON.stringify({...data,request_id:requestId}),signal:AbortSignal.timeout(15000)});
+   const result=await response.json();if(!response.ok)throw new Error(result.error?.message??'Proposal was not saved.');showResult(form,result);status.textContent='Private proposal saved for owner review. No fee charged. Keep the submission ID and capability.';
+  }catch(error){status.textContent=workflowError(error);}finally{button.disabled=false;}
+ });
+}
+for(const form of document.querySelectorAll('.submission-status-form')){
+ const button=form.querySelector('[type="submit"]'),status=form.querySelector('[role="status"]');button.hidden=false;
+ form.addEventListener('submit',async event=>{
+  event.preventDefault();if(button.disabled||!form.reportValidity())return;button.disabled=true;status.textContent='Reading private status…';
+  try{const values=new FormData(form),response=await fetch((form.dataset.statusPath??'/v1/tool-submissions/')+encodeURIComponent(values.get('submission_id').trim()),{headers:{'X-Creator-Capability':values.get('capability').trim()},cache:'no-store',signal:AbortSignal.timeout(10000)}),data=await response.json();if(!response.ok)throw new Error(data.error?.message??'Status unavailable.');showResult(form,data);status.textContent='Private status: '+data.state+'.';}catch(error){status.textContent=workflowError(error);}finally{button.disabled=false;}
+ });
+}
+
+for(const form of document.querySelectorAll('.tool-update-form')){
+ const load=form.querySelector('[data-load-approved]'),fields=form.querySelector('[data-update-fields]'),button=form.querySelector('[type="submit"]'),status=form.querySelector('[role="status"]');load.hidden=false;
+ let context=null,previousBody=null,requestId=null;
+ for(const name of ['tool_id','capability'])form.elements[name].addEventListener('input',()=>{context=null;fields.hidden=true;});
+ load.addEventListener('click',async()=>{
+  if(load.disabled||!form.elements.tool_id.reportValidity()||!form.elements.capability.reportValidity())return;
+  load.disabled=true;status.textContent='Reading approved metadata…';fields.hidden=true;context=null;
+  try{
+   const tool=form.elements.tool_id.value.trim(),capability=form.elements.capability.value.trim(),response=await fetch('/v1/creator-tools/'+encodeURIComponent(tool),{headers:{'X-Creator-Capability':capability},cache:'no-store',signal:AbortSignal.timeout(10000)}),data=await response.json();
+   if(!response.ok)throw new Error(data.error?.message??'Approved tool unavailable.');
+   context={tool,capability,terms_version:data.terms.terms_version};form.elements.base_version.value=data.current_version;form.elements.expected_head_revision.value=data.head_revision;
+   for(const name of ['name','summary','endpoint_url'])form.elements[name].value=data.proposal[name];
+   for(const name of ['input_schema','output_schema'])form.elements[name].value=JSON.stringify(data.proposal[name],null,2);
+   form.elements.proposed_version.value='';form.elements.consent.checked=false;fields.hidden=false;showResult(form,data);status.textContent='Approved metadata loaded. Propose a higher version for review.';
+  }catch(error){status.textContent=workflowError(error);}finally{load.disabled=false;}
+ });
+ form.addEventListener('submit',async event=>{
+  event.preventDefault();if(button.disabled||!context||!form.reportValidity())return;button.disabled=true;status.textContent='Submitting private update…';
+  try{
+   const values=new FormData(form),capability=values.get('capability').trim(),tool=values.get('tool_id').trim();
+   if(tool!==context.tool||capability!==context.capability)throw new Error('Read the approved version again with this tool and capability.');
+   const data={terms_version:context.terms_version,creator_secret_hash:await commitment(capability),base_version:values.get('base_version'),expected_head_revision:Number(values.get('expected_head_revision')),proposed_version:values.get('proposed_version').trim(),proposal:{name:values.get('name').trim(),summary:values.get('summary').trim(),endpoint_url:values.get('endpoint_url').trim(),input_schema:JSON.parse(values.get('input_schema')),output_schema:JSON.parse(values.get('output_schema'))}};
+   const serialized=JSON.stringify({tool,...data});if(serialized!==previousBody){requestId=crypto.randomUUID();previousBody=serialized;}
+   const response=await fetch('/v1/creator-tools/'+encodeURIComponent(tool)+'/updates',{method:'POST',headers:{'Content-Type':'application/json','X-Creator-Capability':capability},body:JSON.stringify({...data,request_id:requestId}),signal:AbortSignal.timeout(15000)}),result=await response.json();
+   if(!response.ok)throw new Error(result.error?.message??'Update was not saved.');showResult(form,result);status.textContent='Private update saved for review. Your approved version is retained. Keep the update ID and original capability.';
+  }catch(error){status.textContent=workflowError(error);}finally{button.disabled=false;}
+ });
+}
