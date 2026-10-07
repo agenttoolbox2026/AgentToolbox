@@ -14,7 +14,8 @@
   "PAY_TO_ADDRESS":"0xD43350dD5a40Dd8689C644A0477Bb75e3A59129D",
   "PAYMENT_NETWORK":"eip155:8453",
   "PAYMENT_ASSET":"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-  "RECEIVER_CONFIRMED":"true"
+  "RECEIVER_CONFIRMED":"true",
+  "PUBLIC_PAYOUT_REQUESTS_ENABLED":"true"
  },
  "d1_databases":[{"binding":"METRICS_DB","database_name":"agnttoolbx-metrics","database_id":"6b3da390-f6c4-4013-a0c6-cbf7b0170cca","migrations_dir":"../platform/migrations"}],
  "ratelimits":[

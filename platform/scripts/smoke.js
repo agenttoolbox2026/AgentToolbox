@@ -42,7 +42,7 @@ try{
  const listed=await client.callTool({name:'list_products',arguments:{}});assert.deepEqual(listed.structuredContent.products.map(p=>p.id),['docs-pack','quote-proof','contract-cases','mcp-wirecheck']);
  const archived=await client.callTool({name:'get_product',arguments:{product_id:'retry-gate'}});assert.equal(archived.structuredContent.product.status,'retired');
  const invoked=await client.callTool({name:'invoke_product',arguments:{product_id:'retry-gate',version:'0.1.0',input:{},max_charge_usdc_atomic:0,idempotency_key:crypto.randomUUID()}});assert.equal(invoked.isError,true);assert.match(invoked.content[0].text,/product_retired/);
- checks.push({protocol:'MCP',tools:tools.tools.map(t=>t.name),catalog:'docs-pack active experimental',retired_invocation:'rejected'});
+ checks.push({protocol:'MCP',tools:tools.tools.map(t=>t.name),catalog:'docs-pack active beta',retired_invocation:'rejected'});
 }finally{await client.close();}
 if(origin.startsWith('https:')){
  for(const [path,method]of [['/','GET'],['/v1/recover','POST'],['/mcp','POST']]){

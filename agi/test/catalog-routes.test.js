@@ -47,7 +47,7 @@ test('readable contracts, checks and fixtures retain canonical machine data with
   assert.deepEqual(await (await get(worker,'/tools/'+tool.id+'/examples',{Accept:'application/json'})).json(),freeExampleManifest(tool.id));
  }
  assert.equal((await get(worker,'/tools/private-proposal/checks')).status,404);
- const terms=await get(worker,'/sell/terms');assert.equal(terms.status,200);assert((await terms.text()).includes('No payout service'));
+ const terms=await get(worker,'/sell/terms');assert.equal(terms.status,200);assert((await terms.text()).includes('without changing the accepted financial terms'));
 });
 
 test('community and seller workflows share the document shell while preserving native protections and zero-write GETs',async t=>{

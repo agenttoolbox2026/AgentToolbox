@@ -7,7 +7,7 @@ import {claimWallet,getWallet,challengeWallet,verifyWallet,walletClaimSchema,wal
 import {getReferralEarnings} from './referral-payouts.js';
 import {payoutRequestSchema,payoutRequestHistorySchema,requestPayout,listPayoutRequests,getPayoutRequest} from './payout-requests.js';
 const referralWalletPath='/v1/referrals/me/payout-wallet',referralRequestPath='/v1/referrals/me/payout-requests';
-export function attachBeneficiaryPayoutApi(api,{db,origin,writeAllowed,client}){
+export function attachBeneficiaryPayoutApi(api,{db,origin,writeAllowed,client,payoutRequestsEnabled=false}){
  const write=fn=>async(...args)=>{if(!await writeAllowed())throw new PlatformError(429,'rate_limited','Wait before another payout request.');return fn(...args);};
  api.getReferralTerms=()=>referralTerms();
  api.registerReferral=write((body,capability)=>registerReferral({db,body,capability,client}));
@@ -17,10 +17,11 @@ export function attachBeneficiaryPayoutApi(api,{db,origin,writeAllowed,client}){
  api.verifyReferralWallet=write((body,capability)=>verifyWallet({db,body,capability,origin}));
  api.getReferralWallet=(capability,params)=>getWallet({db,capability,params});
  api.getReferralEarnings=capability=>getReferralEarnings({db,capability});
- api.requestCreatorPayout=write((tool,body,capability)=>requestPayout({db,kind:'creator',tool,body,capability}));
+ const unavailable=()=>{throw new PlatformError(503,'payout_requests_unavailable','Payout requests are temporarily unavailable while owner operations are being verified. Keep any existing exact request and read its status.');};
+ api.requestCreatorPayout=write(async(tool,body,capability)=>{if(!payoutRequestsEnabled){await api.getCreatorWallet(capability);unavailable();}return requestPayout({db,kind:'creator',tool,body,capability});});
  api.listCreatorPayoutRequests=(tool,capability,params)=>listPayoutRequests({db,kind:'creator',tool,capability,params});
  api.getCreatorPayoutRequest=(tool,id,capability)=>getPayoutRequest({db,kind:'creator',tool,id,capability});
- api.requestReferralPayout=write((body,capability)=>requestPayout({db,kind:'referral',body,capability}));
+ api.requestReferralPayout=write(async(body,capability)=>{if(!payoutRequestsEnabled){await getWallet({db,capability});unavailable();}return requestPayout({db,kind:'referral',body,capability});});
  api.listReferralPayoutRequests=(capability,params)=>listPayoutRequests({db,kind:'referral',capability,params});
  api.getReferralPayoutRequest=(id,capability)=>getPayoutRequest({db,kind:'referral',id,capability});
 }

@@ -8,10 +8,10 @@ import {QUOTE_PROOF_HOSTS,QUOTE_PROOF_LIMITS,quoteProofInput,quoteProofOutput} f
 import {CONTRACT_CASES_LIMITS,CONTRACT_CASES_SUBSET,contractCasesInput,contractCasesOutput} from './contract-cases.js';
 import {MCP_WIRE_ENDPOINTS,MCP_WIRE_ENDPOINT_SCOPE,MCP_WIRE_VERSIONS,MCP_WIRE_LIMITS,MCP_WIRE_AUTHORITY,mcpWireCheckInput,mcpWireCheckOutput} from './mcp-wirecheck.js';
 const newTool=(id,name,summary,input,output,example,limits,criterion,preview)=>Object.freeze({
- id,name,version:'0.1.0',status:'active',experimental:true,summary,problem:summary,tags:[id,'experimental'],
+ id,name,version:'0.1.0',status:'active',maturity:'beta',experimental:false,summary,problem:summary,tags:[id,'beta'],
  provider:{id:'agenttoolbox',name:'AgentToolbox',type:'first_party'},examples_url:'/v1/products/'+id+'/examples',
  outcome:{description:summary,success_criterion:criterion,criteria:criteriaFor(id),evidence:'server_validated',verified:true},
- pricing:{model:'buyer_chosen_per_success',payment_protocol:'x402-v2-exact',currency:'USDC',network:BASE_NETWORK,minimum_amount_atomic:'10000',decimals:6,business_maximum:null,payments_enabled:true,price_status:'experimental; willingness to pay unproven',live_payment_verified:false},
+ pricing:{model:'buyer_chosen_per_success',payment_protocol:'x402-v2-exact',currency:'USDC',network:BASE_NETWORK,minimum_amount_atomic:'10000',decimals:6,business_maximum:null,payments_enabled:true,price_status:'beta; willingness to pay unproven',live_payment_verified:false},
  preview:{supported:preview,path:preview?'/v1/products/'+id+'/prepare':null,page:preview?'/products/'+id+'/preview':null,unpaid_ttl_seconds:900,limits:preview?PREPARATION_LIMITS:null},
  quote:{path:'/v1/products/'+id+'/quote',required_for:'above-minimum amounts and prepared results'},limits,
  input_schema:z.toJSONSchema(input),output_schema:z.toJSONSchema(output),example_input:example,
@@ -20,16 +20,16 @@ const newTool=(id,name,summary,input,output,example,limits,criterion,preview)=>O
  failure_policy:'Invalid input, failed criterion or unavailable decisive evidence never settles. Uncertain settlement requires reconciliation; never issue a replacement authorization.',
 });
 export const API_VERSION = '1';
-export const REGISTRY_VERSION = '2026-10-07.2';
+export const REGISTRY_VERSION = '2026-10-07.3';
 export const products = Object.freeze([
   Object.freeze({
-    id:'docs-pack',version:'0.1.0',name:'Docs Pack',status:'active',experimental:true,
+    id:'docs-pack',version:'0.1.0',name:'Docs Pack',status:'active',maturity:'beta',experimental:false,
     summary:'Get query-matched excerpts from up to 5 documentation pages.',
     provider:{id:'agenttoolbox',name:'AgentToolbox',type:'first_party'},examples_url:'/v1/products/docs-pack/examples',
     problem:'Inspect several documentation pages without putting all their contents into context.',
-    tags:['documentation','excerpts','context','batch'],
+    tags:['documentation','excerpts','context','batch','beta'],
     outcome:{description:'Exact excerpts with source URLs, titles, hashes, offsets and matching terms.',success_criterion:'Every requested source returns HTTP 200 and at least one literal query-term match; excerpts respect the requested character budget and preserve complete fenced code blocks. The full output passes its schema and 14,000-byte product bound.',criteria:criteriaFor('docs-pack'),evidence:'server_validated',verified:true},
-    pricing:{model:'buyer_chosen_per_success',payment_protocol:'x402-v2-exact',currency:'USDC',network:BASE_NETWORK,minimum_amount_atomic:docsPackMinimum,decimals:6,business_maximum:null,payments_enabled:true,price_status:'experimental hypothesis; willingness to pay unproven',live_payment_verified:false},
+    pricing:{model:'buyer_chosen_per_success',payment_protocol:'x402-v2-exact',currency:'USDC',network:BASE_NETWORK,minimum_amount_atomic:docsPackMinimum,decimals:6,business_maximum:null,payments_enabled:true,price_status:'beta; willingness to pay unproven',live_payment_verified:false},
     preview:{supported:true,path:'/v1/products/docs-pack/prepare',page:'/products/docs-pack/preview',unpaid_ttl_seconds:900,limits:PREPARATION_LIMITS},
     quote:{path:'/v1/products/docs-pack/quote',required_for:'above-minimum amounts and prepared results'},
     limits:{max_urls:5,max_source_bytes:262144,max_excerpt_chars:6000,max_output_bytes:14000,deadline_seconds:12,redirects_per_source:2,supported_hosts:DOC_HOSTS,formats:['UTF-8 Markdown','UTF-8 plain text','static HTML with readable body/main/article'],unsupported:['credentials, ports or query strings in URLs','private or unlisted hosts','login, bot challenges, JavaScript rendering, PDFs, crawling','semantic relevance or completeness guarantees']},
@@ -70,7 +70,7 @@ export function searchProducts({ q = '', status = 'active' } = {}, catalog = pro
     (!query || [p.name,p.id,p.summary,p.problem,...p.tags].join(' ').toLocaleLowerCase().includes(query)));
 }
 export function summary(p) {
-  return { id:p.id, version:p.version, name:p.name, status:p.status, summary:p.summary,
+  return { id:p.id, version:p.version, name:p.name, status:p.status, maturity:p.maturity??null, summary:p.summary,
     tags:p.tags, provider:p.provider??null,pricing:p.pricing, preview:p.preview??{supported:false,path:null,page:null},examples_url:p.examples_url??null,criteria_url:p.outcome.criteria?`/v1/products/${p.id}/criteria`:null,criteria_version:p.outcome.criteria?.criteria_version??null,detail_url:`/v1/products/${p.id}` };
 }
 export function catalogResult(params, catalog = products) {

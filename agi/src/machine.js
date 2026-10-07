@@ -1,9 +1,10 @@
 import {selectCatalog,CATALOG_LIMITS} from './catalog.js';
 const json=value=>JSON.stringify(value,null,2);
+const payoutAvailability=m=>m.payoutRequestsEnabled===true?'':'\n\nPayout requests are temporarily unavailable while owner operations are being verified. Wallet proof, earnings and existing request status remain available.';
 export const markdownText=value=>String(value??'').replace(/\s+/gu,' ').trim()
  .replace(/[\\`*_[\]<>#!]/g,'\\$&').replace(/^(\d+)([.)])(?=\s)/,'$1\\$2').replace(/^[-+](?=\s)/,'\\$&');
 export function toolManifest(m,p){
- return {id:p.id,name:p.name,version:p.version,provider:p.provider,experimental:p.experimental,
+ return {id:p.id,name:p.name,version:p.version,provider:p.provider,maturity:p.maturity??null,experimental:p.experimental,
   use_when:p.fit,scope:p.scope,minimum_amount_atomic:p.pricing.minimum_amount_atomic,decimals:p.pricing.decimals,
   currency:p.pricing.currency,network:p.pricing.network,pricing_model:p.pricing.model,
   success_criterion:p.outcome.success_criterion,success_contract_sha256_snapshot:p.success_pin.sha256,
@@ -21,8 +22,9 @@ export function compactManifest(m){
   next:page.nextUrl?m.siteOrigin+page.nextUrl.replace('/tools','/tools.json'):null,
   seller:{terms:m.origin+'/v1/creator-terms',submit:m.origin+'/v1/tool-submissions',browser_submit:m.origin+'/submit-tool',
    browser_update:m.origin+'/update-tool',charged_fee_atomic:m.sellerTerms.terms.charged_fee_atomic,
-   share_bps:m.sellerTerms.terms.share_bps,approval_effect:m.sellerTerms.terms.approval_effect,transfers_enabled:false},
-  referrals:{terms:m.origin+'/v1/referral-terms',first_party_only:true,share_bps:m.referralTerms.terms.share_bps,transfers_enabled:false},
+   share_bps:m.sellerTerms.terms.share_bps,approval_effect:m.sellerTerms.terms.approval_effect,transfers_enabled:false,
+   payouts:{browser:m.origin+'/creator-wallet',wallet:m.origin+'/v1/creators/me/payout-wallet',earnings:m.origin+'/v1/creator-tools/{tool_id}/earnings',requests:m.origin+'/v1/creator-tools/{tool_id}/payout-requests',requests_enabled:m.payoutRequestsEnabled===true,mode:'owner_reviewed_external_signature',automatic_transfers:false,paid_basis:'finalized_canonical_base_usdc_transfer'}},
+  referrals:{terms:m.origin+'/v1/referral-terms',first_party_only:true,share_bps:m.referralTerms.terms.share_bps,transfers_enabled:false,browser:m.origin+'/referrals',payout_processing:{...m.referralTerms.payout_processing,requests_enabled:m.payoutRequestsEnabled===true}},
   outcomes_sold:m.origin+'/v1/stats',outcomes_sold_meaning:'Completed live purchases, including repeats; not unique agents or independently reconciled revenue.',
  };
 }
@@ -48,7 +50,7 @@ After uncertain delivery, replay the identical body, key and original authorizat
 
 ## Sell tools
 
-Submit a private proposal for free. Approved creators retain 90% lifetime gross entitlement under frozen terms. Approval covers metadata; publication and execution need a separately reviewed implementation, security review and outcome checks. Payouts are unavailable. Retain your private capability to read status and propose updates; there is no recovery grant.
+Submit a private proposal for free. Approved creators retain 90% lifetime gross entitlement under frozen terms. Approval covers metadata; publication and execution need a separately reviewed implementation, security review and outcome checks. Manage wallet proof, earnings and request history in [Creator payouts](/creator-wallet). Payouts require owner approval and an externally signed transfer. Retain your private capability to read status and propose updates; there is no recovery grant.${payoutAvailability(m)}
 
 [Submit proposal](${m.origin}/submit-tool) · [Seller guide](/sell)
 
@@ -85,7 +87,7 @@ ${tools.map(p=>{
  const path='/tools/'+encodeURIComponent(p.id);
  return `## [${markdownText(p.name)}](${path})
 
-Creator: ${markdownText(p.provider.name)} (\`${p.provider.type}\`). From ${p.price_label} on ${p.pricing.network==='eip155:8453'?'Base':p.pricing.network}. ${p.experimental?'Experimental. ':''}Version \`${p.version}\`.
+Creator: ${markdownText(p.provider.name)} (\`${p.provider.type}\`). From ${p.price_label} on ${p.pricing.network==='eip155:8453'?'Base':p.pricing.network}. ${p.maturity==='beta'?'Beta. ':''}Version \`${p.version}\`.
 
 ${markdownText((p.provider.id==='agenttoolbox'&&p.provider.type==='first_party'?fit[p.id]?.(p):null)??p.summary??p.problem)}
 
@@ -106,7 +108,7 @@ export function buyMarkdown(m){
 
 Use ${m.origin} for operational requests. Browse the [tool catalog](/tools) or read the [catalog JSON](/tools.json) and current contracts before authorizing payment.
 
-1. Choose a published tool from the catalog and check its creator, input/output schemas, limits and exact success contract. Experimental status is shown per tool; live payment behavior and external paid-buyer proof are not independently verified.
+1. Choose a published tool from the catalog and check its creator, input/output schemas, limits and exact success contract. Beta status is shown per tool; live payment behavior and external paid-buyer proof are not independently verified.
 2. Inspect static fixtures where the contract publishes an examples URL. These are offline synthetic cases, not live evidence. input_valid means accepted by the full runtime contract including any host/subset/seed restrictions, not just JSON Schema shape.
 3. GET the canonical /criteria; independently SHA-256 its decoded canonical_json UTF-8 bytes with no trailing newline. Compare sha256. GET the canonical /invoke (expect 402); independently hash payment_requirements_pin.canonical_json and compare sha256. This is the complete accepts[0] PaymentRequirements, including extra and exact address case. Use the published agenttoolbox-json-v1 profile.
 4. Build and save the exact invoke JSON, a fresh 32–128 character Idempotency-Key and your verified pins before authorization. Direct minimum calls need no quote. max_charge_usdc_atomic caps spending; it does not select a higher price.
@@ -164,7 +166,7 @@ Use preparation only when the tool publishes preview and preparation routes. Ins
 
 Private feedback: POST ${m.origin}/v1/feedback with a stable Idempotency-Key; include no secrets. Self-reported outcome: POST ${m.origin}/v1/runs/{operation_id}/outcome; it does not alter payment. Public reviews require explicit publication consent; see ${m.origin}/v1/products/{id}/reviews and OpenAPI. A purchase-linked review needs the private review secret committed as review_secret_hash before purchase; a receipt ID alone is insufficient.
 
-First-party referral pilot: [detailed terms](${m.origin}/v1/referral-terms). Generate and retain an atbf_ capability; register via POST ${m.origin}/v1/referrals with X-Referral-Capability and the exact terms_version. Retrying with the same capability returns the same account. Include only the public referral_code in the original paid invocation; keep it for identical retries. Private accrual: GET ${m.origin}/v1/referrals/me with that capability. Rate: 1% gross; creator tools excluded; no payout processor or transfers.
+First-party referral pilot: [detailed terms](${m.origin}/v1/referral-terms). Generate and retain an atbf_ capability; register via POST ${m.origin}/v1/referrals with X-Referral-Capability and the exact terms_version. Retrying with the same capability returns the same account. Include only the public referral_code in the original paid invocation; keep it for identical retries. Private accrual: GET ${m.origin}/v1/referrals/me with that capability. Rate: 1% gross; creator tools excluded. [Referral account](/referrals) supports registration, destination proof, earnings and request history. Payouts require owner review and an externally signed transfer; only verified finalized receipts count as paid. The original financial terms remain frozen; current payout operations are documented separately in the terms response.${payoutAvailability(m)}
 
 [Full schemas](${m.machine.openapi}) · [MCP discovery and workflows](${m.machine.mcp}); use HTTP for paid invocations.
 `;
@@ -180,7 +182,7 @@ export function toolMarkdown(m,p){
 ${markdownText(p.fit)}
 ${markdownText(p.problem)}
 
-Creator: ${markdownText(p.provider.name)} (\`${p.provider.type}\`). ${p.experimental?'Experimental. ':''}Version \`${p.version}\`.
+Creator: ${markdownText(p.provider.name)} (\`${p.provider.type}\`). ${p.maturity==='beta'?'Beta. ':''}Version \`${p.version}\`.
 Cost: from ${p.price_label} per published success; ${p.pricing.currency} on ${p.pricing.network==='eip155:8453'?'Base':p.pricing.network}, buyer chosen amount. Latency and agent token costs remain on failed outcomes.
 ${p.scope?'Scope: '+markdownText(p.scope)+'\n':''}
 Success: ${p.outcome.success_criterion}
@@ -217,7 +219,7 @@ Submit private proposed metadata for review. [Submit proposal](${m.origin}/submi
 
 ## Terms and activation stages
 
-Current actual submission fee: $0 ($0.50 USDC list fee, 100% discounted). Approved creators retain 90% lifetime gross entitlement for their tool, without deductions for operating costs or referral commissions. Rejection refunds the actual fee paid; today no fee is paid and no refund is due. Nonzero charges and refund transfers are disabled. Payout initiation remains unavailable; protected owner operations, trusted read-only RPC and external owner signing remain separate setup.
+Current actual submission fee: $0 ($0.50 USDC list fee, 100% discounted). Approved creators retain 90% lifetime gross entitlement for their tool, without deductions for operating costs or referral commissions. Rejection refunds the actual fee paid; today no fee is paid and no refund is due. Nonzero charges and refund transfers are disabled. Payout requests use your current saved destination and available earnings. The owner approves the verified destination, reserves the requested amount and signs the transfer externally. A request alone sends no funds; paid status requires a verified finalized Base USDC receipt.
 
 Approval records the entitlement under frozen terms; it does not install, publish or execute the endpoint. Publication and execution require a separately reviewed implementation/adapter, bounded schemas, success checks and operational security review. There is no automatic activation or promised activation date.
 
@@ -254,8 +256,24 @@ Updates retain the last approved version while pending or rejected. Approval pre
 
 [MCP workflows](${m.machine.mcp}) expose \`submit_tool\`, \`get_tool_submission\`, \`get_creator_tool\`, \`submit_tool_update\` and \`get_tool_update\`. Follow their schemas and preserve the same capability and request identity.
 
-Optional [Payout wallet](/creator-wallet): save a destination and read its status using your existing creator capability. EOA ownership proof uses the documented API; ERC-1271 is unsupported. Owner approval and transfers remain separate; this page does not initiate a payout.
+## Earnings and payouts
 
-Approved tools can be published after implementation and security review. Published tools accrue 90% of qualifying gross sales. The current catalog has no installed third-party tools; metadata approval alone does not earn revenue, and payout initiation remains unavailable.
+[Creator payouts](/creator-wallet) uses your existing creator capability. Save a public Base address, prove control with the exact five-minute EOA message, and read your approved tool's earnings. ERC-1271 is unsupported. Wallet proof authorizes no payment.${payoutAvailability(m)}
+
+Read the current wallet and earnings before requesting an amount. Save the exact request ID and body before POST; after uncertainty, replay unchanged or GET the retained request. Request acceptance holds no funds. The owner rechecks the current proof-verified destination and available earnings, approves the reservation and signs externally. Submitted or unknown transfers stay reserved until reconciliation; a transaction hash alone is not proof of payment.
+
+\`\`\`http
+GET ${m.origin}/v1/creators/me/payout-wallet
+GET ${m.origin}/v1/creator-tools/{tool_id}/earnings
+POST ${m.origin}/v1/creator-tools/{tool_id}/payout-requests
+X-Creator-Capability: <your-retained-private-capability>
+Content-Type: application/json
+
+{"request_id":"<fresh-UUID>","amount_atomic":"<positive-exact-Base-USDC-atoms>","claim_revision":1}
+\`\`\`
+
+GET the same payout-requests path for bounded history, or append the saved request ID for current status and any finalized receipt. Exact schemas and MCP equivalents are in [OpenAPI](${m.machine.openapi}) and [MCP](${m.machine.mcp}). No payout date is promised. Keep the original frozen financial terms; payout operations do not reduce your earned share.
+
+Approved tools can be published after implementation and security review. Published tools accrue 90% of qualifying gross sales. A submitted URL is not automatically executed. Each seller implementation must be reviewed, compiled and installed before it becomes callable; metadata approval alone produces no sales.
 `;
 }

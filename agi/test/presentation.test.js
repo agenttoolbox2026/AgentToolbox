@@ -130,8 +130,9 @@ test('buyer and seller guides preserve payment recovery, approval boundaries and
  assert.match(sell,/does not install, publish or execute/i);
  assert.match(sell,/last approved version while pending or rejected/i);
  assert.match(sell,/no fee is paid and no refund is due/i);
- assert.match(sell,/payout initiation remains unavailable/i);
- assert.match(sell,/\[Payout wallet\]\(\/creator-wallet\)/);
+ assert.match(sell,/paid status requires a verified finalized Base USDC receipt/i);
+ assert.doesNotMatch(sell,/payout initiation remains unavailable/i);
+ assert.match(sell,/\[Creator payouts\]\(\/creator-wallet\)/);
  assert.match(sell,/ERC-1271 is unsupported/);
  assert.match(sell,/never URLs, public proposal fields, logs or browser web storage/i);
 });

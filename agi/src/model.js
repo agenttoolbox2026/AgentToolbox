@@ -1,12 +1,13 @@
 // Build-time only. Every published tool fact comes from the canonical registry.
 // Presentation and operational routes share the same contracts and origin.
-import {products, REGISTRY_VERSION} from '../../platform/src/registry.js';
+import {REGISTRY_VERSION} from '../../platform/src/registry.js';
 import {formatUsdcPrice, minimumAmount} from '../../platform/src/payment-config.js';
 import {successContractPin} from '../../platform/src/contract-pins.js';
 import {creatorTerms} from '../../platform/src/submissions.js';
 import {referralTerms} from '../../platform/src/referrals.js';
 import {freeExampleManifest} from '../../platform/src/free-examples.js';
 import {isPublishedTool} from './catalog.js';
+import {getCompiledRuntime} from './compiled-runtime.js';
 
 export const CANONICAL_ORIGIN='https://agi.agenttoolbox2026.workers.dev';
 export const SITE_ORIGIN='https://agi.agenttoolbox2026.workers.dev';
@@ -25,7 +26,8 @@ const scope={
 const optionalText=value=>typeof value==='string'&&value.trim()?value:null;
 // catalog is a compiled public registry, never a submission body or D1 metadata
 // query. The default is the same source used by the operational service.
-export async function createModel({origin=CANONICAL_ORIGIN,catalog=products,registryVersion=REGISTRY_VERSION}={}){
+export async function createModel({origin=CANONICAL_ORIGIN,catalog,registryVersion=REGISTRY_VERSION}={}){
+ catalog??=(await getCompiledRuntime()).catalog;
  const published=catalog.filter(isPublishedTool);
  if(new Set(published.map(p=>p.id)).size!==published.length)throw new TypeError('Published tool IDs must be unique.');
  const tools=await Promise.all(published.map(async p=>{

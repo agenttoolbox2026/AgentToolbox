@@ -89,7 +89,12 @@ test('catalog documents stay bounded and preserve creator attribution and useful
  for(const tool of model.tools){
   assert(current.includes('](/tools/'+tool.id+')'));
   assert(current.includes(tool.links.detail));assert(current.includes(tool.links.reviews));
+  assert.equal(tool.maturity,'beta');assert.equal(tool.experimental,false);
+  for(const document of [toolMarkdown(model,tool),...['contract','checks','examples'].map(kind=>contractDocument(model,tool,kind).markdown)]){
+   assert(document.includes('Beta.'));assert(!document.includes('Experimental.'));
+  }
  }
+ assert.equal((current.match(/Beta\./g)??[]).length,4);
  assert(current.includes('8 supported hosts'));
  assert(current.includes('absent quotes and ambiguous repeated occurrences'));
  assert(current.includes('Auth-required, blocked, unsupported or unknown outcomes alone cannot'));
@@ -103,13 +108,14 @@ test('homepage and manifest remain bounded while all tool contracts stay discove
  for(const route of ['/tools','/buy','/sell','/reviews','/feedback'])assert(home.includes(']('+route+')'));
  for(const tool of model.tools)assert(!home.includes(tool.name));
  assert(home.includes('## Sell tools'));
- assert(home.includes('90% lifetime gross entitlement'));assert(home.includes('Payouts are unavailable'));
+ assert(home.includes('90% lifetime gross entitlement'));assert(home.includes('[Creator payouts](/creator-wallet)'));assert(home.includes('Payouts require owner approval'));
  const manifest=compactManifest(large);
  assert.equal(manifest.format,'agenttoolbox-frontdoor-v1');assert.equal(manifest.tools.length,20);
  assert.equal(manifest.total,1000);assert.equal(manifest.next,model.origin+'/tools.json?page=2');
  assert.equal(manifest.catalog_page,model.origin+'/tools');assert.equal(manifest.catalog_markdown,model.origin+'/tools.md');
  assert.equal(manifest.catalog_json,model.origin+'/tools.json');
  assert.equal(compactManifest(model).tools.length,4);
+ assert(compactManifest(model).tools.every(tool=>tool.maturity==='beta'&&tool.experimental===false));
  assert.deepEqual(toolManifest(model,seed).provider,seed.provider);
  assert.equal(toolManifest(model,seed).success_contract_sha256_snapshot,seed.success_pin.sha256);
 });
@@ -132,7 +138,7 @@ test('creator metadata stays literal Markdown even with brackets, newlines and b
 // Local presentation fixture only. It is not added to the production registry,
 // installed as an adapter, fetched, executed, submitted or published.
 const sellerContract={
- id:'creator-presentation-fixture',name:'Boundary [helper]',version:'1.0.0',status:'active',experimental:true,
+ id:'creator-presentation-fixture',name:'Boundary [helper]',version:'1.0.0',status:'active',maturity:'beta',experimental:false,
  summary:'Check a bounded integer input against a fixed outcome.',
  provider:{id:'fixture-lab',name:'Fixture [Lab]',type:'creator'},
  pricing:{...seed.pricing},
