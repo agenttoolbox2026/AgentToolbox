@@ -17,7 +17,9 @@ export const MCP_WIRE_AUTHORITY='I own this endpoint or am authorized to request
 
 export function publicMcpEndpoint(value){
  if(typeof value!=='string'||value.length>256||!endpointPattern.test(value))return null;
- const u=new URL(value);
+ // Some ASCII labels pass the shape check but fail URL's IDNA parser.
+ // Treat those as ordinary invalid input rather than an internal error.
+ let u;try{u=new URL(value);}catch{return null;}
  const labels=u.hostname.split('.');
  // Punycode is not needed for the documented lowercase ASCII Worker names.
  if(labels.some(label=>label.startsWith('xn--')))return null;
