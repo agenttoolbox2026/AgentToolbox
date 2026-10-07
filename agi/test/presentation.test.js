@@ -5,8 +5,9 @@ import {readFile} from 'node:fs/promises';
 import {database} from '../../platform/scripts/local-db.js';
 import {humansPage} from '../src/humans.js';
 import worker from '../src/worker.js';
+import {selectCatalog} from '../src/catalog.js';
 import {createModel} from '../src/model.js';
-import {homePage,toolPage,renderMarkdown} from '../src/pages.js';
+import {homePage,toolPage,renderMarkdown,catalogPage} from '../src/pages.js';
 import {products,REGISTRY_VERSION} from '../../platform/src/registry.js';
 import {successContractPin} from '../../platform/src/contract-pins.js';
 import {CREATOR_TERMS} from '../../platform/src/submissions.js';
@@ -81,7 +82,7 @@ test('tool data and example input stay inert when rendered into text, code and a
  product.outcome.success_criterion=payload;
  product.example_input={text:payload};
  product.links.detail='https://example.invalid/" onmouseover="alert(3)';
- for(const html of [homePage(model),toolPage(model,product)]){
+ for(const html of [catalogPage(model,selectCatalog(model)),toolPage(model,product)]){
   assert(html.includes('Audit sentinel'),'Renderer must retain visible text.');
   assert.doesNotMatch(html,/<script\b|<img\s+src=x/i);
   assert(html.includes('&lt;'),'Untrusted angle brackets must be escaped.');
@@ -184,7 +185,7 @@ test('only public assets reach ASSETS with fresh credential-free requests',async
   assert.equal([...req.headers].length,0);assert.equal(req.body,null);
   return new Response('asset',{headers:{'Content-Type':url.pathname.endsWith('.css')?'text/css':url.pathname.endsWith('.js')?'text/javascript':'image/png'}});
  }}};
- const paths=['/style.css','/humans.css','/header.css','/workflow.css','/site.js','/retry-envelope.js','/agenttoolbox-icon.png'];
+ const paths=['/style.css','/humans.css','/header.css','/forms.css','/workflow.css','/site.js','/retry-envelope.js','/agenttoolbox-icon.png'];
  for(const path of paths){
   assert.equal((await request(path+'?private=secret',{headers:{Authorization:'secret','PAYMENT-SIGNATURE':'secret','X-Creator-Capability':'secret'}},env)).status,200);
   const head=await request(path,{method:'HEAD'},env);assert.equal(head.status,200);assert.equal(await head.text(),'');

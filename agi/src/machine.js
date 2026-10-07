@@ -1,14 +1,24 @@
+import {selectCatalog,CATALOG_LIMITS} from './catalog.js';
 const json=value=>JSON.stringify(value,null,2);
+const markdownText=value=>String(value??'').replace(/\s+/gu,' ').trim()
+ .replace(/[\\`*_[\]<>#!]/g,'\\$&').replace(/^(\d+)([.)])(?=\s)/,'$1\\$2').replace(/^[-+](?=\s)/,'\\$&');
+export function toolManifest(m,p){
+ return {id:p.id,name:p.name,version:p.version,provider:p.provider,experimental:p.experimental,
+  use_when:p.fit,scope:p.scope,minimum_amount_atomic:p.pricing.minimum_amount_atomic,decimals:p.pricing.decimals,
+  currency:p.pricing.currency,network:p.pricing.network,pricing_model:p.pricing.model,
+  success_criterion:p.outcome.success_criterion,success_contract_sha256_snapshot:p.success_pin.sha256,
+  guide:m.siteOrigin+p.markdown_url,preview_supported:p.preview.supported,...p.links};
+}
 export function compactManifest(m){
+ const page=selectCatalog(m);
  return {name:m.name,format:'agenttoolbox-frontdoor-v1',catalog_version:m.registryVersion,
   canonical_api_origin:m.origin,contract_policy:m.contract_policy,
   buy_guide:m.siteOrigin+'/buy.md',sell_guide:m.siteOrigin+'/sell.md',for_humans:m.origin+'/humans',
   ...m.machine,
-  tools:m.tools.map(p=>({id:p.id,name:p.name,version:p.version,provider:p.provider,experimental:p.experimental,
-   use_when:p.fit,scope:p.scope,minimum_amount_atomic:p.pricing.minimum_amount_atomic,decimals:p.pricing.decimals,
-   currency:p.pricing.currency,network:p.pricing.network,pricing_model:p.pricing.model,
-   success_criterion:p.outcome.success_criterion,success_contract_sha256_snapshot:p.success_pin.sha256,
-   guide:m.siteOrigin+p.markdown_url,preview_supported:p.preview.supported,...p.links})),
+  catalog_page:m.siteOrigin+'/tools',catalog_markdown:m.siteOrigin+'/tools.md',catalog_json:m.siteOrigin+'/tools.json',
+  tools:page.tools.map(p=>toolManifest(m,p)),total:page.total,
+  pagination:{page:page.page,limit:page.limit,page_count:page.pageCount,start:page.start,end:page.end},
+  next:page.nextUrl?m.siteOrigin+page.nextUrl.replace('/tools','/tools.json'):null,
   seller:{terms:m.origin+'/v1/creator-terms',submit:m.origin+'/v1/tool-submissions',browser_submit:m.origin+'/submit-tool',
    browser_update:m.origin+'/update-tool',charged_fee_atomic:m.sellerTerms.terms.charged_fee_atomic,
    share_bps:m.sellerTerms.terms.share_bps,approval_effect:m.sellerTerms.terms.approval_effect,transfers_enabled:false},
@@ -17,42 +27,24 @@ export function compactManifest(m){
  };
 }
 export function homeMarkdown(m){
- const fit={
-  'docs-pack':p=>`Gather literal query-matched excerpts from up to ${p.limits.max_urls} documentation pages across ${p.limits.supported_hosts.length} supported hosts. Every requested page must match; no partial-pack charge.`,
-  'quote-proof':()=>`Check literal quotation fidelity against supported documentation. Matches, absent quotes and ambiguous repeated occurrences may qualify for payment; unknown results alone cannot. This does not verify truth.`,
-  'contract-cases':()=>`Generate boundary and negative tests for a bounded JSON Schema subset using a valid seed. Cases are revalidated against the accepted schema; coverage gaps stay explicit.`,
-  'mcp-wirecheck':()=>`Inspect anonymous MCP discovery and tools/list on a public workers.dev endpoint you own or are authorized to check; no tools/call. Incompatible verdicts can qualify for payment. Auth-required, blocked, unsupported or unknown outcomes alone cannot.`,
- };
  return `# AgentToolbox
 
 > Tools for agents. Pay when the published outcome checks pass.
 
-${m.tools.length} experimental AgentToolbox tools. Buyer-chosen prices from $0.01 USDC on Base, paid through x402.
+Buy tools with buyer-chosen prices from $0.01 USDC on Base through x402, or submit a tool proposal for review.
 
-[Buy tools](#buy-tools) · [Sell tools](#sell-tools)
+[Browse tools](/tools) · [Buy tools](#buy-tools) · [Sell tools](#sell-tools)
 
 ## Buy tools
 
-Tool names open their contracts. Checks define the paid outcome, not usefulness, certification or independently verified payment proof.
+1. Browse the catalog. Check the creator, scope, price and published outcome before choosing a tool.
+2. Read its contract, checks and free synthetic examples. Verify the current success and payment pins; use a limited preview where offered.
+3. Save the exact request and \`Idempotency-Key\`, authorize with an x402 v2 exact client, then invoke. A direct minimum-price call needs no quote.
+4. Retain the result and receipt. Settlement is attempted only after the published checks pass; a qualifying negative verdict can be a paid result.
 
-${m.tools.map(p=>`### [${p.name}](${p.links.detail})
+After uncertain delivery, replay the identical body, key and original authorization. Unknown settlement: stop for reconciliation; never create a replacement authorization.
 
-${fit[p.id]?.(p)??p.fit}
-
-[Checks](${p.links.criteria}) · [Synthetic examples](${p.links.examples})${p.preview.supported?` · [Limited preview](${p.links.preview})`:''}
-`).join('\n')}
-Examples are free offline fixtures. Real-input previews withhold full output and have [quotas and preparation rules](/buy#optional-real-input-previews).
-
-## Minimum-price call
-
-API base: ${m.origin}
-
-1. Read the chosen contract and checks. Use its current version and accepted input; host, schema-subset and valid-seed restrictions apply beyond JSON shape.
-2. Fetch \`GET /v1/products/{id}/criteria\` and \`GET /v1/products/{id}/invoke\` (402 expected). Verify both SHA-256 pins from decoded \`canonical_json\` UTF-8 bytes, without a trailing newline.
-3. Save a body containing \`version\`, \`input\`, \`max_charge_usdc_atomic: "10000"\`, \`success_contract_sha256\` and \`payment_requirements_sha256\`, plus a fresh 32–128 character \`Idempotency-Key\`. Authorize \`10000\` atomic USDC with an x402 v2 exact client; \`POST\` to the invoke URL with \`PAYMENT-SIGNATURE\`. A direct minimum-price call needs no quote; max charge is a ceiling, not a higher-price selector.
-4. Retain output, \`operation_id\`, \`contract_pins\`, \`payment\` and \`PAYMENT-RESPONSE\`. Settlement is attempted only after the published checks pass.
-
-Failed checks do not trigger settlement; latency and agent token costs remain. Uncertain delivery: replay the identical body, key and original authorization. Completed output replays for 24 hours. Unknown settlement: stop for reconciliation; never create a replacement authorization. [Buyer guide: exact requests, receipts and higher prices](/buy).
+[Buyer guide: exact requests, prices and recovery](/buy) · [Reviews](/reviews) · [Feedback](/feedback)
 
 ## Sell tools
 
@@ -67,14 +59,52 @@ Submit a private proposal for free. Approved creators retain 90% lifetime gross 
 MCP supports discovery and documented workflows; paid calls use HTTP x402. Verify current contracts before authorizing.
 `;
 }
+export function catalogMarkdown(m,selection){
+ const fit={
+  'docs-pack':p=>`Gather literal query-matched excerpts from up to ${p.limits.max_urls} documentation pages across ${p.limits.supported_hosts.length} supported hosts. Every requested page must match; no partial-pack charge.`,
+  'quote-proof':()=>`Check literal quotation fidelity against supported documentation. Matches, absent quotes and ambiguous repeated occurrences may qualify for payment; unknown results alone cannot. This does not verify truth.`,
+  'contract-cases':()=>`Generate boundary and negative tests for a bounded JSON Schema subset using a valid seed. Cases are revalidated against the accepted schema; coverage gaps stay explicit.`,
+  'mcp-wirecheck':()=>`Inspect anonymous MCP discovery and tools/list on a public workers.dev endpoint you own or are authorized to check; no tools/call. Incompatible verdicts can qualify for payment. Auth-required, blocked, unsupported or unknown outcomes alone cannot.`,
+ };
+ const {tools,query,page,limit,total,catalogTotal,pageCount,start,end,previousUrl,nextUrl}=selection;
+ const navigation=[previousUrl?`[Previous](${previousUrl})`:null,`Page ${page} of ${pageCount}`,nextUrl?`[Next](${nextUrl})`:null].filter(Boolean).join(' · ');
+ const queryText=JSON.stringify(query).replaceAll('`','\\u0060');
+ return `# Browse tools
+
+Search published tools by name, purpose, tag or creator. Each entry links to its guide, current contract and outcome checks.
+
+[How to buy](/buy) · [Sell tools](/sell) · [Reviews](/reviews) · [Feedback](/feedback)
+
+Search: \`GET /tools?q=your+query\`. Use up to ${CATALOG_LIMITS.query_chars} characters; \`page\` starts at 1 and \`limit\` defaults to ${CATALOG_LIMITS.default_limit}, capped at ${CATALOG_LIMITS.max_limit}. [Clear search](/tools).
+
+${query?`Query: \`${queryText}\`. `:''}${total?`Showing ${start}–${end} of ${total} matching tools`:'No matching tools'}; ${catalogTotal} published tools. ${limit} per page.
+
+${navigation}
+
+${tools.map(p=>{
+ const path='/tools/'+encodeURIComponent(p.id);
+ return `## [${markdownText(p.name)}](${path})
+
+Creator: ${markdownText(p.provider.name)} (\`${p.provider.type}\`). From ${p.price_label} on ${p.pricing.network==='eip155:8453'?'Base':p.pricing.network}. ${p.experimental?'Experimental. ':''}Version \`${p.version}\`.
+
+${markdownText(fit[p.id]?.(p)??p.summary??p.problem)}
+
+[Contract JSON](${p.links.detail}) · [Checks](${path}/checks) · [Synthetic examples](${path}/examples)${p.preview.supported?` · [Limited preview](${p.links.preview})`:''} · [Reviews](${p.links.reviews})
+`;
+ }).join('\n')}
+${tools.length?navigation+'\n\n':''}Checks define the paid outcome, not usefulness or certification. Examples are free offline fixtures; previews withhold full output and have [preparation limits](/buy#optional-real-input-previews).
+
+[Catalog JSON](${selection.canonicalUrl.replace('/tools','/tools.json')}) · [Catalog Markdown](${selection.canonicalUrl.replace('/tools','/tools.md')}) · [OpenAPI](${m.machine.openapi})
+`;
+}
 export function buyMarkdown(m){
  const p=m.tools.find(p=>p.id==='contract-cases')??m.tools[0];
  const docs=m.tools.find(tool=>tool.id==='docs-pack');
  return `# Buy tools — AgentToolbox
 
-Use ${m.origin} for operational requests. Read the [catalog](${m.machine.catalog}) and current tool contracts before authorizing payment.
+Use ${m.origin} for operational requests. Browse the [tool catalog](/tools) or read the [catalog JSON](/tools.json) and current contracts before authorizing payment.
 
-1. Choose a tool in ${m.siteOrigin}/agent.json; read its input/output schemas, limits and exact success contract. Every current tool is first-party and experimental; live payment behavior and external paid-buyer proof are not independently verified.
+1. Choose a published tool from the catalog and check its creator, input/output schemas, limits and exact success contract. Experimental status is shown per tool; live payment behavior and external paid-buyer proof are not independently verified.
 2. Inspect static fixtures at the tool's /examples URL. These are offline synthetic cases, not live evidence. input_valid means accepted by the full runtime contract including host/subset/seed restrictions, not just JSON Schema shape.
 3. GET the canonical /criteria; independently SHA-256 its decoded canonical_json UTF-8 bytes with no trailing newline. Compare sha256. GET the canonical /invoke (expect 402); independently hash payment_requirements_pin.canonical_json and compare sha256. This is the complete accepts[0] PaymentRequirements, including extra and exact address case. Use the published agenttoolbox-json-v1 profile.
 4. Build and save the exact invoke JSON, a fresh 32–128 character Idempotency-Key and your verified pins before authorization. Direct minimum calls need no quote. max_charge_usdc_atomic caps spending; it does not select a higher price.
@@ -139,24 +169,27 @@ First-party referral pilot: [detailed terms](${m.origin}/v1/referral-terms). Gen
 `;
 }
 export function toolMarkdown(m,p){
- return `# ${p.name} — AgentToolbox
+ const path='/tools/'+encodeURIComponent(p.id);
+ return `# ${markdownText(p.name)} — AgentToolbox
 
-${p.fit}
-${p.problem}
+[Browse tools](/tools) · [Checks](${path}/checks) · [Synthetic examples](${path}/examples) · [Reviews](${p.links.reviews})
 
-Provider: ${p.provider.name}, first-party. Experimental version ${p.version}.
+${markdownText(p.fit)}
+${markdownText(p.problem)}
+
+Creator: ${markdownText(p.provider.name)} (\`${p.provider.type}\`). ${p.experimental?'Experimental. ':''}Version \`${p.version}\`.
 Cost: from ${p.price_label} per published success; USDC on Base, buyer chosen amount. Latency and agent token costs remain on failed outcomes.
-Scope: ${p.scope}
+Scope: ${markdownText(p.scope)}
 Success: ${p.outcome.success_criterion}
 Failure policy: ${p.failure_policy}
 
 ## Inspect, test, pin, call
 
-Full current contract: ${p.links.detail}
-Current success checks and verifiable pin: ${p.links.criteria}
+Full current contract JSON: ${p.links.detail}
+Current success checks JSON and verifiable pin: ${p.links.criteria}
 Source snapshot success hash (verify current contract before authorizing): ${p.success_pin.sha256}
-Free static fixtures: ${p.links.examples}
-Fixtures are first-party synthetic offline cases, not live outcomes. input_valid covers the full runtime-accepted contract, including host/subset/seed constraints.
+Free static fixtures JSON: ${p.links.examples}
+Fixtures are synthetic offline cases, not live outcomes. input_valid covers the full runtime-accepted contract, including host/subset/seed constraints.
 ${p.preview.supported?'Limited real-input preview: '+p.links.preview+'\nPreparation API: POST '+p.links.prepare:'No real-input preview: verdicts that pass the published checks are the paid output. Read the buyer guide for qualifying negative verdicts.'}
 Read-only minimum challenge/pin: GET ${p.links.payment_requirements} (402 expected)
 Direct minimum call: POST ${p.links.invoke}

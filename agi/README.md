@@ -4,6 +4,11 @@
 buyer/seller workflows, OpenAPI, MCP and public APIs. The Worker executes the
 existing platform runtime in process. It never proxies visitor credentials.
 
+The homepage explains buying and selling. `/tools` provides bounded search and
+pagination with creator attribution; `/tools.md` and `/tools.json` expose the
+same selected page. The default page size is 20 and the maximum is 50. Only the
+actual active public registry is listed; private proposals never enter the catalog.
+
 HTML and Markdown use the same compact instructions. `src/model.js` builds its
 snapshot from the operational registry, success canonicalizer and creator/referral
 terms. Rebuild when contracts change. Current criteria and payment requirements
@@ -15,7 +20,12 @@ a black background, audience navigation and a **Tools Sold** count
 read from the existing public purchase total. Repeats count; unique agents/tools
 are not claimed. Missing data displays Unavailable. Agent documents and Humans
 need no JavaScript. Existing operational forms keep their scripts and CSP.
-`build.js` copies their exact assets, renaming the stylesheet to avoid a collision.
+`build.js` copies their exact script assets. A recognized-shell adapter applies
+the same header, document typography and flat form styles while preserving form
+bodies, capability fields, consent, native POST actions and CSP. Reviews and
+private feedback have `/reviews` and `/feedback` entry points using the original
+backend. `/tools/{id}/contract`, `/checks` and `/examples` are readable document
+views; canonical `/v1` JSON types and payment hashes remain unchanged.
 The Worker strips visitor headers/query/body before calling the asset binding.
 
 ## Ledger and migration boundary

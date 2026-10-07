@@ -1,7 +1,10 @@
 import generated from './generated.json' with {type:'json'};
-import {homePage,buyPage,sellPage,toolPage,notFoundPage} from './pages.js';
+import {homePage,buyPage,sellPage,toolPage,notFoundPage,catalogPage,documentPage} from './pages.js';
 import {humansPage} from './humans.js';
-import {compactManifest,homeMarkdown,buyMarkdown,sellMarkdown,toolMarkdown} from './machine.js';
+import {compactManifest,homeMarkdown,buyMarkdown,sellMarkdown,toolMarkdown,catalogMarkdown,toolManifest} from './machine.js';
+import {selectCatalog,CatalogQueryError} from './catalog.js';
+import {contractDocument,sellerTermsDocument} from './contract-documents.js';
+import {themeWorkflowHtml} from './workflow-theme.js';
 import {createPlatform} from '../../platform/src/app.js';
 import {createQuoteProof} from '../../platform/src/quote-proof.js';
 import {createContractCases} from '../../platform/src/contract-cases.js';
@@ -16,7 +19,7 @@ const security={
  'Permissions-Policy':'camera=(), microphone=(), geolocation=(), payment=()',
  'Strict-Transport-Security':'max-age=31536000',
 };
-const assetPaths=new Set(['/style.css','/humans.css','/header.css','/workflow.css','/site.js','/retry-envelope.js','/agenttoolbox-icon.png']);
+const assetPaths=new Set(['/style.css','/humans.css','/header.css','/forms.css','/workflow.css','/site.js','/retry-envelope.js','/agenttoolbox-icon.png']);
 const acceptType=request=>{
  const types=(request.headers.get('Accept')??'text/html').split(',').map((part,index)=>{
   const [mime,...params]=part.trim().toLowerCase().split(';');
@@ -52,12 +55,39 @@ export function createAgi({model=generated,platformOptions={}}={}){
    if(!read)return json(request,{error:{code:'method_not_allowed'}},405,{Allow:'GET, HEAD','Cache-Control':'no-store'});
    const asset=await assetFetch(request),headers=new Headers(asset.headers);
    for(const [k,v]of Object.entries(security))headers.set(k,v);
-   headers.set('Cache-Control',['/site.js','/retry-envelope.js','/workflow.css'].includes(path)?'no-store':'public, max-age=3600');
+   headers.set('Cache-Control',['/site.js','/retry-envelope.js','/workflow.css','/forms.css'].includes(path)?'no-store':'public, max-age=3600');
    return new Response(request.method==='HEAD'?null:asset.body,{status:asset.status,headers});
   }
-  const documentPath=['/','/buy','/sell','/humans','/agent.json','/llms.txt','/AGENTS.md','/index.md','/buy.md','/sell.md','/robots.txt','/sitemap.xml'].includes(path)||/^\/tools\/[a-z0-9-]+(?:\.md)?$/.test(path);
+  const documentPath=['/','/buy','/sell','/humans','/tools','/tools.md','/tools.json','/sell/terms','/sell/terms.md','/agent.json','/llms.txt','/AGENTS.md','/index.md','/buy.md','/sell.md','/robots.txt','/sitemap.xml'].includes(path)||/^\/tools\/[a-z0-9-]+(?:\/(?:contract|checks|examples))?(?:\.md)?$/.test(path);
   if(documentPath&&!read&&request.method!=='OPTIONS')return json(request,{error:{code:'method_not_allowed'}},405,{Allow:'GET, HEAD','Cache-Control':'no-store'});
   if(read){
+   const format=acceptType(request);
+   if(['/tools','/tools.md','/tools.json'].includes(path)){
+    let selection;
+    try{selection=selectCatalog(model,url.searchParams);}catch(error){
+     if(!(error instanceof CatalogQueryError))throw error;
+     if(path.endsWith('.json')||(!path.endsWith('.md')&&format==='json'))return json(request,{error:{code:error.code,message:error.message}},400,{'Cache-Control':'no-store'});
+     return respond(request,documentPage(model,'# Invalid catalog query\n\n'+error.message+'\n\n[Browse tools](/tools).','/tools'),'text/html',400,{'Cache-Control':'no-store'});
+    }
+    if(path.endsWith('.json')||(!path.endsWith('.md')&&format==='json'))return json(request,{name:model.name,catalog_version:model.registryVersion,
+     query:selection.query,page:selection.page,limit:selection.limit,total:selection.total,catalog_total:selection.catalogTotal,
+     page_count:selection.pageCount,previous:selection.previousUrl?model.origin+selection.previousUrl.replace('/tools','/tools.json'):null,next:selection.nextUrl?model.origin+selection.nextUrl.replace('/tools','/tools.json'):null,
+     tools:selection.tools.map(tool=>toolManifest(model,tool))});
+    if(path.endsWith('.md')||format==='markdown')return respond(request,catalogMarkdown(model,selection),'text/markdown');
+    return respond(request,catalogPage(model,selection),'text/html',200,{'Content-Security-Policy':security['Content-Security-Policy'].replace("form-action 'none'","form-action 'self'")});
+   }
+   if(path==='/sell/terms'||path==='/sell/terms.md'){
+    if(format==='json'&&!path.endsWith('.md'))return json(request,model.sellerTerms);
+    const markdown=sellerTermsDocument(model);
+    return respond(request,path.endsWith('.md')||format==='markdown'?markdown:documentPage(model,markdown,'/sell/terms'),path.endsWith('.md')||format==='markdown'?'text/markdown':'text/html');
+   }
+   const contractPath=path.match(/^\/tools\/([a-z0-9-]+)\/(contract|checks|examples)(\.md)?$/);
+   if(contractPath){
+    const tool=model.tools.find(p=>p.id===contractPath[1]),document=tool&&contractDocument(model,tool,contractPath[2]);
+    if(!document)return respond(request,notFoundPage(model),'text/html',404,{'Cache-Control':'no-store'});
+    if(format==='json'&&!contractPath[3])return json(request,document.data);
+    return respond(request,contractPath[3]||format==='markdown'?document.markdown:documentPage(model,document.markdown,path.replace(/\.md$/,'')),contractPath[3]||format==='markdown'?'text/markdown':'text/html');
+   }
    if(path==='/humans'){
     let stats=null;
     try{
@@ -71,13 +101,12 @@ export function createAgi({model=generated,platformOptions={}}={}){
     return respond(request,humansPage(model,stats),'text/html',200,{'Cache-Control':'no-store'});
    }
    if(path==='/robots.txt')return respond(request,'User-agent: *\nAllow: /\nSitemap: '+model.siteOrigin+'/sitemap.xml\n','text/plain');
-   if(path==='/sitemap.xml')return respond(request,'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+['/','/buy','/sell','/humans',...model.tools.map(p=>p.guide_url)].map(path=>'<url><loc>'+model.siteOrigin+path+'</loc></url>').join('')+'</urlset>','application/xml');
+   if(path==='/sitemap.xml')return respond(request,'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+['/','/tools','/buy','/sell','/humans','/reviews','/feedback',...model.tools.map(p=>p.guide_url)].map(path=>'<url><loc>'+model.siteOrigin+path+'</loc></url>').join('')+'</urlset>','application/xml');
    if(path==='/agent.json')return json(request,compactManifest(model));
    if(['/llms.txt','/AGENTS.md','/index.md'].includes(path))return respond(request,homeMarkdown(model),'text/markdown');
    if(path==='/buy.md')return respond(request,buyMarkdown(model),'text/markdown');
    if(path==='/sell.md')return respond(request,sellMarkdown(model),'text/markdown');
    const match=path.match(/^\/tools\/([a-z0-9-]+)(\.md)?$/),tool=match&&model.tools.find(p=>p.id===match[1]);
-   const format=acceptType(request);
    if(path==='/'){
     if(format==='json')return json(request,compactManifest(model));
     if(format==='markdown')return respond(request,homeMarkdown(model),'text/markdown');
@@ -87,7 +116,7 @@ export function createAgi({model=generated,platformOptions={}}={}){
    if(path==='/sell')return respond(request,format==='markdown'?sellMarkdown(model):sellPage(model),format==='markdown'?'text/markdown':'text/html');
    if(tool){
     if(match[2]||format==='markdown')return respond(request,toolMarkdown(model,tool),'text/markdown');
-    if(format==='json')return json(request,compactManifest(model).tools.find(p=>p.id===tool.id));
+    if(format==='json')return json(request,toolManifest(model,tool));
     return respond(request,toolPage(model,tool));
    }
    if(match)return respond(request,notFoundPage(model),'text/html',404,{'Cache-Control':'no-store'});
@@ -105,7 +134,14 @@ export function createAgi({model=generated,platformOptions={}}={}){
   // Execute locally: never proxy an authorization or capability to another host.
   const response=await app(request,request.headers.get('CF-Connecting-IP')??'unknown');
   if(read&&request.method!=='HEAD'&&response.headers.get('Content-Type')?.startsWith('text/html')){
-   const html=(await response.text()).replace(/href="\/style\.css(?=[?"])/g,'href="/workflow.css').replaceAll('href="/#feedback"','href="/buy#after-the-result"');
+   let html=themeWorkflowHtml(await response.text());
+   // Only exact, trusted registry links are rewritten. Machine endpoints retain
+   // their JSON contracts; the destination documents link back to those APIs.
+   for(const tool of model.tools){
+    for(const [suffix,view]of [['/criteria','checks'],['/examples','examples'],['','contract']])
+     html=html.replaceAll('href="/v1/products/'+tool.id+suffix+'"','href="/tools/'+tool.id+'/'+view+'"');
+   }
+   html=html.replaceAll('href="/v1/creator-terms"','href="/sell/terms"').replaceAll('href="/#feedback"','href="/feedback"');
    return new Response(html,{status:response.status,headers:response.headers});
   }
   return response;

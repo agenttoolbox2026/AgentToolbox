@@ -1,6 +1,6 @@
 import {products,findProduct} from './registry.js';
 import {service,searchSchema,invokeSchema,outcomeSchema,PlatformError} from './service.js';
-import {home,humansPage,notFoundPage,reviewsPage,reviewPage,previewPage,submissionPage,updatePage} from './pages.js';
+import {home,humansPage,notFoundPage,reviewsIndexPage,feedbackPage,reviewsPage,reviewPage,previewPage,submissionPage,updatePage} from './pages.js';
 import {publicPurchases} from './purchases.js';
 import {markdown,openapi} from './discovery.js';
 import {mcp} from './mcp.js';
@@ -94,6 +94,14 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
       if(path==='/v1/referrals/me')return finish(Response.json(await getReferral({db,capability:request.headers.get('X-Referral-Capability')})));
       if(path==='/submit-tool')return finish(html(submissionPage()));
       if(path==='/update-tool')return finish(html(updatePage()));
+      if(path==='/reviews')return finish(html(reviewsIndexPage(catalog)));
+      if(path==='/feedback'){
+        const selected=url.searchParams.getAll('tool');
+        if(!selected.length)return finish(html(feedbackPage(catalog)));
+        const product=selected.length===1?findProduct(selected[0],catalog):null;
+        if(!product||product.status!=='active')throw new PlatformError(404,'product_not_found','No active tool has that identifier.');
+        return finish(html(feedbackPage(catalog,product)));
+      }
       const creatorTool=path.match(/^\/v1\/creator-tools\/([a-z0-9-]{1,64})$/);
       if(creatorTool)return finish(Response.json(await api.getCreatorTool(creatorTool[1],request.headers.get('X-Creator-Capability'),Object.fromEntries(url.searchParams))));
       const toolUpdate=path.match(/^\/v1\/tool-updates\/([0-9a-f-]{36})$/);

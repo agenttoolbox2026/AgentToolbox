@@ -1,17 +1,20 @@
 import {header,headerStylesheet} from './header.js';
 // All agent pages render the same source-derived instructions as their Markdown
 // routes. No client script, form, wallet, capabilities or operational requests.
-import {homeMarkdown,buyMarkdown,sellMarkdown,toolMarkdown} from './machine.js';
+import {homeMarkdown,buyMarkdown,sellMarkdown,toolMarkdown,catalogMarkdown} from './machine.js';
+export const agentStylesheet='<link rel="stylesheet" href="/style.css?v=c20d87a835ad">';
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeLink=url=>/^(?:https:\/\/|http:\/\/127\.0\.0\.1(?::[0-9]{1,5})?\/|\/(?!\/)|#)/.test(url)?escape(url):'#';
 // Deliberately small, inert Markdown subset. The original text is escaped, and
 // only known links/code/emphasis can create markup. Raw HTML is never accepted.
 function inline(text){
- const pattern=/(\[[^\]\n]+\]\((?:https:\/\/|http:\/\/127\.0\.0\.1(?::[0-9]{1,5})?\/|\/(?!\/)|#)[^\s)]+\)|`[^`\n]+`|\*\*[^*\n]+\*\*|https:\/\/[^\s<>]+)/g;
+ const pattern=/(\\[\\`*{}\[\]()#+\-.!_>]|\[(?:\\.|[^\]\\\n])+\]\((?:https:\/\/|http:\/\/127\.0\.0\.1(?::[0-9]{1,5})?\/|\/(?!\/)|#)[^\s)]+\)|`[^`\n]+`|\*\*[^*\n]+\*\*|https:\/\/[^\s<>]+)/g;
+ const literal=value=>value.replace(/\\([\\`*{}\[\]()#+\-.!_>])/g,'$1');
  let result='',start=0;
  for(const match of text.matchAll(pattern)){
   result+=escape(text.slice(start,match.index));const token=match[0];
-  if(token[0]==='['){const split=token.indexOf('](');result+=`<a href="${safeLink(token.slice(split+2,-1))}">${escape(token.slice(1,split))}</a>`;}
+  if(token[0]==='\\')result+=escape(token.slice(1));
+  else if(token[0]==='['){const split=token.lastIndexOf('](');result+=`<a href="${safeLink(token.slice(split+2,-1))}">${escape(literal(token.slice(1,split)))}</a>`;}
   else if(token[0]==='`')result+=`<code>${escape(token)}</code>`;
   else if(token.startsWith('**'))result+=`<strong>${escape(token)}</strong>`;
   else{const url=token.replace(/[.,;:]+$/,'');result+=`<a href="${safeLink(url)}">${escape(url)}</a>${escape(token.slice(url.length))}`;}
@@ -38,16 +41,19 @@ export function renderMarkdown(markdown){
  }
  return out.join('\n');
 }
-function shell(model,markdown,path='/'){
+export function documentPage(model,markdown,path='/',beforeContent=''){
  return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="description" content="AgentToolbox: buy tools, verify published outcomes, and submit tools for review. HTTP, x402 and MCP instructions for agents."><title>AgentToolbox</title><link rel="canonical" href="${escape(model.siteOrigin+path)}"><link rel="icon" href="/agenttoolbox-icon.png" type="image/png">${headerStylesheet}<link rel="stylesheet" href="/style.css?v=c20d87a835ad"><link rel="alternate" type="text/markdown" href="${path==='/'?'/llms.txt':escape(path+'.md')}" title="Markdown"><link rel="alternate" type="application/json" href="/agent.json" title="Agent manifest"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="description" content="AgentToolbox: buy tools, verify published outcomes, and submit tools for review. HTTP, x402 and MCP instructions for agents."><title>AgentToolbox</title><link rel="canonical" href="${escape(model.siteOrigin+path)}"><link rel="icon" href="/agenttoolbox-icon.png" type="image/png">${headerStylesheet}${agentStylesheet}${beforeContent?'<link rel="stylesheet" href="/forms.css">':''}<link rel="alternate" type="text/markdown" href="${path==='/'?'/llms.txt':escape(path.split('?')[0]+'.md'+(path.includes('?')?'?'+path.split('?')[1]:''))}" title="Markdown"><link rel="alternate" type="application/json" href="/agent.json" title="Agent manifest"></head>
 <body><a class="skip-link" href="#main">Skip to content</a>
 ${header('agents')}
-<main id="main" class="document">${path==='/'?'':`<p class="back-link"><a href="/">← AgentToolbox</a></p>`}${renderMarkdown(markdown)}</main>
+<main id="main" class="document">${path==='/'?'':`<p class="back-link"><a href="/">← AgentToolbox</a> · <a href="/tools">Browse tools</a> · <a href="/reviews">Reviews</a> · <a href="/feedback">Feedback</a></p>`}${beforeContent}${renderMarkdown(markdown)}</main>
 <footer class="document-footer">Built for agents, by agents.</footer></body></html>`;
 }
+const shell=documentPage;
 export const homePage=model=>shell(model,homeMarkdown(model));
 export const buyPage=model=>shell(model,buyMarkdown(model),'/buy');
 export const sellPage=model=>shell(model,sellMarkdown(model),'/sell');
 export const toolPage=(model,tool)=>shell(model,toolMarkdown(model,tool),'/tools/'+tool.id);
 export const notFoundPage=model=>shell(model,'# Page not found\n\n[Return to AgentToolbox](/).','/404');
+export const catalogPage=(model,selection)=>shell(model,catalogMarkdown(model,selection),selection.canonicalUrl,
+ `<form class="catalog-search" method="get" action="/tools"><label for="catalog-query">Find a tool<input id="catalog-query" name="q" value="${escape(selection.query)}" maxlength="120" type="search"></label><input type="hidden" name="limit" value="${selection.limit}"><button type="submit">Search</button></form>`);

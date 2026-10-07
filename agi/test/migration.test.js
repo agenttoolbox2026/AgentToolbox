@@ -33,7 +33,7 @@ function fixture(t,{run,settle}={}){
  const assets={fetch:async request=>{
   assetRequests.push(request);
   const path=new URL(request.url).pathname;
-  const files={'/style.css':'style.css','/workflow.css':'workflow.css','/humans.css':'humans.css','/header.css':'header.css','/site.js':'site.js','/retry-envelope.js':'retry-envelope.js','/agenttoolbox-icon.png':'agenttoolbox-icon.png'};
+  const files={'/style.css':'style.css','/workflow.css':'workflow.css','/humans.css':'humans.css','/header.css':'header.css','/forms.css':'forms.css','/site.js':'site.js','/retry-envelope.js':'retry-envelope.js','/agenttoolbox-icon.png':'agenttoolbox-icon.png'};
   if(!Object.hasOwn(files,path))return new Response(null,{status:404});
   const content=await readFile(new URL('../public/'+files[path],import.meta.url));
   return new Response(request.method==='HEAD'?null:content,{headers:{'Content-Type':path.endsWith('.js')?'text/javascript':path.endsWith('.css')?'text/css':'image/png'}});
@@ -194,13 +194,13 @@ test('operational pages retain working CSP and load actual workflow/header CSS a
  for(const path of ['/submit-tool','/update-tool','/products/docs-pack/preview','/products/docs-pack/reviews']){
   const response=await s.next(path);assert.equal(response.status,200,path);
   const html=await response.text(),policy=response.headers.get('content-security-policy');
-  assert.match(html,/href="\/workflow\.css(?:\?[^\"]*)?"/,path);assert.match(html,/src="\/site\.js(?:\?[^\"]*)?"/,path);
-  assert.doesNotMatch(html,/href="\/style\.css(?:\?|\")/,path);
+  assert.match(html,/href="\/forms\.css(?:\?[^\"]*)?"/,path);assert.match(html,/src="\/site\.js(?:\?[^\"]*)?"/,path);
+  assert.match(html,/href="\/style\.css(?:\?|\")/,path);
   assert(policy.includes("script-src 'self'"),path);assert(policy.includes("form-action 'self'"),path);
   assert(!policy.includes("connect-src 'none'"),path);assert.equal(response.headers.get('cache-control'),'no-store');
  }
  const secrets={Authorization:'Bearer private-sentinel',Cookie:'private-sentinel','PAYMENT-SIGNATURE':'private-sentinel','X-Preparation-Capability':'private-sentinel','X-Creator-Capability':'private-sentinel','X-Referral-Capability':'private-sentinel'};
- for(const path of ['/workflow.css','/header.css','/site.js','/retry-envelope.js'])for(const method of ['GET','HEAD']){
+ for(const path of ['/forms.css','/workflow.css','/header.css','/site.js','/retry-envelope.js'])for(const method of ['GET','HEAD']){
   const response=await s.next(path+'?private=private-query',{method,headers:secrets});assert.equal(response.status,200,path);
   assert.equal(response.headers.get('cache-control'),path==='/header.css'?'public, max-age=3600':'no-store');
   const body=await response.text(),sent=s.assetRequests.at(-1);
