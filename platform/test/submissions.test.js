@@ -5,6 +5,7 @@ import {database} from '../scripts/local-db.js';
 import {createPlatform} from '../src/app.js';
 import {CREATOR_TERMS,submitTool,getSubmission,creatorAccrual,creatorBeneficiary} from '../src/submissions.js';
 import {hash} from '../src/telemetry.js';
+import {submitToolUpdate,getCreatorTool} from '../src/tool-updates.js';
 import {paymentRequirements,BASE_NETWORK,BASE_USDC,MAX_UINT256} from '../src/payment-config.js';
 import {paidInvocation,quotedPayment} from '../src/x402.js';
 import {encodePaymentSignatureHeader} from '@x402/core/http';
@@ -119,7 +120,7 @@ async function paidFixture({live=true}={}){
   const body={version,input:{n},payment_amount_atomic:amount,max_charge_usdc_atomic:amount,quote_id:quote.quote_id,...bodyExtra};
   const request=new Request(url,{method:'POST',headers:{'PAYMENT-SIGNATURE':encodePaymentSignatureHeader(payload),'X-AgentToolbox-Sample':'synthetic'}});
   const invoke=()=>paidInvocation({db,request,body,key,product:p,handler,config,origin,adapterFactory:async()=>({requirements:terms,verify:async()=>{counts.verify++;return {isValid:true,payer};},settle:async()=>{counts.settle++;if(beforeSettle)beforeSettle();if(unknown)throw new Error('local unknown');return {success:true,network:BASE_NETWORK,transaction,payer,amount};}})});
-  return {invoke,body};
+  return {invoke,body,request,key,terms};
  };
  return {db,submitted,product,handler,config,counts,run,install:()=>db.sqlite.prepare('UPDATE platform_creator_entitlements SET installed_adapter=? WHERE tool_id=?').run(handler.creatorAdapterId,product.id)};
 }
@@ -145,4 +146,18 @@ test('failed/unknown/non-live operations never accrue; forged client beneficiari
   const frozen=await s.run({beforeSettle:()=>s.db.sqlite.exec('UPDATE platform_creator_entitlements SET installed_adapter=NULL')});await frozen.invoke();assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) n FROM platform_creator_allocations').get().n,1);
  }finally{s.db.close();}
  const mock=await paidFixture({live:false});try{mock.install();await(await mock.run()).invoke();assert.equal(mock.db.sqlite.prepare('SELECT COUNT(*) n FROM platform_live_receipts').get().n,0);}finally{mock.db.close();}
+});
+
+test('metadata approval leaves outstanding installed quotes unchanged; separate adapter change fails before settlement and replay stays frozen',async()=>{
+ const s=await paidFixture();try{
+  s.install();const outstanding=await s.run();
+  const p=await submitToolUpdate({db:s.db,tool:s.product.id,body:{request_id:crypto.randomUUID(),creator_secret_hash:await hash(capability),terms_version:CREATOR_TERMS.terms_version,base_version:'0.1.0',expected_head_revision:0,proposed_version:'0.2.0',proposal:{...proposal,name:'LOCAL new metadata'}},capability,client:'updates'});
+  await s.db.prepare('INSERT INTO platform_tool_update_decisions VALUES(?,?,?,?,?,?,?,?,?,?,?)').bind(crypto.randomUUID(),p.update_id,'fixture-owner',await hash(crypto.randomUUID()),'a'.repeat(64),0,1,0,'approved','Local test',date).run();
+  assert.equal((await getCreatorTool({db:s.db,tool:s.product.id,capability})).current_version,'0.2.0');assert.equal(s.product.version,'0.1.0');assert.equal(s.handler.creatorAdapterId,'local-fixture-only');
+  const result=await(await outstanding.invoke()).json();assert.equal(result.version,'0.1.0');assert.equal(s.counts.settle,1);
+  const unused=await s.run(),changed={...s.handler,creatorAdapterId:'separately-reviewed-new-revision'};s.db.sqlite.prepare('UPDATE platform_creator_entitlements SET installed_adapter=? WHERE tool_id=?').run(changed.creatorAdapterId,s.product.id);
+  let adapterCalls=0;await assert.rejects(paidInvocation({db:s.db,request:unused.request,body:unused.body,key:unused.key,product:s.product,handler:changed,config:s.config,origin,adapterFactory:async()=>{adapterCalls++;throw new Error('Must fail before payment adapter');}}),e=>e.code==='quote_terms_changed');assert.equal(adapterCalls,0);assert.equal(s.counts.settle,1);
+  const replay=await paidInvocation({db:s.db,request:outstanding.request,body:outstanding.body,key:outstanding.key,product:{...s.product,version:'0.9.0'},handler:changed,config:s.config,origin,adapterFactory:async()=>{throw new Error('Replay must not verify or settle');}});assert.deepEqual(await replay.json(),result);
+  const saved=s.db.sqlite.prepare('SELECT * FROM platform_payments WHERE operation_id=?').get(result.operation_id);assert.equal(saved.version,'0.1.0');assert(saved.minimum_policy.endsWith(':adapter:local-fixture-only'));assert.equal(saved.creator_tool_id,s.product.id);assert.equal(saved.creator_share_bps,9000);
+ }finally{s.db.close();}
 });

@@ -111,7 +111,7 @@ test('official MCP SDK discovers active paid HTTP contract and retired stop',asy
  const run=await start({port:0});const client=new Client({name:'platform-smoke',version:'1'},{capabilities:{}});
  try{
   await client.connect(new StreamableHTTPClientTransport(new URL(run.origin+'/mcp'),{requestInit:{headers:{'X-AgentToolbox-Sample':'synthetic'}}}));
-   const tools=await client.listTools();assert.deepEqual(tools.tools.map(t=>t.name).sort(),['get_creator_terms','get_product','get_review','get_tool_submission','invoke_product','leave_feedback','list_products','list_review_replies','list_reviews','reply_to_review','report_outcome','submit_review','submit_tool']);
+   const tools=await client.listTools();assert.deepEqual(tools.tools.map(t=>t.name).sort(),['get_creator_terms','get_creator_tool','get_product','get_review','get_tool_submission','get_tool_update','invoke_product','leave_feedback','list_products','list_review_replies','list_reviews','reply_to_review','report_outcome','submit_review','submit_tool','submit_tool_update']);
   const list=await client.callTool({name:'list_products',arguments:{}});assert.deepEqual(list.structuredContent.products.map(p=>p.id),['docs-pack','quote-proof','contract-cases','mcp-wirecheck']);
   const paid=await client.callTool({name:'invoke_product',arguments:{product_id:'docs-pack',version:'0.1.0',input:{},max_charge_usdc_atomic:10000,idempotency_key:'mcp_paid_abcdefghijklmnopqrstuvwxyz'}});assert.equal(paid.isError,true);assert.match(paid.content[0].text,/paid_http_required/);
   const detail=await client.callTool({name:'get_product',arguments:{product_id:'retry-gate'}});assert.equal(detail.structuredContent.product.status,'retired');

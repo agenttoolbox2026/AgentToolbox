@@ -1,0 +1,15 @@
+{
+  "origin": "https://agnttoolbx.agenttoolbox2026.workers.dev",
+  "worker_version": "6170122e-7107-40f2-89d7-2c9742e16de4",
+  "pages": [
+    "/",
+    "/submit-tool"
+  ],
+  "production_screenshots": true,
+  "library_file_ids": {
+    "desktop_home": "libfile_91573d370adc819188e14b5051f2e215",
+    "desktop_submit": "libfile_57362a13c2a48191bb2ab39d07bb745a",
+    "mobile_home": "libfile_e9b367f8fd5c8191be414c5cf77faedc",
+    "mobile_submit": "libfile_bc205b5ba73481918a03ea5d1ce683ed"
+  }
+}

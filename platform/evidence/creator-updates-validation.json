@@ -1,0 +1,95 @@
+{
+  "origin": "http://127.0.0.1:8790",
+  "results": [
+    {
+      "device": "desktop",
+      "path": "/",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "desktop",
+      "path": "/submit-tool",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "desktop",
+      "path": "/update-tool",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "desktop",
+      "path": "/products/docs-pack/preview",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "desktop",
+      "path": "/products/contract-cases/preview",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "desktop",
+      "private_update": true,
+      "retained_approved_version": "0.1.0",
+      "private_status": true,
+      "xss_executed": false,
+      "fee_charged_atomic": "0"
+    },
+    {
+      "device": "mobile",
+      "path": "/",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "mobile",
+      "path": "/submit-tool",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "mobile",
+      "path": "/update-tool",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "mobile",
+      "path": "/products/docs-pack/preview",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "mobile",
+      "path": "/products/contract-cases/preview",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "mobile",
+      "private_update": true,
+      "retained_approved_version": "0.1.0",
+      "private_status": true,
+      "xss_executed": false,
+      "fee_charged_atomic": "0"
+    }
+  ],
+  "browser_errors": [],
+  "live_mutations": 0,
+  "production_deployed": false,
+  "migration": "0008_creator_updates.sql",
+  "migration_sha256": "5f389f5b6139feca2c0a515953c84eaad03c53b5c83685157ceae856ff9b699a",
+  "sql_splitter": "actual Wrangler splitter; 22 commands applied successfully to local D1",
+  "payment_adapters": "mocked only",
+  "test_scope": "Full API/MCP/payment/migration regressions plus isolated local workerd/D1 desktop/mobile form QA",
+  "tests_passed": 157,
+  "tests_failed": 0,
+  "tests_skipped": 0,
+  "syntax_passed": true,
+  "whitespace_passed": true,
+  "production_bundle_dry_run_passed": true
+}

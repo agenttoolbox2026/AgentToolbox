@@ -1,6 +1,6 @@
 import {products,findProduct} from './registry.js';
 import {service,searchSchema,invokeSchema,outcomeSchema,PlatformError} from './service.js';
-import {home,humansPage,notFoundPage,reviewsPage,reviewPage,previewPage,submissionPage} from './pages.js';
+import {home,humansPage,notFoundPage,reviewsPage,reviewPage,previewPage,submissionPage,updatePage} from './pages.js';
 import {publicPurchases} from './purchases.js';
 import {markdown,openapi} from './discovery.js';
 import {mcp} from './mcp.js';
@@ -9,6 +9,7 @@ import {runtimeCatalog} from './payment-config.js';
 import {runExample} from './examples.js';
 import {prepareResult} from './preparations.js';
 import {creatorTerms,submitTool,getSubmission} from './submissions.js';
+import {getCreatorTool,submitToolUpdate,getToolUpdate} from './tool-updates.js';
 const HEADERS={
  'Access-Control-Allow-Origin':'*',
  'Access-Control-Allow-Methods':'GET,HEAD,POST,OPTIONS',
@@ -58,6 +59,9 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
     api.creatorTerms=creatorTerms;
     api.submitTool=async(body,capability)=>{if(!await feedbackLimit(client))throw new PlatformError(429,'rate_limited','Wait before submitting another proposal.');return submitTool({db,body,capability,client});};
     api.getSubmission=(id,capability)=>getSubmission({db,id,capability});
+    api.getCreatorTool=(tool,capability,params)=>getCreatorTool({db,tool,capability,params});
+    api.getToolUpdate=(id,capability)=>getToolUpdate({db,id,capability});
+    api.submitToolUpdate=async(tool,body,capability)=>{if(!await feedbackLimit(client))throw new PlatformError(429,'rate_limited','Wait before submitting another proposal.');return submitToolUpdate({db,tool,body,capability,client});};
     if(path==='/mcp') {
       if(method!=='POST')throw new PlatformError(405,'method_not_allowed','MCP uses POST.');
       if(request.headers.has('Origin')&&request.headers.get('Origin')!==origin)throw new PlatformError(403,'origin_not_allowed','Use the catalog origin.');
@@ -66,6 +70,11 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
     if(['GET','HEAD'].includes(method)) {
       if(path==='/v1/creator-terms')return finish(Response.json(creatorTerms()));
       if(path==='/submit-tool')return finish(html(submissionPage()));
+      if(path==='/update-tool')return finish(html(updatePage()));
+      const creatorTool=path.match(/^\/v1\/creator-tools\/([a-z0-9-]{1,64})$/);
+      if(creatorTool)return finish(Response.json(await api.getCreatorTool(creatorTool[1],request.headers.get('X-Creator-Capability'),Object.fromEntries(url.searchParams))));
+      const toolUpdate=path.match(/^\/v1\/tool-updates\/([0-9a-f-]{36})$/);
+      if(toolUpdate)return finish(Response.json(await api.getToolUpdate(toolUpdate[1],request.headers.get('X-Creator-Capability'))));
       const submission=path.match(/^\/v1\/tool-submissions\/([0-9a-f-]{36})$/);
       if(submission)return finish(Response.json(await api.getSubmission(submission[1],request.headers.get('X-Creator-Capability'))));
       const preview=path.match(/^\/products\/([a-z0-9-]{1,64})\/preview$/);
@@ -104,6 +113,8 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
       return finish(html(notFoundPage(),404));
     }
     if(method==='POST') {
+      const update=path.match(/^\/v1\/creator-tools\/([a-z0-9-]{1,64})\/updates$/);
+      if(update)return finish(Response.json(await api.submitToolUpdate(update[1],await jsonBody(request),request.headers.get('X-Creator-Capability'))));
       if(path==='/v1/tool-submissions')return finish(Response.json(await api.submitTool(await jsonBody(request),request.headers.get('X-Creator-Capability'))));
       if(path==='/v1/reviews')return finish(Response.json(await api.submitReview(await jsonBody(request),request.headers.get('Idempotency-Key'))));
       const reply=path.match(/^\/v1\/reviews\/([0-9a-f-]{36})\/replies$/);

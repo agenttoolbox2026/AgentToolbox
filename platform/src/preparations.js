@@ -3,7 +3,8 @@ import {hash} from './telemetry.js';
 import {canonical} from './x402.js';
 import {minimumAmount,paymentRequirements} from './payment-config.js';
 export {PREPARATION_LIMITS} from './preparation-limits.js';
-export const minimumPolicy=product=>`${product.version}:${minimumAmount(product)}`;
+// Creator adapter IDs identify immutable installed revisions; metadata approval never changes them.
+export const minimumPolicy=(product,handler)=>`${product.version}:${minimumAmount(product)}`+(typeof handler?.creatorAdapterId==='string'?':adapter:'+handler.creatorAdapterId:'');
 export async function capabilityHash(request){
  const secret=request.headers.get('X-Preparation-Capability');
  if(!/^atbp_[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(secret??''))throw new PlatformError(403,'preparation_capability_required','Keep a client-generated 32-byte atbp_ capability; send it only in X-Preparation-Capability.');
@@ -56,7 +57,7 @@ export async function createQuote({db,request,body,product,handler,config,now=()
  const inputHash=prepared?.input_hash??await hash(canonical(validate(handler.input,data.input)));
  const expires=prepared?.expires_at??new Date(date.getTime()+900000).toISOString(),id=crypto.randomUUID();
  const saved=await db.prepare(`INSERT INTO platform_quotes(quote_id,product_id,version,input_hash,result_hash,prepared_id,capability_hash,amount_atomic,minimum_policy,requirements_json,created_at,expires_at)
- SELECT ?,?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM platform_quotes WHERE created_at>=?)<200`).bind(id,product.id,product.version,inputHash,prepared?.result_hash??null,prepared?.prepared_id??null,prepared?.capability_hash??null,terms.amount,minimumPolicy(product),canonical(terms),iso,expires,iso.slice(0,10)+'T00:00:00.000Z').run();
+ SELECT ?,?,?,?,?,?,?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM platform_quotes WHERE created_at>=?)<200`).bind(id,product.id,product.version,inputHash,prepared?.result_hash??null,prepared?.prepared_id??null,prepared?.capability_hash??null,terms.amount,minimumPolicy(product,handler),canonical(terms),iso,expires,iso.slice(0,10)+'T00:00:00.000Z').run();
  if(saved.meta.changes!==1)throw new PlatformError(429,'quote_budget_exhausted','Daily quote budget exhausted.');
  return {quote_id:id,expires_at:expires,product_id:product.id,version:product.version,payment_amount_atomic:terms.amount,minimum_amount_atomic:minimumAmount(product),prepared_id:prepared?.prepared_id??null,terms};
 }
@@ -66,7 +67,7 @@ export async function loadQuote({db,request,body,product,handler,config,now=new 
  if(row.operation_id)throw new PlatformError(409,'quote_already_claimed','Reuse the original paid request and authorization.');
  if(row.expires_at<=now.toISOString())throw new PlatformError(410,'quote_expired','Request a fresh quote before authorizing payment.');
  const current=paymentRequirements(product,config,body.payment_amount_atomic);
- if(row.minimum_policy!==minimumPolicy(product)||canonical(current)!==row.requirements_json)throw new PlatformError(409,'quote_terms_changed','Request a current quote before authorizing payment.');
+ if(row.minimum_policy!==minimumPolicy(product,handler)||canonical(current)!==row.requirements_json)throw new PlatformError(409,'quote_terms_changed','Request a current quote before authorizing payment.');
  let prepared,input;
  if(row.prepared_id){prepared=await preparedRecord({db,request,id:row.prepared_id,product,now});if(prepared.result_hash!==row.result_hash||prepared.capability_hash!==row.capability_hash)throw new PlatformError(409,'quote_mismatch','Prepared result differs from quote.');}
  else input=validate(handler.input,body.input);

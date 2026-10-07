@@ -1,0 +1,20 @@
+{
+  "migration": "0007_creator_submissions.sql",
+  "migration_sha256": "d6759a372b2e728da940c19d72007398349aa428921a26440c27fd6902a49704",
+  "migrations": 7,
+  "new_tables": 7,
+  "financial_columns_verified": 3,
+  "legacy_history_preserved": true,
+  "historical_daily_rows": 36,
+  "historical_daily_events": 545,
+  "payments": 0,
+  "ledger": 0,
+  "purchases": 0,
+  "private_feedback_preserved": 1,
+  "public_reviews": 0,
+  "replies": 0,
+  "creator_submissions": 0,
+  "creator_receipts": 0,
+  "creator_allocations": 0,
+  "history_backfills": 0
+}

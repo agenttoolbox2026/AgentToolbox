@@ -127,3 +127,5 @@ automatic billing was added.
 
 Read [product and benchmark](docs/docs-pack.md),
 [operations](docs/platform-operations.md) and [payment limits](docs/platform-x402.md).
+
+Approved creators can propose versioned metadata updates using their original capability: `GET /v1/creator-tools/{tool_id}`, `POST /v1/creator-tools/{tool_id}/updates`, and `GET /v1/tool-updates/{id}`; matching MCP tools are `get_creator_tool`, `submit_tool_update`, and `get_tool_update`. The human form is `/update-tool`. Pending/rejected updates preserve the approved version. Approval advances only metadata and preserves the stable identity, original lifetime gross share, and separately installed adapter. See [the shared update contract](docs/creator-update-contract.md) for CAS, idempotency, bounds and deployment ordering.
