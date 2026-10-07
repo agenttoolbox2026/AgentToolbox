@@ -126,9 +126,18 @@ export function extractExcerpts(text,query,budget){
  }
  return picked.sort((a,b)=>a.start_char-b.start_char);
 }
+export function docsPackPreview(output){
+ const queryTerms=terms(output.query),first=output.sources[0]?.excerpts[0];
+ const snippet=first?Array.from(first.text).slice(0,120).join(''):'';
+ return {source_count:output.sources.length,matched_source_count:output.sources.filter(s=>s.selection_status==='matched').length,excerpt_chars:output.excerpt_chars,
+  match_measure:'Distinct literal query terms covered by selected excerpts; not semantic relevance.',
+  sources:output.sources.map((source,index)=>({source_index:index,matched_terms_count:new Set(source.excerpts.flatMap(excerpt=>excerpt.matched_terms)).size,query_terms_count:queryTerms.length})),
+  sample:{source_index:0,text:snippet,truncated:!!first&&snippet.length<first.text.length},source_content:'untrusted_data',
+  content:'Free sample from the saved result. Payment unlocks full bounded excerpts and source hashes.'};
+}
 export function createDocsPack({fetcher=fetch,htmlExtractor=htmlText,now=()=>new Date()}={}){
  return {input:docsPackInput,output:docsPackOutput,
-  preview:output=>({source_count:output.sources.length,matched_source_count:output.sources.filter(s=>s.selection_status==='matched').length,excerpt_chars:output.excerpt_chars,content:'Full excerpts and source hashes unlock after confirmed payment.'}),
+  preview:docsPackPreview,
   failureReason:e=>['source_too_large','empty_source','robots_unavailable','source_disallows_access','unsupported_url','redirect_limit','unsupported_redirect','fetch_failed','source_disallows_excerpts','unsupported_content_type','no_matching_excerpt','output_too_large'].includes(e?.message)?e.message:'source_unavailable',
   async run(input){
    const control=new AbortController(),timer=setTimeout(()=>control.abort(),12000),policies=new Map();

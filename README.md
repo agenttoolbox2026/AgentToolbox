@@ -8,11 +8,14 @@ using x402 v2:
 - **Docs Pack:** query-matched excerpts from supported documentation sources.
 - **QuoteProof:** quotation matches, ambiguity and source evidence; not claim truth.
 - **ContractCases:** independently checked boundary and negative examples for a bounded JSON Schema subset.
-- **MCP WireCheck for Cloudflare Workers:** discovery and tools/list checks on your public workers.dev endpoint.
+- **MCP WireCheck:** discovery and tools/list checks on your public workers.dev endpoint.
 
 No qualifying outcome, no charge. Each tool publishes versioned machine criteria
 at `/v1/products/{id}/criteria`; the same predicates run in its handler alongside
-the input/output schemas and limits. Settlement follows validated success.
+the input/output schemas and limits. Buyers can inspect canonical success bytes,
+verify their SHA-256, and pin that definition before paying. Settlement follows
+validated success. All four current products are built by AgentToolbox.
+See [success contract pins](docs/success-contracts.md).
 
 We are in **Phase 1: learning from real agent buyers**. The next milestone is one
 verified paid purchase by an external agent. The long-term vision is a public
@@ -52,9 +55,15 @@ Runnable scripts: [`examples/free-call.sh`](examples/free-call.sh),
 [`examples/paid-call.sh`](examples/paid-call.sh). An unsigned challenge is not a
 completed purchase or verification that a wallet can pay.
 
+Free offline test cases at `/v1/products/{id}/examples` expose inputs, mocked
+source responses and expected checks for all four products. These are
+independently checkable fixtures, not live customer or usefulness evidence.
+See [value and evidence](docs/tool-value-evidence.md).
+
 Optional real-input previews for Docs Pack and ContractCases retain a private
 result and require a quote/payment to unlock it. Verdict tools have no dynamic
-preview. Higher buyer-chosen amounts remain supported as an advanced option and
+preview. Docs Pack shows literal term coverage and a short snippet for free.
+Higher buyer-chosen amounts remain supported as an advanced option and
 require an exact durable quote. Neither flow is required for the default direct
 call. See [pricing and preview flow](docs/buyer-chosen-pricing.md).
 
@@ -62,7 +71,8 @@ call. See [pricing and preview flow](docs/buyer-chosen-pricing.md).
 
 - HTTP catalog: `/v1/products`; MCP discovery: `/mcp`
 - Product contract and charge criteria: `/v1/products/{id}` and `/v1/products/{id}/criteria`
-- Fixed free example: `/v1/products/{id}/example`
+- Free test cases: `/v1/products/{id}/examples`; live fixed example: `/v1/products/docs-pack/example`
+- Read-only payment challenge: `GET` or `HEAD /v1/products/{id}/invoke`
 - Paid invocation: `POST /v1/products/{id}/invoke` (HTTP x402 v2)
 - MCP Registry: `io.github.agenttoolbox2026/docs-pack` (v0.1.0)
 - Machine instructions: `/llms.txt`; schemas: `/openapi.json`
@@ -87,11 +97,16 @@ gross revenue**, with no operating-cost or referral deductions. Rejection refund
 the actual fee paid; the current promotion has no fee paid or refund due. No
 nonzero fee, refund or payout transfers are enabled.
 
-Approved-creator updates are part of the current shipping scope: use the same
-private creator capability and stable tool identity to propose an update for
-review. Retain the last approved version until the update is accepted. This
-scope statement does not establish that update APIs are already deployed;
-check the current contract and deployment evidence for availability.
+Approved creators can propose versioned metadata updates using their original
+capability: `GET /v1/creator-tools/{tool_id}`,
+`POST /v1/creator-tools/{tool_id}/updates`, and `GET /v1/tool-updates/{id}`.
+Matching MCP tools are `get_creator_tool`, `submit_tool_update`, and
+`get_tool_update`; the human form is `/update-tool`. Pending or rejected updates
+preserve the approved version. Approval advances metadata while preserving the
+stable tool identity, original lifetime gross share and separately installed
+adapter. See [the shared update contract](docs/creator-update-contract.md) for
+concurrency checks, idempotency, bounds and deployment ordering. Check deployment
+evidence for the currently published version.
 
 Proposals and status remain capability-protected. Metadata approval alone does
 not publish, install, fetch or execute a tool. See the
@@ -103,6 +118,16 @@ remain future work. Submissions and approvals do not count as paid-buyer proof.
 Public [reviews](docs/public-reviews.md) remain available through HTTP/MCP.
 Purchase-linked badges do not verify identity or usefulness. Private owner
 feedback is the primary channel for current learning.
+
+## First-party referrals
+
+The referral pilot accrues **1% of gross receipts for AgentToolbox's four own
+products only**. Register a private capability at `/v1/referrals`, share the
+returned public code, and have the buyer include `referral_code` in its original
+paid request. A qualifying settled operation accrues once. Creator products and
+their existing revenue share are excluded. Attribution does not prove distinct
+agents or customer acquisition. **No payout processor or transfers are enabled.**
+Read the frozen terms at `/v1/referral-terms` and the [referral contract](docs/referrals.md).
 
 ## Run
 
@@ -127,5 +152,3 @@ automatic billing was added.
 
 Read [product and benchmark](docs/docs-pack.md),
 [operations](docs/platform-operations.md) and [payment limits](docs/platform-x402.md).
-
-Approved creators can propose versioned metadata updates using their original capability: `GET /v1/creator-tools/{tool_id}`, `POST /v1/creator-tools/{tool_id}/updates`, and `GET /v1/tool-updates/{id}`; matching MCP tools are `get_creator_tool`, `submit_tool_update`, and `get_tool_update`. The human form is `/update-tool`. Pending/rejected updates preserve the approved version. Approval advances only metadata and preserves the stable identity, original lifetime gross share, and separately installed adapter. See [the shared update contract](docs/creator-update-contract.md) for CAS, idempotency, bounds and deployment ordering.

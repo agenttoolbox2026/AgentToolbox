@@ -4,16 +4,19 @@ import {home,humansPage,notFoundPage,reviewsPage,reviewPage,previewPage,submissi
 import {publicPurchases} from './purchases.js';
 import {markdown,openapi} from './discovery.js';
 import {mcp} from './mcp.js';
-import {paidInvocation,paymentManifest,quotedPayment} from './x402.js';
+import {paidInvocation,paymentManifest,quotedPayment,discoveryChallenge} from './x402.js';
 import {runtimeCatalog} from './payment-config.js';
+import {successContractPin} from './contract-pins.js';
+import {freeExampleManifest} from './free-examples.js';
 import {runExample} from './examples.js';
 import {prepareResult} from './preparations.js';
 import {creatorTerms,submitTool,getSubmission} from './submissions.js';
+import {referralTerms,registerReferral,getReferral} from './referrals.js';
 import {getCreatorTool,submitToolUpdate,getToolUpdate} from './tool-updates.js';
 const HEADERS={
  'Access-Control-Allow-Origin':'*',
  'Access-Control-Allow-Methods':'GET,HEAD,POST,OPTIONS',
- 'Access-Control-Allow-Headers':'Content-Type,Idempotency-Key,Accept,MCP-Protocol-Version,MCP-Session-Id,PAYMENT-SIGNATURE,X-AgentToolbox-Sample,X-Preparation-Capability,X-Creator-Capability',
+ 'Access-Control-Allow-Headers':'Content-Type,Idempotency-Key,Accept,MCP-Protocol-Version,MCP-Session-Id,PAYMENT-SIGNATURE,X-AgentToolbox-Sample,X-Preparation-Capability,X-Creator-Capability,X-Referral-Capability',
  'Access-Control-Expose-Headers':'PAYMENT-REQUIRED,PAYMENT-RESPONSE',
  'X-Content-Type-Options':'nosniff',
  'Referrer-Policy':'no-referrer',
@@ -32,9 +35,9 @@ async function jsonBody(request){
  const bytes=await boundedBody(request);
  try{return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{throw new PlatformError(400,'invalid_json','Malformed or missing JSON.');}
 }
-function validate(schema,value) {const parsed=schema.safeParse(value);if(!parsed.success)throw new PlatformError(400,'invalid_input','Request does not match the published schema.');return parsed.data;}
+function validate(schema,value) {const parsed=schema.safeParse(value);if(!parsed.success){if(schema===invokeSchema&&parsed.error.issues.some(issue=>issue.path[0]==='agent_id'))throw new PlatformError(400,'invalid_agent_id','agent_id must be a random UUID pseudonym (for example crypto.randomUUID()). Omit it if unavailable; it does not prove agent identity.');throw new PlatformError(400,'invalid_input','Request does not match the published schema.');}return parsed.data;}
 function html(content,status=200){return new Response(content,{status,headers:{'Content-Type':'text/html; charset=utf-8'}});}
-export function createPlatform({db,origin,catalog:sourceCatalog=products,handlers={},limit=async()=>true,feedbackLimit=async()=>true,assets,payments={enabled:false},paymentAdapterFactory}) {
+export function createPlatform({db,origin,catalog:sourceCatalog=products,handlers={},limit=async()=>true,feedbackLimit=async()=>true,assets,payments={enabled:false},paymentAdapterFactory,index402VerificationHash}) {
  const catalog=runtimeCatalog(sourceCatalog,handlers,payments);
  return async function app(request,client='unknown') {
   const url=new URL(request.url),path=url.pathname,method=request.method;
@@ -68,7 +71,22 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
       return finish(await mcp(request,api,await jsonBody(request)));
     }
     if(['GET','HEAD'].includes(method)) {
+      if(path==='/.well-known/402index-verify.txt'){
+        if(!/^[0-9a-f]{64}$/.test(index402VerificationHash??''))throw new PlatformError(404,'verification_not_configured','No public verification hash is configured.');
+        return finish(new Response(index402VerificationHash,{headers:{'Content-Type':'text/plain; charset=utf-8'}}));
+      }
+      const discoveryInvoke=path.match(/^\/v1\/products\/([a-z0-9-]{1,64})\/invoke$/);
+      if(discoveryInvoke){
+        const product=findProduct(discoveryInvoke[1],catalog);
+        if(!product||!['active','validation'].includes(product.status)||!product.pricing.payments_enabled)throw new PlatformError(404,'not_found','No payable resource at this path.');
+        if(!handlers[product.id])throw new PlatformError(503,'payment_not_ready','No configured paid contract.');
+        return finish(await discoveryChallenge({product,config:payments,origin}));
+      }
+      const examples=path.match(/^\/v1\/products\/([a-z0-9-]{1,64})\/examples$/);
+      if(examples){const product=findProduct(examples[1],catalog),manifest=product?.provider?.type==='first_party'?freeExampleManifest(product.id):null;if(!manifest)throw new PlatformError(404,'examples_unavailable','No free verification fixtures for this tool.');return finish(Response.json(manifest));}
       if(path==='/v1/creator-terms')return finish(Response.json(creatorTerms()));
+      if(path==='/v1/referral-terms')return finish(Response.json(referralTerms()));
+      if(path==='/v1/referrals/me')return finish(Response.json(await getReferral({db,capability:request.headers.get('X-Referral-Capability')})));
       if(path==='/submit-tool')return finish(html(submissionPage()));
       if(path==='/update-tool')return finish(html(updatePage()));
       const creatorTool=path.match(/^\/v1\/creator-tools\/([a-z0-9-]{1,64})$/);
@@ -106,13 +124,17 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
       const reviewDetail=path.match(/^\/(v1\/)?reviews\/([0-9a-f-]{36})(\/replies)?$/);
       if(reviewDetail){const params=Object.fromEntries(url.searchParams);const data=reviewDetail[3]?await api.replies(reviewDetail[2],params):await api.review(reviewDetail[2],params);return finish(reviewDetail[1]||reviewDetail[3]?Response.json(data):html(reviewPage(data)));}
       const criteria=path.match(/^\/v1\/products\/([a-z0-9-]{1,64})\/criteria$/);
-      if(criteria){const product=findProduct(criteria[1],catalog);if(!product?.outcome.criteria)throw new PlatformError(404,'criteria_unavailable','No server-validated criteria for this tool.');return finish(Response.json({api_version:'1',product_id:product.id,product_version:product.version,criteria:product.outcome.criteria,limits:product.limits,input_schema_url:'/v1/products/'+product.id,output_schema_url:'/v1/products/'+product.id}));}
+      if(criteria){const product=findProduct(criteria[1],catalog);if(!product?.outcome.criteria)throw new PlatformError(404,'criteria_unavailable','No server-validated criteria for this tool.');return finish(Response.json({api_version:'1',product_id:product.id,product_version:product.version,criteria:product.outcome.criteria,limits:product.limits,...await successContractPin(product),input_schema_url:'/v1/products/'+product.id,output_schema_url:'/v1/products/'+product.id}));}
       const detail=path.match(/^\/(v1\/)?products\/([a-z0-9-]{1,64})$/);
       if(detail){const p=findProduct(detail[2],catalog);if(!p)throw new PlatformError(404,'product_not_found','No product has that identifier.');if(!isHead)await api.detail(p.id);return finish(detail[1]?Response.json({api_version:'1',product:p}):new Response(null,{status:308,headers:{Location:'/v1/products/'+p.id}}));}
       if(path.startsWith('/v1')||path==='/admin'||path.startsWith('/metrics'))throw new PlatformError(404,'not_found','No public resource at this path.');
       return finish(html(notFoundPage(),404));
     }
     if(method==='POST') {
+      if(path==='/v1/referrals'){
+        if(!await feedbackLimit(client))throw new PlatformError(429,'rate_limited','Wait before registering another referral account.');
+        return finish(Response.json(await registerReferral({db,body:await jsonBody(request),capability:request.headers.get('X-Referral-Capability'),client})));
+      }
       const update=path.match(/^\/v1\/creator-tools\/([a-z0-9-]{1,64})\/updates$/);
       if(update)return finish(Response.json(await api.submitToolUpdate(update[1],await jsonBody(request),request.headers.get('X-Creator-Capability'))));
       if(path==='/v1/tool-submissions')return finish(Response.json(await api.submitTool(await jsonBody(request),request.headers.get('X-Creator-Capability'))));
@@ -132,7 +154,7 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
           return finish(await paidInvocation({request,product,handler:handlers[product.id],db,config:payments,origin}));
         }
         const body=validate(invokeSchema,await jsonBody(request));
-        if(product && ['active','validation'].includes(product.status) && product.pricing.payments_enabled) return finish(await paidInvocation({request,body,key:request.headers.get('Idempotency-Key'),product,handler:handlers[product.id],db,config:payments,origin,adapterFactory:paymentAdapterFactory}));
+        if(request.headers.has('PAYMENT-SIGNATURE')||(['active','validation'].includes(product.status)&&product.pricing.payments_enabled)) return finish(await paidInvocation({request,body,key:request.headers.get('Idempotency-Key'),product,handler:handlers[product.id],db,config:payments,origin,adapterFactory:paymentAdapterFactory}));
         return finish(Response.json(await api.invoke(invoke[1],body,request.headers.get('Idempotency-Key'))));}
       const outcome=path.match(/^\/v1\/runs\/([0-9a-f-]{36})\/outcome$/);
       if(outcome)return finish(Response.json(await api.outcome(outcome[1],validate(outcomeSchema,await jsonBody(request)))));
