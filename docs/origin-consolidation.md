@@ -8,7 +8,9 @@ Pass `trackingEnabled: false` to `createPlatform`. The early integration name `t
 
 The new scheduled handler can call `expirePaidResults(db)` and `expirePreparations(db, new Date(), {preserveRecords: true})` after scheduler ownership transfers. The latter retains expired unpaid quote/preparation rows, but clears their private result/preview JSON once both expiry and the former one-day cleanup threshold have passed. Identity, capability commitments, input/result hashes, pins and dates remain unchanged. Their original expiry still prevents purchases. The existing 24-hour paid-output retention clears bounded output while preserving financial tombstones and receipts; uncertain settlements retain their durable output. No permanent history purge or capability rewrite is part of consolidation.
 
-Static asset requests pass only the configured origin, asset pathname and GET/HEAD method to the asset binding. Incoming credentials, capabilities, payment headers, cookies, query strings and bodies are discarded. Workflow stylesheet retargeting belongs to the AGI wrapper; canonical forms and retry envelopes remain unchanged.
+Static asset requests pass only the configured origin, asset pathname and GET/HEAD method to the asset binding. Incoming credentials, capabilities, payment headers, cookies, query strings and bodies are discarded. Workflow stylesheet retargeting belongs to the AGI wrapper; scripted form behavior and retry envelopes remain unchanged.
+
+Workflow forms now declare explicit same-origin POST actions. If JavaScript is disabled or fails before intercepting submission, a native form submission cannot serialize capabilities, proposal text or private preview input into a GET URL. The native URL-encoded fallback is rejected by the JSON-only API or the workflow page's unsupported POST route without creating a proposal/preparation. No-JavaScript guides link to AGI's buyer and seller protocol pages; the scripted request/retry-envelope implementation stays intact.
 
 ## Exact cross-origin obligations
 
