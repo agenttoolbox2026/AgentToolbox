@@ -105,6 +105,32 @@ test('an envelope stays bound to the separately retained capability during impor
  assert.equal(fixture.client.snapshot().phase,'prepared');
 });
 
+test('capabilities embedded anywhere in an otherwise valid request ID are rejected before retention, export or fetch',async()=>{
+ const source=await prepared(),original=JSON.parse(source.envelope);
+ for(const request_id of [capability,'prefix_'+capability,capability+'_suffix','prefix_'+capability+'_suffix','prefix_'+otherCapability+'_suffix']){
+  assert.match(request_id,/^[A-Za-z0-9_-]{32,128}$/);
+  const envelope=structuredClone(original);envelope.body.request_id=request_id;
+  const fixture=setup(),safeError=error=>error.message==='A retry request must not contain a private creator capability. No claim was sent.'&&!error.message.includes(capability)&&!error.message.includes(request_id);
+  assert.throws(()=>validateWalletEnvelope(envelope),safeError);
+  await assert.rejects(fixture.client.restore(JSON.stringify(envelope),capability),safeError);
+  assert.equal(fixture.calls.length,0);assert.equal(fixture.client.snapshot().envelope,null);assert.equal(fixture.client.snapshot().phase,'empty');
+  await assert.rejects(fixture.client.send(capability),/Prepare and save/);assert.equal(fixture.calls.length,0);
+ }
+});
+
+test('a bad generated request ID cannot retain or post a capability, and rejected imports preserve a safe retained request',async()=>{
+ for(const requestId of [capability,'prefix_'+capability+'_suffix']){
+  const fixture=setup([json(history())],{cryptoImpl:{subtle:webcrypto.subtle,randomUUID:()=>requestId}});
+  await fixture.client.read(capability);const reads=fixture.calls.length;
+  await assert.rejects(fixture.client.prepare(address,capability),/must not contain a private creator capability/);
+  assert.equal(fixture.client.snapshot().envelope,null);assert.equal(fixture.calls.length,reads);assert.equal(postCalls(fixture).length,0);
+ }
+ const fixture=await prepared(),unsafe=JSON.parse(fixture.envelope);unsafe.body.request_id=capability;
+ await assert.rejects(fixture.client.restore(JSON.stringify(unsafe),capability),/must not contain a private creator capability/);
+ assert.equal(fixture.client.snapshot().envelope,fixture.envelope);assert.equal(fixture.client.snapshot().envelope.includes(capability),false);
+ assert.equal(postCalls(fixture).length,0);
+});
+
 test('malformed, oversized and redirected imports fail closed before any request',async()=>{
  const fixture=await prepared(),original=JSON.parse(fixture.envelope);
  const mutated=change=>{const value=structuredClone(original);change(value);return value;};

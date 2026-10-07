@@ -11,12 +11,20 @@ const fail=message=>{throw new Error(message);};
 const capabilityValue=value=>typeof value==='string'&&capabilityPattern.test(value)?value:fail('Paste the original private creator capability from your earlier submission.');
 const sha256=async(value,cryptoImpl)=>Array.from(new Uint8Array(await cryptoImpl.subtle.digest('SHA-256',new TextEncoder().encode(value))),byte=>byte.toString(16).padStart(2,'0')).join('');
 const envelopeError='Use an unchanged wallet retry request exported by this page. No claim was sent.';
+const withoutCapability=(value,capability)=>{
+ const text=JSON.stringify(value);
+ // Request IDs accept the same characters as capabilities. Reject secret-shaped
+ // substrings too, so copy/export remains safe even after the input changes.
+ if((capability&&text.includes(capability))||/atbc_[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]/.test(text))fail('A retry request must not contain a private creator capability. No claim was sent.');
+ return value;
+};
 
 export function validateWalletEnvelope(value){
  if(!exact(value,['api_version','kind','path','creator_secret_hash','body'])||value.api_version!=='1'||value.kind!=='creator_wallet_claim'||value.path!==walletPath||typeof value.creator_secret_hash!=='string'||!/^[0-9a-f]{64}$/.test(value.creator_secret_hash))fail(envelopeError);
  const body=value.body;
  if(!exact(body,['request_id','expected_revision','network','address'])||typeof body.request_id!=='string'||!/^[A-Za-z0-9_-]{32,128}$/.test(body.request_id)||!validRevision(body.expected_revision,2147483646)||body.network!=='eip155:8453'||!validAddress(body.address))fail(envelopeError);
  if(new TextEncoder().encode(JSON.stringify(value)).length>maxEnvelopeBytes)fail(envelopeError);
+ withoutCapability(value);
  return Object.freeze({...value,body:Object.freeze({...body})});
 }
 
@@ -50,10 +58,11 @@ const errorMessage=(status,code)=>{
 
 export function createWalletClient({fetchImpl=globalThis.fetch,cryptoImpl=globalThis.crypto,timeoutMs=15000}={}){
  let envelope=null,revision=null,readIdentity=null,phase='empty',busy=false;
- const snapshot=()=>({envelope:envelope?JSON.stringify(envelope,null,2):null,revision,phase,busy});
+ const snapshot=()=>({envelope:envelope?JSON.stringify(withoutCapability(envelope),null,2):null,revision,phase,busy});
  const enter=()=>{if(busy)fail('Wait for the current wallet request to finish.');busy=true;};
  const identity=async capability=>sha256(capabilityValue(capability),cryptoImpl);
  const request=async(method,capability,body)=>{
+  if(method==='POST')withoutCapability(body,capabilityValue(capability));
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeoutMs);
   try{
    const response=await fetchImpl(walletPath,{method,headers:{Accept:'application/json','X-Creator-Capability':capability,...(method==='POST'?{'Content-Type':'application/json'}:{})},...(method==='POST'?{body:JSON.stringify(body)}:{}),cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer',signal:controller.signal});
@@ -62,6 +71,7 @@ export function createWalletClient({fetchImpl=globalThis.fetch,cryptoImpl=global
   }finally{clearTimeout(timer);}
  };
  const bound=async capability=>{
+  if(envelope)withoutCapability(envelope,capabilityValue(capability));
   const hash=await identity(capability);
   if(envelope&&hash!==envelope.creator_secret_hash)fail('This request belongs to another creator capability. Paste the original capability separately.');
   return hash;
@@ -86,7 +96,7 @@ export function createWalletClient({fetchImpl=globalThis.fetch,cryptoImpl=global
     if(readIdentity!==hash||revision===null)fail('Read current wallet status with this capability before preparing a claim.');
     if(!validAddress(address))fail('Enter a nonzero public Base wallet address: 0x followed by 40 hexadecimal characters.');
     if(!validRevision(revision,2147483646))fail('The wallet revision limit has been reached.');
-    envelope=validateWalletEnvelope({api_version:'1',kind:'creator_wallet_claim',path:walletPath,creator_secret_hash:hash,body:{request_id:cryptoImpl.randomUUID(),expected_revision:revision,network:'eip155:8453',address}});phase='prepared';return snapshot().envelope;
+    envelope=withoutCapability(validateWalletEnvelope({api_version:'1',kind:'creator_wallet_claim',path:walletPath,creator_secret_hash:hash,body:{request_id:cryptoImpl.randomUUID(),expected_revision:revision,network:'eip155:8453',address}}),capability);phase='prepared';return snapshot().envelope;
    }finally{busy=false;}
   },
   async restore(text,capability){
@@ -94,7 +104,7 @@ export function createWalletClient({fetchImpl=globalThis.fetch,cryptoImpl=global
    try{
     if(typeof text!=='string'||new TextEncoder().encode(text).length>maxEnvelopeBytes)fail(envelopeError);
     let parsed;try{parsed=JSON.parse(text);}catch{fail(envelopeError);}
-    const saved=validateWalletEnvelope(parsed),hash=await identity(capability);
+    const saved=withoutCapability(validateWalletEnvelope(parsed),capabilityValue(capability)),hash=await identity(capability);
     if(hash!==saved.creator_secret_hash)fail('Paste the original creator capability separately before restoring this request.');
     if(envelope&&JSON.stringify(saved)!==JSON.stringify(envelope))fail('A different request is already retained. Resolve it before importing another request.');
     envelope=saved;revision=null;readIdentity=null;phase='uncertain';return snapshot().envelope;

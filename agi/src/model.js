@@ -30,12 +30,13 @@ export async function createModel({origin=CANONICAL_ORIGIN,catalog=products,regi
  if(new Set(published.map(p=>p.id)).size!==published.length)throw new TypeError('Published tool IDs must be unique.');
  const tools=await Promise.all(published.map(async p=>{
  const productPath='/v1/products/'+p.id;
+ const minimum=minimumAmount(p);
  const firstParty=p.provider.type==='first_party'&&p.provider.id==='agenttoolbox';
  const quote=p.quote?.path===productPath+'/quote';
  const preview=p.preview?.supported===true&&p.preview.path===productPath+'/prepare'&&p.preview.page==='/products/'+p.id+'/preview'&&quote;
  const examples=firstParty&&p.examples_url===productPath+'/examples'&&freeExampleManifest(p.id);
  return {
-  ...p,price_label:'$'+formatUsdcPrice(minimumAmount(p))+' USDC',
+  ...p,pricing:{...p.pricing,minimum_amount_atomic:minimum},price_label:'$'+formatUsdcPrice(minimum)+' USDC',
   fit:optionalText(p.fit)??(firstParty?fit[p.id]:null)??p.summary,
   scope:optionalText(p.scope)??(firstParty?scope[p.id]?.(p):null)??null,
   preview:preview?p.preview:p.preview?.supported===false?p.preview:{supported:false},

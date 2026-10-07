@@ -206,3 +206,22 @@ test('incomplete or ambiguous compiled publication metadata cannot enter the mod
  assert.deepEqual(compiled.tools.map(tool=>tool.id),[sellerContract.id]);
  await assert.rejects(createModel({catalog:[sellerContract,{...sellerContract}]}),/unique/);
 });
+
+test('fallback atomic prices normalize once for manifests and complete buyer examples',async()=>{
+ const {minimum_amount_atomic,...pricing}=sellerContract.pricing;
+ for(const amount_atomic of ['25000',25000]){
+  const source={...sellerContract,pricing:{...pricing,amount_atomic},example_input:{value:3}};
+  const compiled=await createModel({catalog:[source]}),seller=compiled.tools[0];
+  assert.equal(seller.pricing.minimum_amount_atomic,'25000');
+  assert.equal(seller.price_label,'$0.025 USDC');
+  assert.equal(compactManifest(compiled).tools[0].minimum_amount_atomic,'25000');
+  const request=JSON.parse(buyMarkdown(compiled).match(/```http\n[^]*?\n\n(\{[^]*?\})\n```/)[1]);
+  assert.equal(request.max_charge_usdc_atomic,'25000');
+  assert.equal(request.version,source.version);assert.deepEqual(request.input,source.example_input);
+  assert.equal(source.pricing.minimum_amount_atomic,undefined,'Normalization must not mutate the canonical source.');
+  assert.deepEqual(seller.success_pin,await successContractPin(source));
+ }
+ const current=await createModel();
+ assert.equal(current.tools.length,4);
+ for(const tool of current.tools)assert.deepEqual(tool.pricing,model.tools.find(original=>original.id===tool.id).pricing);
+});

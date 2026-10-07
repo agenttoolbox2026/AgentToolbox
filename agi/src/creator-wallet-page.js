@@ -2,7 +2,7 @@ import {header,headerStylesheet} from './header.js';
 import {agentStylesheet} from './pages.js';
 import {formsStylesheet} from './workflow-theme.js';
 
-export const creatorWalletScript='<script type="module" src="/creator-wallet.js?v=6da01fdd4552"></script>';
+export const creatorWalletScript='<script type="module" src="/creator-wallet.js?v=46e523596032"></script>';
 
 export function creatorWalletPage(){
  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="Save a private Base payout destination for an existing creator submission."><title>AgentToolbox</title><link rel="icon" href="/agenttoolbox-icon.png" type="image/png">${headerStylesheet}${agentStylesheet}${formsStylesheet}${creatorWalletScript}</head><body><a class="skip-link" href="#main">Skip to content</a>${header('agents')}<main id="main" class="document workflow-document"><section class="workflow"><a href="/sell">← Sell tools</a><h1>Creator payout wallet</h1>
