@@ -1,0 +1,37 @@
+# AgentToolbox presentation review
+
+Baseline: public commit `09f3922b04e62d206d6d75823a3f6d3fc5fd5773`, tree `39b0fbdcebecaec7c409d20b3639e9597dc90665`; enabled payout requests. The entire 136-line owner-supplied Satring prompt was read from Library. Isolated branch: `codex/satring-presentation-20261007`.
+
+## Prioritized critique before editing
+
+1. **Navigation and task orientation.** The white audience header is coherent and must remain. Operational navigation appears only in scattered paragraphs/footers; important paths require returning through the manual. Add a compact, bracketed task navigation below the white header with real links and current-page semantics.
+2. **Catalog scanning.** The live catalog puts the form before the page title and spends roughly 550 desktop pixels before its first tool. Records lack a clear delimiter, tool identifier and invocation metadata. Group each existing record into one flat ruled section; lead with name/purpose, followed by truthful price, creator, Beta/version and protocol facts. Keep all limitations and exact existing links.
+3. **Technical documents.** Long contracts/buyer instructions lack landmarks and code boundaries. Keep 15px raw headings and manual format; use quiet section rules, contextual section links and flat code panels. Preserve every existing heading anchor and code payload.
+4. **Forms and status hierarchy.** Current seller/wallet forms have readable labels but long runs of fields and footnotes. Group the seller fields around public metadata, contract and private capability. Separate wallet proof, earnings and request stages with quiet rules; distinguish status/result panels without inferring success from appearance.
+5. **Touch and keyboard access.** Baseline layouts have no whole-page overflow at 1440/390/320, but many nav links and disclosure controls are below 44px. Raise standalone controls and navigation to 44px, retain focus outlines and native hidden/disabled states, and avoid shrinking mobile input text.
+6. **Truthful motivation.** Explain concrete value before dense prerequisites: buyers can inspect a defined result and disclosed price, with examples/previews only where offered; sellers can propose a useful tool for review and retain 90% gross entitlement under frozen terms. Preserve activation, payout and recovery limitations. No demand, savings or guaranteed-income claims.
+7. **Human entry point.** Keep the exact purpose sentence and Tools Sold counter/disclosure, add direct buying, selling and manual links with useful concise context.
+
+## Route inventory and shared components
+
+HTML manual: `/`, `/buy`, `/sell`, `/sell/terms`, `/tools` (q/page/limit, empty/invalid states), `/tools/{id}`, `/tools/{id}/contract`, `/checks`, `/examples`, missing tool/404. The shared inert Markdown renderer, `documentPage`, white `header`, manual CSS and workflow adapter are the primary components.
+
+HTML workflows: `/submit-tool`, `/update-tool`, `/creator-wallet`, `/referrals`, `/reviews`, `/feedback` and `?tool=`, `/products/{id}/preview` (supported tools), `/products/{id}/reviews` (status/version/cursor), `/reviews/{uuid}` (reply anchors/cursor), preview/result/status/retry/unauthorized/rate-limit states. `/humans` uses its black canvas and truthful paid-purchase counter. `/agents` and `/about` retain redirects. No separate public privacy/legal/help page exists; privacy/terms guidance remains in these documents and forms. Private owner `/payouts` is outside this visual scope.
+
+Machine interfaces: negotiated JSON/Markdown for manual/catalog/tool/contract/checks/examples; `/llms.txt`, `/AGENTS.md`, `/index.md`, `/buy.md`, `/sell.md`, `/tools.md`, `/tools.json`, `/sell/terms.md`, `/agent.json`, `/robots.txt`, `/sitemap.xml`, `/openapi.json`, `/mcp`, `/health`, `/.well-known/x402`, `/.well-known/402index-verify.txt`; `/v1/products` and detail/criteria/examples/invoke/quote/prepare/reviews; `/v1/creator-terms`, `/v1/tool-submissions`, `/v1/creator-tools/{id}` and updates/earnings; `/v1/tool-updates/{uuid}`; creator/referral wallet, proof and payout request endpoints; `/v1/referral-terms`, `/v1/referrals` and private account/earnings; reviews/replies, feedback and outcome APIs. All methods, transport, payloads, auth and error contracts stay unchanged.
+
+No production mutation is part of design QA. Baseline UI is read-only; local in-memory fixtures cover changed workflows. Baseline AGI suite: 170 passed, zero failed/skipped.
+
+## Implemented and verified
+
+Shared semantic palette/spacing tokens, bracketed task navigation beneath the existing white header, square code/result panels, readable rules and 44px standalone targets. Catalog search follows its title; native query documentation is discoverable, all original record content/links remain, and each bounded record adds its exact tool ID/method/protocol. Tool facts use a wrapped definition table. Seller fields are grouped by metadata, proposed contract and private management capability. Visible prepare/save/send guidance retains the existing two-click flow and every original data hook.
+
+HTML-only buyer/seller introductions explain concrete benefits and conditional earnings. `/humans` retains its exact purpose sentence, title, black canvas, prominent Tools Sold counter and disclosure, with concise direct task guidance. Referral payout expectations are explicit. Tools without previews use a higher-amount quote label and clarify the shared retention metadata without editing canonical JSON. The buyer HTML guide links uncertain delivery to private feedback with only an operation ID; no response time is promised.
+
+Validation: **519 tests passed, zero failures/skips**, including independent Ajv/Python/official JSON Schema fixtures and existing payment/payout fault tests. AGI snapshot and canonical workflow assets match; JavaScript syntax and whitespace checks pass; Wrangler dry run passes with payout requests still enabled. **76 before/after machine-response comparisons** preserve exact bytes, statuses, response types, CSP and Vary under a fixed synthetic clock. Financial/config/Markdown source files are unchanged.
+
+Browser evidence: **112 route/viewport views** at 1440/768/390/320; zero page overflow or hidden-state failures. Final targeted checks confirm 44px standalone controls and no CSS animations. True Chrome **200% zoom** reflows seller/catalog/creator/referral pages at 720 CSS pixels without overflow. Native keyboard focus and required-field validation work. Pagination preserves query/limit through Next and Back. Ten main/manual/seller/preview views were initially checked with scripts blocked; the remaining workflow views are checked using a QA-only server switch that does not enter the application.
+
+Chrome Back restores an edited, unsubmitted native search draft while correctly restoring the URL, result query and records. This is the existing browser behavior; no synchronization script or relaxed CSP is introduced. JSON errors remain JSON; no HTML styling wraps machine errors. Static checks are shown as published predicates, without inventing run/verification statuses. No copy buttons are added to inert manual pages because those pages prohibit scripts; code remains selectable and exact.
+
+No production proposals, reviews, earnings, payout requests, signatures, transfers, migrations, grants or access changes were created. The private owner operator is unchanged. This branch is ready for visual review; no production deployment was performed.

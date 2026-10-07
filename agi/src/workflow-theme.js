@@ -1,8 +1,8 @@
 import {shell as platformShell} from '../../platform/src/pages.js';
-import {header,headerStylesheet} from './header.js';
+import {header,headerStylesheet,taskNavigation} from './header.js';
 import {agentStylesheet} from './pages.js';
 
-export const formsStylesheet='<link rel="stylesheet" href="/forms.css?v=e3fbd7e8c618">';
+export const formsStylesheet='<link rel="stylesheet" href="/forms.css?v=f212cbfe4dfb">';
 
 // Derive the recognized shell from the actual renderer instead of maintaining
 // another copy of its scripts, version tags or trusted header/footer markup.
@@ -15,7 +15,7 @@ const headOpening=prefix.slice(0,prefix.indexOf('<head>')+6);
 const headClosingIndex=prefix.indexOf('</head>');
 const legacyBodyOpening=prefix.slice(headClosingIndex);
 const legacyStylesheet=prefix.slice(0,headClosingIndex).match(/<link rel="stylesheet" href="\/style\.css(?:\?[^\"]*)?">/)?.[0];
-const themedBodyOpening='</head><body><a class="skip-link" href="#main">Skip to content</a>'+header('agents')+'<main id="main" class="document workflow-document">';
+const themedBodyOpening=path=>'</head><body><a class="skip-link" href="#main">Skip to content</a>'+header('agents')+taskNavigation(path)+'<main id="main" class="document workflow-document">';
 const themedSuffix='</main><footer class="document-footer workflow-footer"><nav aria-label="Toolbox links"><a href="/tools">Browse tools</a><a href="/reviews">Reviews</a><a href="/feedback">Private feedback</a><a href="/sell">Sell tools</a><a href="/llms.txt">llms.txt</a><a href="/openapi.json">OpenAPI</a></nav><p>Built for agents, by agents.</p></footer></body></html>';
 
 /**
@@ -29,7 +29,7 @@ const themedSuffix='</main><footer class="document-footer workflow-footer"><nav 
  * HTTP headers (including CSP) remain the caller's responsibility and are never
  * accepted, synthesized or relaxed by this presentation-only function.
  */
-export function themeWorkflowHtml(html){
+export function themeWorkflowHtml(html,path=''){
  if(typeof html!=='string'||!legacyStylesheet||!html.startsWith(headOpening)||!html.endsWith(suffix))return html;
  const headEnd=html.indexOf('</head>',headOpening.length);
  if(headEnd<0||!html.startsWith(legacyBodyOpening,headEnd))return html;
@@ -40,5 +40,5 @@ export function themeWorkflowHtml(html){
  const styles=head.split(legacyStylesheet);
  if(styles.length!==2)return html;
  const themedHead=styles[0]+headerStylesheet+agentStylesheet+formsStylesheet+styles[1];
- return themedHead+themedBodyOpening+html.slice(bodyStart,bodyEnd)+themedSuffix;
+ return themedHead+themedBodyOpening(path)+html.slice(bodyStart,bodyEnd)+themedSuffix;
 }

@@ -1,4 +1,4 @@
-import {header,headerStylesheet} from './header.js';
+import {header,headerStylesheet,taskNavigation} from './header.js';
 import {agentStylesheet} from './pages.js';
 import {formsStylesheet} from './workflow-theme.js';
 import {walletProofSection} from './wallet-proof-section.js';
@@ -9,7 +9,7 @@ import {payoutRequestSection} from './payout-request-section.js';
 export const creatorPayoutJourneyScript='<script type="module" src="/creator-payout-journey.js?v=38d7a29b5494"></script>';
 
 export function creatorWalletPage({payoutRequestsEnabled=false}={}){
- return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="Manage your private creator payout destination, wallet proof, earnings and payout requests."><title>AgentToolbox</title><link rel="icon" href="/agenttoolbox-icon.png" type="image/png">${headerStylesheet}${agentStylesheet}${formsStylesheet}${creatorPayoutJourneyScript}</head><body><a class="skip-link" href="#main">Skip to content</a>${header('agents')}<main id="main" class="document workflow-document"><section class="workflow"><a href="/sell">← Sell tools</a><h1>Creator payouts</h1>
+ return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="Manage your private creator payout destination, wallet proof, earnings and payout requests."><title>AgentToolbox</title><link rel="icon" href="/agenttoolbox-icon.png" type="image/png">${headerStylesheet}${agentStylesheet}${formsStylesheet}${creatorPayoutJourneyScript}</head><body><a class="skip-link" href="#main">Skip to content</a>${header('agents')}${taskNavigation('/creator-wallet')}<main id="main" class="document workflow-document"><section class="workflow"><a href="/sell">← Sell tools</a><h1>Creator payouts</h1>
 <p>Use the private creator capability from your earlier tool submission to manage your Base payout destination, earnings and payout requests.</p><p class="footnote">A saved address is UNVERIFIED until the backend verifies a separate ownership proof. Owner approval is separate. Saving an address does not initiate a payout. Never enter a private key or seed phrase.</p>
 <form data-creator-wallet method="post" action="/v1/creators/me/payout-wallet" autocomplete="off">
 <label for="creator-wallet-capability">Existing private creator capability<input id="creator-wallet-capability" data-capability type="password" autocomplete="off" spellcheck="false" maxlength="48" required pattern="atbc_[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]"></label>
