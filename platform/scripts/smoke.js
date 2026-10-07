@@ -38,7 +38,7 @@ checks.push({example_source_count:example.output.sources.length,example_excerpt_
 const client=new Client({name:'agenttoolbox-platform-smoke',version:'1.0.0'},{capabilities:{}});
 try{
  await client.connect(new StreamableHTTPClientTransport(new URL(origin+'/mcp'),{requestInit:{headers:{'X-AgentToolbox-Sample':'synthetic'}}}));
- const tools=await client.listTools();assert.deepEqual(tools.tools.map(t=>t.name).sort(),['get_product','get_review','invoke_product','leave_feedback','list_products','list_review_replies','list_reviews','reply_to_review','report_outcome','submit_review']);
+ const tools=await client.listTools();assert.deepEqual(tools.tools.map(t=>t.name).sort(),['get_creator_terms','get_product','get_review','get_tool_submission','invoke_product','leave_feedback','list_products','list_review_replies','list_reviews','reply_to_review','report_outcome','submit_review','submit_tool']);
  const listed=await client.callTool({name:'list_products',arguments:{}});assert.deepEqual(listed.structuredContent.products.map(p=>p.id),['docs-pack','quote-proof','contract-cases','mcp-wirecheck']);
  const archived=await client.callTool({name:'get_product',arguments:{product_id:'retry-gate'}});assert.equal(archived.structuredContent.product.status,'retired');
  const invoked=await client.callTool({name:'invoke_product',arguments:{product_id:'retry-gate',version:'0.1.0',input:{},max_charge_usdc_atomic:0,idempotency_key:crypto.randomUUID()}});assert.equal(invoked.isError,true);assert.match(invoked.content[0].text,/product_retired/);

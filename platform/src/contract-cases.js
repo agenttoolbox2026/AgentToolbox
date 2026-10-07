@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import {hash} from './telemetry.js';
+import {passesCriteria} from './criteria.js';
 
 export const CONTRACT_CASES_LIMITS=Object.freeze({schema_bytes:8192,seed_bytes:2048,schema_nodes:64,schema_depth:3,properties_per_object:25,total_properties:25,array_items:16,string_length:128,instance_nodes:128,instance_depth:8,number_magnitude:1e9,candidates:160,cases:24,output_bytes:14000});
 export const CONTRACT_CASES_SUBSET=Object.freeze({dialect:'2020-12 bounded subset',types:['object','array','string','number','integer','boolean','null'],keywords:['type','enum','const','properties','required','additionalProperties','items','minItems','maxItems','minLength','maxLength','minimum','maximum','exclusiveMinimum','exclusiveMaximum'],annotations:['$schema','title','description'],unsupported:['references','composition','type unions','boolean schemas','pattern','format','multipleOf','unevaluated keywords','remote resources']});
@@ -188,6 +189,6 @@ export function createContractCases(){
    if(!output.summary.positive_cases||!output.summary.negative_cases)fail('no_meaningful_cases');
    if(bytes(output)>L.output_bytes)fail('output_too_large');return output;
   },
-  success:output=>contractCasesOutput.safeParse(output).success&&output.summary.positive_cases===output.cases.filter(c=>c.kind==='positive_boundary').length&&output.summary.negative_cases===output.cases.filter(c=>c.kind==='negative_mutation').length&&output.summary.coverage_gaps===output.coverage_gaps.length+output.coverage_gaps_omitted&&output.cases.every(c=>c.kind==='positive_boundary'?c.expected_verdict==='valid'&&c.validation.valid&&c.validation.errors.length===0:c.expected_verdict==='invalid'&&!c.validation.valid&&c.validation.errors.length===1&&c.validation.errors[0].schema_pointer===c.schema_pointer&&c.validation.errors[0].keyword===c.keyword&&c.validation.errors[0].instance_pointer===c.instance_pointer)&&bytes(output)<=L.output_bytes,
+  success:output=>contractCasesOutput.safeParse(output).success&&passesCriteria('contract-cases',output),
  };
 }

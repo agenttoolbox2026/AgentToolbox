@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import {InitializeResultSchema,ListToolsResultSchema} from '@modelcontextprotocol/sdk/types.js';
+import {passesCriteria,WIRE_DECISIVE_REASONS} from './criteria.js';
 
 // Cloudflare owns and routes workers.dev; customers select Worker/account
 // labels, not arbitrary A/AAAA/CNAME records or destination IPs. See the
@@ -32,7 +33,7 @@ export const mcpWireCheckInput=z.strictObject({
 const methods=['initialize','notifications/initialized','server/discover','tools/list'];
 const locations=methods;
 const reasons=['checked_scope_passed','requested_version_not_negotiated','unsupported_negotiated_version','version_not_supported','method_not_supported','tools_capability_absent','invalid_initialize_shape','invalid_discovery_shape','invalid_tools_shape','invalid_header_annotation','schema_inspection_limit','duplicate_tool_name','invalid_jsonrpc','response_id_mismatch','invalid_notification_ack','invalid_session_header','unexpected_session_change','unexpected_modern_session','unsupported_content_type','invalid_json','redirect_not_followed','authentication_required','access_blocked','http_error','rpc_error','network_error','timeout','response_limit','total_byte_limit','sse_event_limit','sse_incomplete','server_request_not_supported','page_limit','tool_limit','cursor_loop','cursor_limit','request_limit'];
-const decisive=new Set(['checked_scope_passed','tools_capability_absent','invalid_initialize_shape','invalid_discovery_shape','invalid_tools_shape','invalid_header_annotation','duplicate_tool_name','invalid_jsonrpc','response_id_mismatch','invalid_notification_ack','invalid_session_header','unexpected_session_change','unexpected_modern_session','unsupported_content_type','invalid_json']);
+const decisive=new Set(WIRE_DECISIVE_REASONS);
 const transcriptSchema=z.strictObject({
  method:z.enum(methods),http_status:z.number().int().min(100).max(599).nullable(),
  media_type:z.enum(['application/json','text/event-stream','other','none']),
@@ -160,7 +161,7 @@ export function createMcpWireCheck({fetchImpl=fetch,now=()=>new Date(),requestTi
  const totalTime=Math.max(1,Math.min(MCP_WIRE_LIMITS.total_timeout_ms,totalTimeoutMs));
  return {input:mcpWireCheckInput,output:mcpWireCheckOutput,previewSupported:false,
   failureReason:error=>error instanceof CheckFailure?error.code:'wirecheck_unavailable',
-  success:output=>mcpWireCheckOutput.safeParse(output).success&&output.versions.some(row=>row.discovery_valid&&['compatible','incompatible'].includes(row.status)&&decisive.has(row.reason)),
+  success:output=>mcpWireCheckOutput.safeParse(output).success&&passesCriteria('mcp-wirecheck',output),
   async run(raw){
    const parsed=mcpWireCheckInput.safeParse(raw);if(!parsed.success)fail('invalid_wirecheck_input');
    const input=parsed.data,state={requests:0,bytes:0},versions=[],start=Date.now();

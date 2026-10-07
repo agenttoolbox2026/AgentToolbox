@@ -135,3 +135,24 @@ payment commitment, indexes and atomic thread bounds. Existing feedback stays
 private. Review writes share FEEDBACK_LIMIT; no new services or credentials.
 See [public reviews](public-reviews.md) for capability semantics and exclusions.
 Automatic request logs remain disabled to avoid retaining review secrets.
+
+## Creator submissions and financial authority
+
+Migration 0007 adds private inert proposals, capability hashes, immutable owner
+decisions, 90% lifetime gross entitlements, zero-fee promotion refund obligations,
+and append-only authoritative receipts/allocations. See the exact
+[shared review contract](creator-review-contract.md). The separate private admin
+project supplies owner authentication and CSRF; the public Worker has no approval
+or adapter-installation endpoint. Approval never executes, installs or publishes.
+No submission fee, refund or payout transfer is enabled.
+
+Buyer-controlled synthetic classification remains an analytics/public-counter
+convention. It never excludes a true server-live settled creator receipt from
+earnings. `platform_live_receipts` captures future validated facilitator-confirmed
+receipts independently; `platform_creator_allocations` freezes the beneficiary
+and full buyer-chosen gross amount at original admission. BigInt sums retain
+fractional-atom carry across receipts and tool versions. `report:remote` emits
+these facts separately, with unavailable transfer status and no historical
+backfill. Neither caller-reported outcomes nor public purchase counts are money
+authority. Missing facts require reconciliation; never invent zero or rewrite
+older data without evidence.

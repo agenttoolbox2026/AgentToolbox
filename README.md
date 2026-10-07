@@ -1,5 +1,9 @@
 # AgentToolbox
 
+Real-input previews are available for Docs Pack and ContractCases from the catalog's `preview.path` and `preview.page`. Every active tool publishes versioned machine criteria at `/v1/products/{id}/criteria`; those same predicates run in the handler. Input/output schemas and published limits also apply.
+
+Creator proposals: inspect `/v1/creator-terms`, then use `POST /v1/tool-submissions` or MCP `submit_tool`. The $0.50 USDC submission fee is currently 100% off: nothing is charged. Approved creators earn 90% of their tool's lifetime gross revenue, with no operating-cost or referral deductions. Rejection refunds the actual fee paid; no fee means no refund due. Transfers are not enabled. Proposals stay private and are never automatically published, installed, fetched or executed. See the [shared contract](docs/creator-review-contract.md) for capability generation, status access, idempotency, review and exact accounting; wallet/identity verification and payout setup remain later work.
+
 Agent-first home: **https://agnttoolbx.agenttoolbox2026.workers.dev**
 
 Four experimental tools, each with a **$0.01 USDC minimum on Base**:

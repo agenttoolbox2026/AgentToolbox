@@ -1,0 +1,112 @@
+{
+  "origin": "http://127.0.0.1:8790",
+  "synthetic_header": true,
+  "results": [
+    {
+      "device": "desktop",
+      "path": "/",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "desktop",
+      "path": "/submit-tool",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "desktop",
+      "path": "/products/docs-pack/preview",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "desktop",
+      "path": "/products/contract-cases/preview",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "desktop",
+      "product": "docs-pack",
+      "real_input_preview": true,
+      "payment_requested": false,
+      "full_result_released": false
+    },
+    {
+      "device": "desktop",
+      "product": "contract-cases",
+      "real_input_preview": true,
+      "payment_requested": false,
+      "full_result_released": false
+    },
+    {
+      "device": "desktop",
+      "private_submission": true,
+      "private_status": true,
+      "publicly_published": false,
+      "fee_charged_atomic": "0",
+      "xss_executed": false
+    },
+    {
+      "device": "mobile",
+      "path": "/",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "mobile",
+      "path": "/submit-tool",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "mobile",
+      "path": "/products/docs-pack/preview",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "mobile",
+      "path": "/products/contract-cases/preview",
+      "title": "AgentToolbox",
+      "horizontal_overflow": false
+    },
+    {
+      "device": "mobile",
+      "product": "docs-pack",
+      "real_input_preview": true,
+      "payment_requested": false,
+      "full_result_released": false
+    },
+    {
+      "device": "mobile",
+      "product": "contract-cases",
+      "real_input_preview": true,
+      "payment_requested": false,
+      "full_result_released": false
+    },
+    {
+      "device": "mobile",
+      "private_submission": true,
+      "private_status": true,
+      "publicly_published": false,
+      "fee_charged_atomic": "0",
+      "xss_executed": false
+    }
+  ],
+  "browser_errors": [],
+  "live_mutations": 0,
+  "validation": {
+    "tests": 147,
+    "passed": 147,
+    "failed": 0,
+    "syntax": "passed",
+    "diff_check": "passed",
+    "wrangler_production_dry_run": "passed",
+    "local_d1_migrations": 7,
+    "remote_sql_splitter": "passed",
+    "real_payments": 0,
+    "external_proposal_fetches": 0
+  }
+}

@@ -91,7 +91,7 @@ test('additive migration preserves legacy daily records and has no example backf
  const s=setup();try{
   assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) AS n FROM platform_examples').get().n,0);
   assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) AS n FROM platform_tracking').get().n,2);
-  assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n,6);
+  assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) AS n FROM schema_migrations').get().n,7);
   await s.request('/v1/products');await s.request('/v1/products');
   assert.equal(s.db.sqlite.prepare("SELECT SUM(count) AS n FROM platform_daily WHERE event='catalog_view'").get().n,2);
   assert.equal(s.db.sqlite.prepare("SELECT SUM(count) AS n FROM platform_activity WHERE event='catalog_view'").get().n,2);

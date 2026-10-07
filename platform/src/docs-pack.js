@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import {hash} from './telemetry.js';
+import {passesCriteria} from './criteria.js';
 
 export const DOC_HOSTS=Object.freeze(['developers.cloudflare.com','docs.payai.network','docs.x402.org','docs.python.org','nodejs.org','developer.mozilla.org','docs.github.com','www.typescriptlang.org']);
 export const MAX_SOURCE_BYTES=262144;
@@ -170,6 +171,6 @@ export function createDocsPack({fetcher=fetch,htmlExtractor=htmlText,now=()=>new
     if(new TextEncoder().encode(JSON.stringify(output)).length>14000)fail('output_too_large');return output;
    }finally{clearTimeout(timer);control.abort();}
   },
-  success:output=>output.sources.length>0&&output.sources.every(s=>s.status===200&&s.excerpts.every(e=>e.matched_terms.length>0&&e.end_char-e.start_char===e.text.length))&&output.excerpt_chars<=output.max_excerpt_chars,
+  success:output=>passesCriteria('docs-pack',output),
  };
 }

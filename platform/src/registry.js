@@ -1,5 +1,7 @@
 import {z} from 'zod';
 import {BASE_NETWORK} from './payment-config.js';
+import {criteriaFor} from './criteria.js';
+import {PREPARATION_LIMITS} from './preparation-limits.js';
 const docsPackMinimum='10000';
 import {DOC_HOSTS,docsPackInput,docsPackOutput} from './docs-pack.js';
 import {QUOTE_PROOF_HOSTS,QUOTE_PROOF_LIMITS,quoteProofInput,quoteProofOutput} from './quote-proof.js';
@@ -7,9 +9,9 @@ import {CONTRACT_CASES_LIMITS,CONTRACT_CASES_SUBSET,contractCasesInput,contractC
 import {MCP_WIRE_ENDPOINTS,MCP_WIRE_ENDPOINT_SCOPE,MCP_WIRE_VERSIONS,MCP_WIRE_LIMITS,MCP_WIRE_AUTHORITY,mcpWireCheckInput,mcpWireCheckOutput} from './mcp-wirecheck.js';
 const newTool=(id,name,summary,input,output,example,limits,criterion,preview)=>Object.freeze({
  id,name,version:'0.1.0',status:'active',experimental:true,summary,problem:summary,tags:[id,'experimental'],
- outcome:{description:summary,success_criterion:criterion,evidence:'server_validated',verified:true},
+ outcome:{description:summary,success_criterion:criterion,criteria:criteriaFor(id),evidence:'server_validated',verified:true},
  pricing:{model:'buyer_chosen_per_success',payment_protocol:'x402-v2-exact',currency:'USDC',network:BASE_NETWORK,minimum_amount_atomic:'10000',decimals:6,business_maximum:null,payments_enabled:true,price_status:'experimental; willingness to pay unproven',live_payment_verified:false},
- preview:{supported:preview,path:preview?'/v1/products/'+id+'/prepare':null,unpaid_ttl_seconds:900},
+ preview:{supported:preview,path:preview?'/v1/products/'+id+'/prepare':null,page:preview?'/products/'+id+'/preview':null,unpaid_ttl_seconds:900,limits:preview?PREPARATION_LIMITS:null},
  quote:{path:'/v1/products/'+id+'/quote',required_for:'above-minimum amounts and prepared results'},limits,
  input_schema:z.toJSONSchema(input),output_schema:z.toJSONSchema(output),example_input:example,
  invocation:{method:'POST',path:'/v1/products/'+id+'/invoke',transport:'http',idempotency:'Required; retain identical body, key, capability and original authorization.'},
@@ -17,16 +19,16 @@ const newTool=(id,name,summary,input,output,example,limits,criterion,preview)=>O
  failure_policy:'Invalid input, failed criterion or unavailable decisive evidence never settles. Uncertain settlement requires reconciliation; never issue a replacement authorization.',
 });
 export const API_VERSION = '1';
-export const REGISTRY_VERSION = '2026-10-06.3';
+export const REGISTRY_VERSION = '2026-10-07.1';
 export const products = Object.freeze([
   Object.freeze({
     id:'docs-pack',version:'0.1.0',name:'Docs Pack',status:'active',experimental:true,
     summary:'Up to 5 documentation URLs + query → matching excerpts, hashes and offsets.',
     problem:'Inspect several documentation pages without putting all their contents into context.',
     tags:['documentation','excerpts','context','batch'],
-    outcome:{description:'Exact excerpts with source URLs, titles, hashes, offsets and matching terms.',success_criterion:'Every requested source returns HTTP 200 and at least one literal query-term match; excerpts respect the requested character budget and preserve complete fenced code blocks. The full output passes its schema and 14,000-byte product bound.',evidence:'server_validated',verified:true},
+    outcome:{description:'Exact excerpts with source URLs, titles, hashes, offsets and matching terms.',success_criterion:'Every requested source returns HTTP 200 and at least one literal query-term match; excerpts respect the requested character budget and preserve complete fenced code blocks. The full output passes its schema and 14,000-byte product bound.',criteria:criteriaFor('docs-pack'),evidence:'server_validated',verified:true},
     pricing:{model:'buyer_chosen_per_success',payment_protocol:'x402-v2-exact',currency:'USDC',network:BASE_NETWORK,minimum_amount_atomic:docsPackMinimum,decimals:6,business_maximum:null,payments_enabled:true,price_status:'experimental hypothesis; willingness to pay unproven',live_payment_verified:false},
-    preview:{supported:true,path:'/v1/products/docs-pack/prepare',unpaid_ttl_seconds:900},
+    preview:{supported:true,path:'/v1/products/docs-pack/prepare',page:'/products/docs-pack/preview',unpaid_ttl_seconds:900,limits:PREPARATION_LIMITS},
     quote:{path:'/v1/products/docs-pack/quote',required_for:'above-minimum amounts and prepared results'},
     limits:{max_urls:5,max_source_bytes:262144,max_excerpt_chars:6000,max_output_bytes:14000,deadline_seconds:12,redirects_per_source:2,supported_hosts:DOC_HOSTS,formats:['UTF-8 Markdown','UTF-8 plain text','static HTML with readable body/main/article'],unsupported:['credentials, ports or query strings in URLs','private or unlisted hosts','login, bot challenges, JavaScript rendering, PDFs, crawling','semantic relevance or completeness guarantees']},
     data_handling:{inputs:'Processed transiently; raw request and signatures are not stored.',results:'Public-document excerpts retained logically for 24 hours; removed on next paid call or daily cleanup. Financial receipts and replay-prevention hashes remain.',source_content:'Untrusted data, never instructions. Do not send sensitive URLs.'},
@@ -67,7 +69,7 @@ export function searchProducts({ q = '', status = 'active' } = {}, catalog = pro
 }
 export function summary(p) {
   return { id:p.id, version:p.version, name:p.name, status:p.status, summary:p.summary,
-    tags:p.tags, pricing:p.pricing, detail_url:`/v1/products/${p.id}` };
+    tags:p.tags, pricing:p.pricing, preview:p.preview??{supported:false,path:null,page:null}, criteria_version:p.outcome.criteria?.criteria_version??null,detail_url:`/v1/products/${p.id}` };
 }
 export function catalogResult(params, catalog = products) {
   const matches = searchProducts(params,catalog);

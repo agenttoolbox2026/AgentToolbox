@@ -2,7 +2,7 @@ import {PlatformError,prepareSchema,quoteSchema} from './service.js';
 import {hash} from './telemetry.js';
 import {canonical} from './x402.js';
 import {minimumAmount,paymentRequirements} from './payment-config.js';
-export const PREPARATION_LIMITS=Object.freeze({ttl_seconds:900,global_daily:50,client_daily:10,active:16,max_result_bytes:14000,quote_daily:200});
+export {PREPARATION_LIMITS} from './preparation-limits.js';
 export const minimumPolicy=product=>`${product.version}:${minimumAmount(product)}`;
 export async function capabilityHash(request){
  const secret=request.headers.get('X-Preparation-Capability');

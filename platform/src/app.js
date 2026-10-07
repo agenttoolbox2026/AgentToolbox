@@ -1,6 +1,6 @@
 import {products,findProduct} from './registry.js';
 import {service,searchSchema,invokeSchema,outcomeSchema,PlatformError} from './service.js';
-import {home,humansPage,notFoundPage,reviewsPage,reviewPage} from './pages.js';
+import {home,humansPage,notFoundPage,reviewsPage,reviewPage,previewPage,submissionPage} from './pages.js';
 import {publicPurchases} from './purchases.js';
 import {markdown,openapi} from './discovery.js';
 import {mcp} from './mcp.js';
@@ -8,10 +8,11 @@ import {paidInvocation,paymentManifest,quotedPayment} from './x402.js';
 import {runtimeCatalog} from './payment-config.js';
 import {runExample} from './examples.js';
 import {prepareResult} from './preparations.js';
+import {creatorTerms,submitTool,getSubmission} from './submissions.js';
 const HEADERS={
  'Access-Control-Allow-Origin':'*',
  'Access-Control-Allow-Methods':'GET,HEAD,POST,OPTIONS',
- 'Access-Control-Allow-Headers':'Content-Type,Idempotency-Key,Accept,MCP-Protocol-Version,MCP-Session-Id,PAYMENT-SIGNATURE,X-AgentToolbox-Sample,X-Preparation-Capability',
+ 'Access-Control-Allow-Headers':'Content-Type,Idempotency-Key,Accept,MCP-Protocol-Version,MCP-Session-Id,PAYMENT-SIGNATURE,X-AgentToolbox-Sample,X-Preparation-Capability,X-Creator-Capability',
  'Access-Control-Expose-Headers':'PAYMENT-REQUIRED,PAYMENT-RESPONSE',
  'X-Content-Type-Options':'nosniff',
  'Referrer-Policy':'no-referrer',
@@ -54,12 +55,21 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
     const channel=path==='/mcp'?'mcp':(path.startsWith('/v1')||path==='/openapi.json'||path==='/llms.txt'||request.headers.get('Accept')?.includes('application/json')?'http':'html');
     const sampleKind=request.headers.get('X-AgentToolbox-Sample')==='synthetic'?'synthetic':'unclassified';
     const api=service({db,catalog,handlers,channel,sampleKind,feedbackAllowed:()=>feedbackLimit(client)});
+    api.creatorTerms=creatorTerms;
+    api.submitTool=async(body,capability)=>{if(!await feedbackLimit(client))throw new PlatformError(429,'rate_limited','Wait before submitting another proposal.');return submitTool({db,body,capability,client});};
+    api.getSubmission=(id,capability)=>getSubmission({db,id,capability});
     if(path==='/mcp') {
       if(method!=='POST')throw new PlatformError(405,'method_not_allowed','MCP uses POST.');
       if(request.headers.has('Origin')&&request.headers.get('Origin')!==origin)throw new PlatformError(403,'origin_not_allowed','Use the catalog origin.');
       return finish(await mcp(request,api,await jsonBody(request)));
     }
     if(['GET','HEAD'].includes(method)) {
+      if(path==='/v1/creator-terms')return finish(Response.json(creatorTerms()));
+      if(path==='/submit-tool')return finish(html(submissionPage()));
+      const submission=path.match(/^\/v1\/tool-submissions\/([0-9a-f-]{36})$/);
+      if(submission)return finish(Response.json(await api.getSubmission(submission[1],request.headers.get('X-Creator-Capability'))));
+      const preview=path.match(/^\/products\/([a-z0-9-]{1,64})\/preview$/);
+      if(preview){const product=findProduct(preview[1],catalog);if(!product?.preview?.supported)throw new PlatformError(404,'preview_unavailable','No limited preview for this tool.');return finish(html(previewPage(product)));}
       if(path==='/.well-known/x402')return finish(Response.json(paymentManifest({catalog,handlers,config:payments,origin})));
       if(path==='/llms.txt')return finish(new Response(markdown(origin,catalog),{headers:{'Content-Type':'text/plain; charset=utf-8'}}));
       if(path==='/openapi.json')return finish(Response.json(openapi(origin,catalog)));
@@ -86,12 +96,15 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
       if(reviewList){const data=await api.reviews(reviewList[2],Object.fromEntries(url.searchParams));return finish(reviewList[1]?Response.json(data):html(reviewsPage(data)));}
       const reviewDetail=path.match(/^\/(v1\/)?reviews\/([0-9a-f-]{36})(\/replies)?$/);
       if(reviewDetail){const params=Object.fromEntries(url.searchParams);const data=reviewDetail[3]?await api.replies(reviewDetail[2],params):await api.review(reviewDetail[2],params);return finish(reviewDetail[1]||reviewDetail[3]?Response.json(data):html(reviewPage(data)));}
+      const criteria=path.match(/^\/v1\/products\/([a-z0-9-]{1,64})\/criteria$/);
+      if(criteria){const product=findProduct(criteria[1],catalog);if(!product?.outcome.criteria)throw new PlatformError(404,'criteria_unavailable','No server-validated criteria for this tool.');return finish(Response.json({api_version:'1',product_id:product.id,product_version:product.version,criteria:product.outcome.criteria,limits:product.limits,input_schema_url:'/v1/products/'+product.id,output_schema_url:'/v1/products/'+product.id}));}
       const detail=path.match(/^\/(v1\/)?products\/([a-z0-9-]{1,64})$/);
       if(detail){const p=findProduct(detail[2],catalog);if(!p)throw new PlatformError(404,'product_not_found','No product has that identifier.');if(!isHead)await api.detail(p.id);return finish(detail[1]?Response.json({api_version:'1',product:p}):new Response(null,{status:308,headers:{Location:'/v1/products/'+p.id}}));}
       if(path.startsWith('/v1')||path==='/admin'||path.startsWith('/metrics'))throw new PlatformError(404,'not_found','No public resource at this path.');
       return finish(html(notFoundPage(),404));
     }
     if(method==='POST') {
+      if(path==='/v1/tool-submissions')return finish(Response.json(await api.submitTool(await jsonBody(request),request.headers.get('X-Creator-Capability'))));
       if(path==='/v1/reviews')return finish(Response.json(await api.submitReview(await jsonBody(request),request.headers.get('Idempotency-Key'))));
       const reply=path.match(/^\/v1\/reviews\/([0-9a-f-]{36})\/replies$/);
       if(reply)return finish(Response.json(await api.reply(reply[1],await jsonBody(request),request.headers.get('Idempotency-Key'))));
