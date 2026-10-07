@@ -9,23 +9,27 @@ import {claimWallet,challengeWallet,verifyWallet,approveWallet} from '../src/cre
 import {getCreatorEarnings,proposePayoutBatch,authorizePayout,cancelPayout,markPayoutUnknown,getPayoutManifest,registerPayoutTransaction,reconcilePayout} from '../src/creator-payouts.js';
 import {BASE_NETWORK,BASE_USDC,MAX_UINT256} from '../src/payment-config.js';
 import {hash} from '../src/telemetry.js';
+import {recordCreatorInstallation} from '../src/creator-installations.js';
 const date='2026-10-07T08:00:00.000Z',now=()=>new Date(date),origin='https://example.invalid',reviewer='local-owner',sourceAddress='0x'+'11'.repeat(20),account=privateKeyToAccount('0x'+'01'.repeat(32));
 const key=()=>crypto.randomUUID(),conflict=e=>e.status===409;
-async function creator(db,{proof=true,approval=true,wallet=true}={}){
+async function creator(db,{proof=true,approval=true,wallet=true,legacy=false}={}){
  const capability='atbc_'+Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
  const submission=await submitTool({db,body:{request_id:key(),creator_secret_hash:await hash(capability),terms_version:CREATOR_TERMS.terms_version,proposal:{name:'Local payout fixture',summary:'Local private accounting fixture',endpoint_url:'https://tool.example/api',input_schema:{type:'object'},output_schema:{type:'object'}}},capability,client:key(),now});
  await db.prepare('INSERT INTO platform_submission_decisions VALUES(?,?,?,?,?,?,?,?,?,?)').bind(key(),submission.submission_id,reviewer,await hash(key()),'a'.repeat(64),0,1,'approved','Local fixture',date).run();
- const tool=submission.tool_id;db.sqlite.prepare('UPDATE platform_creator_entitlements SET installed_adapter=? WHERE tool_id=?').run('local-fixture',tool);
+ const tool=submission.tool_id;
+ let installation;
+ if(legacy)db.sqlite.prepare('UPDATE platform_creator_entitlements SET installed_adapter=? WHERE tool_id=?').run('local-fixture',tool);
+ else installation=await recordCreatorInstallation({db,reviewer,requestId:key(),toolId:tool,expectedRevision:0,action:'install',metadataRevision:0,metadataVersion:'0.1.0',adapterId:'local-fixture',artifactSha256:'a'.repeat(64),successContractSha256:'b'.repeat(64),productVersion:'0.1.0',now});
  const creatorId=db.sqlite.prepare('SELECT creator_id FROM platform_creator_entitlements WHERE tool_id=?').get(tool).creator_id;
- if(!wallet)return {db,tool,creatorId,capability};
+ if(!wallet)return {db,tool,creatorId,capability,installation};
  const claim=await claimWallet({db,capability,body:{request_id:key(),expected_revision:0,network:BASE_NETWORK,address:account.address},now});
  if(proof){const challenge=await challengeWallet({db,capability,body:{request_id:key(),claim_revision:1},origin,now});await verifyWallet({db,capability,body:{challenge_id:challenge.challenge_id,signature:await account.signMessage({message:challenge.message})},origin,now});}
  if(approval&&proof)await approveWallet({db,claimId:claim.claim_id,reviewer,requestId:key(),now});
- return {db,tool,creatorId,capability,claim};
+ return {db,tool,creatorId,capability,claim,installation};
 }
 function accrue(f,gross='10001',{network=BASE_NETWORK,asset=BASE_USDC}={}){
  const operation=key(),transaction='0x'+operation.replaceAll('-','').padEnd(64,'a');
- f.db.sqlite.prepare(`INSERT INTO platform_payments(operation_id,product_id,version,key_hash,fingerprint,payment_digest,network,asset,payer,nonce,amount_atomic,receiver,state,created_at,updated_at,sample_kind,is_live,creator_tool_id,creator_id,creator_share_bps) VALUES(?,?,'0.1.0',?,'fixture','fixture',?,?,?, ?,?,?,'settling',?,?,'synthetic',1,?,?,9000)`).run(operation,f.tool,key(),network,asset,sourceAddress,key(),gross,sourceAddress,date,date,f.tool,f.creatorId);
+ f.db.sqlite.prepare(`INSERT INTO platform_payments(operation_id,product_id,version,key_hash,fingerprint,payment_digest,network,asset,payer,nonce,amount_atomic,receiver,state,created_at,updated_at,sample_kind,is_live,creator_tool_id,creator_id,creator_share_bps${f.installation?',creator_installation_id,creator_install_revision':''}) VALUES(?,?,'0.1.0',?,'fixture','fixture',?,?,?, ?,?,?,'settling',?,?,'synthetic',1,?,?,9000${f.installation?',?,?':''})`).run(operation,f.tool,key(),network,asset,sourceAddress,key(),gross,sourceAddress,date,date,f.tool,f.creatorId,...(f.installation?[f.installation.installation_id,f.installation.revision]:[]));
  const stmt=f.db.sqlite.prepare('INSERT INTO platform_payment_ledger VALUES(?,?,?,?,?,?,?,?,?,?,?)');for(const event of ['outcome_validated','settlement_reported'])stmt.run(key(),operation,f.tool,'0.1.0',event,network,asset,gross,transaction,'synthetic',date);
  f.db.sqlite.prepare("UPDATE platform_payments SET state='settled' WHERE operation_id=?").run(operation);
 }
@@ -97,7 +101,7 @@ test('wallet and payout migrations preserve all earlier creator, payment and pri
  const db={sqlite,prepare(sql){return {bind(...args){return {first:async()=>sqlite.prepare(sql).get(...args)??null,all:async()=>({results:sqlite.prepare(sql).all(...args)}),run:async()=>{sqlite.prepare(sql).run(...args);return {};}};}};},async batch(statements){sqlite.exec('BEGIN');try{const results=await Promise.all(statements.map(s=>s.all()));sqlite.exec('COMMIT');return results;}catch(e){sqlite.exec('ROLLBACK');throw e;}}};
  try{
   const migrations=new URL('../migrations/',import.meta.url),names=readdirSync(migrations).filter(n=>n.endsWith('.sql')).sort();for(const name of names.filter(n=>n<'0011'))sqlite.exec(readFileSync(new URL(name,migrations),'utf8'));
-  const f=await creator(db,{wallet:false});accrue(f);
+  const f=await creator(db,{wallet:false,legacy:true});accrue(f);
   sqlite.prepare("INSERT INTO platform_examples(id,product_id,version,key_hash,state,sample_kind,created_at,updated_at,result_json,result_expires_at) VALUES(?,?,'0.1.0',?,'completed','synthetic',?,?,?,?)").run(key(),f.tool,key(),date,date,JSON.stringify({private_fixture:'local-only result'}),'2026-10-08T08:00:00.000Z');
   sqlite.prepare("INSERT INTO platform_feedback(id,key_hash,fingerprint,product_id,version,channel,link_status,sample_kind,rating,task_description,message,created_at) VALUES(?,?,?,?,'0.1.0','http','unverified','synthetic',4,?,?,?)").run(key(),key(),'private-fingerprint',f.tool,'Private test task','Private test feedback',date);
   const tables=sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map(r=>r.name),snapshot=()=>tables.map(name=>({name,rows:JSON.stringify(sqlite.prepare(`SELECT * FROM ${name} ORDER BY rowid`).all()),foreignKeys:JSON.stringify(sqlite.prepare(`PRAGMA foreign_key_list(${name})`).all())})),before=snapshot();assert.equal(sqlite.prepare('SELECT count(*) n FROM platform_live_receipts').get().n,1);assert.equal(sqlite.prepare('SELECT count(*) n FROM platform_creator_allocations').get().n,1);assert.deepEqual(sqlite.prepare('PRAGMA foreign_key_check').all(),[]);

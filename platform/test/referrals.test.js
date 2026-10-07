@@ -99,7 +99,9 @@ test('allocation persistence failure rolls back receipt and settled state instea
 test('SQL freezes attribution and prevents fabricated allocations, forged rates and creator-owned products',async()=>{
  const db=database();try{
   const {referral_code:code}=await register(db);
-  for(const extra of [{referral_code:'ref_'+crypto.randomUUID()},{referral_share_bps:200},{referral_terms_version:null},{referral_code:null},{product_id:'creator-fixture'},{creator_id:'forged'}])assert.throws(()=>payment(db,code,extra),/invalid_referral_beneficiary/);
+  for(const extra of [{referral_code:'ref_'+crypto.randomUUID()},{referral_share_bps:200},{referral_terms_version:null},{referral_code:null},{creator_id:'forged'}])assert.throws(()=>payment(db,code,extra),/invalid_referral_beneficiary/);
+  // Installation admission now rejects this fabricated creator before referral attribution.
+  assert.throws(()=>payment(db,code,{product_id:'creator-fixture'}),/invalid_creator_installation/);
   const id=payment(db,code);settle(db,id);
   for(const sql of ["UPDATE platform_referrers SET share_bps=200","DELETE FROM platform_referrers","UPDATE platform_payments SET referral_code=NULL","UPDATE platform_payments SET amount_atomic='100000000'","UPDATE platform_referral_allocations SET gross_atomic='999999'","DELETE FROM platform_referral_allocations"])assert.throws(()=>db.sqlite.exec(sql));
   const allocation=db.sqlite.prepare('SELECT * FROM platform_referral_allocations').get();

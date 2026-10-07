@@ -33,7 +33,8 @@ export function paymentChallenge(product,requirements,origin){
   resource:{url:new URL('/v1/products/'+product.id+'/invoke',origin).href,description:product.summary??'Validated product outcome',mimeType:'application/json',serviceName:'AgentToolbox'},
   accepts:[requirements],...(requirements.amount===minimumAmount(product)?{extensions:{bazaar:{info:{input,output:{type:'json'}},schema:{type:'object',properties:{input:inputSchema,output:outputSchema},required:['input'],additionalProperties:false}}}}:{} )};
 }
-export async function discoveryChallenge({product,config,origin}){
+export async function discoveryChallenge({product,handler,db,config,origin}){
+ await creatorBeneficiary(db,product,handler);
  const terms=paymentRequirements(product,config);
  if(!terms)throw new PlatformError(503,'payment_not_ready','No configured payment requirements for this product.');
  const payment=paymentChallenge(product,terms,origin),pins=await contractPins(product,terms);
@@ -104,7 +105,7 @@ export async function paidInvocation({request,body,key,product,handler,db,config
  if(!signature){
   terms=currentTerms();
   await metrics.record('payment_required',product);
-  return discoveryChallenge({product,config,origin:origin??new URL(request.url).origin});
+  return discoveryChallenge({product,handler,db,config,origin:origin??new URL(request.url).origin});
  }
  if(signature.length>12288)throw new PlatformError(413,'payment_header_too_large','Payment header exceeds its bound.');
  if(!/^[A-Za-z0-9_-]{32,128}$/.test(key??''))throw new PlatformError(400,'idempotency_key_required','A stable Idempotency-Key is required.');
@@ -165,8 +166,8 @@ export async function paidInvocation({request,body,key,product,handler,db,config
   throw new PlatformError(402,'payment_invalid','The facilitator did not verify this authorization.');
  await recheckPins();
  const operationId=crypto.randomUUID(),date=now().toISOString();
- let inserted;try{inserted=await db.prepare(`INSERT OR IGNORE INTO platform_payments(operation_id,product_id,version,key_hash,fingerprint,payment_digest,network,asset,payer,nonce,amount_atomic,receiver,state,created_at,updated_at,sample_kind,is_live,result_expires_at,review_secret_hash,request_hash,requirements_json,minimum_policy,quote_id,prepared_id,creator_tool_id,creator_id,creator_share_bps,referral_code,referral_terms_version,referral_share_bps) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'executing',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-  .bind(operationId,product.id,product.version,keyHash,fingerprint,paymentDigest,BASE_NETWORK,BASE_USDC.toLowerCase(),authorization.from.toLowerCase(),authorization.nonce.toLowerCase(),adapter.requirements.amount,config.payTo.toLowerCase(),date,date,sampleKind,config.live===true?1:0,new Date(now().getTime()+86400000).toISOString(),body.review_secret_hash??null,requestHash,canonical(terms),minimumPolicy(product,handler),body.quote_id??null,body.prepared_id??null,beneficiary.tool_id,beneficiary.creator_id,beneficiary.share_bps,referral.referral_code,referral.referral_terms_version,referral.referral_share_bps).run();}catch(e){if(/quote_already_claimed|prepared_already_claimed/.test(String(e)))throw new PlatformError(409,'quote_already_claimed','This quote or prepared result is already purchased. Reuse the original paid request.');throw e;}
+ let inserted;try{inserted=await db.prepare(`INSERT OR IGNORE INTO platform_payments(operation_id,product_id,version,key_hash,fingerprint,payment_digest,network,asset,payer,nonce,amount_atomic,receiver,state,created_at,updated_at,sample_kind,is_live,result_expires_at,review_secret_hash,request_hash,requirements_json,minimum_policy,quote_id,prepared_id,creator_tool_id,creator_id,creator_share_bps,referral_code,referral_terms_version,referral_share_bps,creator_installation_id,creator_install_revision) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'executing',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+  .bind(operationId,product.id,product.version,keyHash,fingerprint,paymentDigest,BASE_NETWORK,BASE_USDC.toLowerCase(),authorization.from.toLowerCase(),authorization.nonce.toLowerCase(),adapter.requirements.amount,config.payTo.toLowerCase(),date,date,sampleKind,config.live===true?1:0,new Date(now().getTime()+86400000).toISOString(),body.review_secret_hash??null,requestHash,canonical(terms),minimumPolicy(product,handler),body.quote_id??null,body.prepared_id??null,beneficiary.tool_id,beneficiary.creator_id,beneficiary.share_bps,referral.referral_code,referral.referral_terms_version,referral.referral_share_bps,beneficiary.installation_id??null,beneficiary.installation_revision??null).run();}catch(e){if(/invalid_creator_installation/.test(String(e)))throw new PlatformError(409,'creator_installation_changed','Creator execution changed before admission. No execution or settlement was requested. Reinspect the installed contract.');if(/quote_already_claimed|prepared_already_claimed/.test(String(e)))throw new PlatformError(409,'quote_already_claimed','This quote or prepared result is already purchased. Reuse the original paid request.');throw e;}
  if(!inserted.meta.changes){
   const row=await db.prepare('SELECT * FROM platform_payments WHERE product_id=? AND version=? AND key_hash=?').bind(product.id,product.version,keyHash).first();
   if(row)return replay(row,fingerprint);

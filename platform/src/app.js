@@ -1,3 +1,4 @@
+import {creatorRuntimeCatalog} from './creator-runtime.js';
 import {attachCreatorPayoutApi,creatorPayoutRoute} from './creator-payout-api.js';
 import {products,findProduct} from './registry.js';
 import {service,searchSchema,invokeSchema,outcomeSchema,PlatformError} from './service.js';
@@ -41,7 +42,7 @@ function html(content,status=200){return new Response(content,{status,headers:{'
 export function createPlatform({db,origin,catalog:sourceCatalog=products,handlers={},limit=async()=>true,feedbackLimit=async()=>true,assets,payments={enabled:false},paymentAdapterFactory,index402VerificationHash,trackingEnabled=true,telemetryEnabled=true}) {
  // Accept the early AGI integration name too; either server option can defer tracking.
  trackingEnabled=trackingEnabled&&telemetryEnabled;
- const catalog=runtimeCatalog(sourceCatalog,handlers,payments);
+ const configuredCatalog=runtimeCatalog(sourceCatalog,handlers,payments);
  return async function app(request,client='unknown') {
   const url=new URL(request.url),path=url.pathname,method=request.method;
   const isHead=method==='HEAD';
@@ -62,6 +63,7 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
       const assetUrl=new URL(path,origin);
       return finish(assets?await assets.fetch(new Request(assetUrl,{method})):new Response(null,{status:404}));
     }
+    const catalog=await creatorRuntimeCatalog({db,catalog:configuredCatalog,handlers});
     const channel=path==='/mcp'?'mcp':(path.startsWith('/v1')||path==='/openapi.json'||path==='/llms.txt'||request.headers.get('Accept')?.includes('application/json')?'http':'html');
     const sampleKind=request.headers.get('X-AgentToolbox-Sample')==='synthetic'?'synthetic':'unclassified';
     const api=service({db,catalog,handlers,channel,sampleKind,feedbackAllowed:()=>feedbackLimit(client),trackingEnabled});
@@ -89,7 +91,7 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
         const product=findProduct(discoveryInvoke[1],catalog);
         if(!product||!['active','validation'].includes(product.status)||!product.pricing.payments_enabled)throw new PlatformError(404,'not_found','No payable resource at this path.');
         if(!handlers[product.id])throw new PlatformError(503,'payment_not_ready','No configured paid contract.');
-        return finish(await discoveryChallenge({product,config:payments,origin}));
+        return finish(await discoveryChallenge({product,handler:handlers[product.id],db,config:payments,origin}));
       }
       const examples=path.match(/^\/v1\/products\/([a-z0-9-]{1,64})\/examples$/);
       if(examples){const product=findProduct(examples[1],catalog),manifest=product?.provider?.type==='first_party'?freeExampleManifest(product.id):null;if(!manifest)throw new PlatformError(404,'examples_unavailable','No free verification fixtures for this tool.');return finish(Response.json(manifest));}

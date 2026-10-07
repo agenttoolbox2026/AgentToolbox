@@ -6,6 +6,7 @@ import {BASE_NETWORK,BASE_USDC,isAtomicAmount} from './payment-config.js';
 import {hash} from './telemetry.js';
 import {canonical} from './x402.js';
 import {verifyBaseUsdcTransfer} from './payout-chain.js';
+import {readCreatorInstallation} from './creator-installations.js';
 
 export const PAYOUT_LIMITS=Object.freeze({snapshot_rows:5000,batch_items:20,transaction_candidates:20});
 const ASSET=BASE_USDC.toLowerCase(),ACTIVE=['reserved','awaiting_owner','submitted','unknown'];
@@ -39,7 +40,10 @@ export async function getCreatorEarnings({db,tool,capability}){
  const entitlement=await db.prepare('SELECT e.* FROM platform_creator_entitlements e JOIN platform_creators c USING(creator_id) WHERE e.tool_id=? AND c.capability_hash=?').bind(tool,commitment).first();
  if(!entitlement)throw new PlatformError(403,'creator_capability_invalid','No matching private creator entitlement.');
  const result=await accounting(db,tool);delete result.snapshot_hash;const payouts=result.payouts;delete result.payouts;
- return {api_version:'1',tool_id:tool,...result,payout_count:payouts.length,execution_status:entitlement.installed_adapter?'installed_adapter':'metadata_only_not_earning',payment_effect:'none'};
+ // This is audit state, not proof that matching compiled code is deployed.
+ const installation=await readCreatorInstallation({db,toolId:tool});
+ const installed=installation?.state==='active'&&installation.installed_adapter===installation.adapter_id;
+ return {api_version:'1',tool_id:tool,...result,payout_count:payouts.length,execution_status:installed?'installed_adapter':'metadata_only_not_earning',payment_effect:'none'};
 }
 async function batchView(db,batchId){
  const rows=(await db.prepare('SELECT * FROM platform_creator_payouts WHERE batch_id=? ORDER BY tool_id LIMIT 21').bind(batchId).all()).results;if(!rows.length||rows.length>20)throw unavailable();

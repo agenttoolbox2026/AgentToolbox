@@ -1,6 +1,7 @@
 import {hash} from './telemetry.js';
 import {PlatformError} from './service.js';
 import {validKey} from './feedback.js';
+import {creatorBeneficiary} from './submissions.js';
 export async function runExample({db,product,handler,key,sampleKind='unclassified',now=()=>new Date()}){
  if(key&&!validKey(key))throw new PlatformError(400,'idempotency_key_required','Use a 32–128 character Idempotency-Key for replay, or omit it for a new example.');
  const keyHash=key?await hash(key):null;
@@ -11,12 +12,14 @@ export async function runExample({db,product,handler,key,sampleKind='unclassifie
   return JSON.parse(row.result_json);
  };
  if(keyHash){const previous=await db.prepare('SELECT * FROM platform_examples WHERE product_id=? AND version=? AND key_hash=?').bind(product.id,product.version,keyHash).first();if(previous)return replay(previous);}
+ await creatorBeneficiary(db,product,handler);
  const id=crypto.randomUUID(),date=now().toISOString();
  const created=await db.prepare(`INSERT OR IGNORE INTO platform_examples(id,product_id,version,key_hash,state,sample_kind,created_at,updated_at,result_expires_at) VALUES(?,?,?,?,'running',?,?,?,?)`)
   .bind(id,product.id,product.version,keyHash,sampleKind,date,date,new Date(now().getTime()+86400000).toISOString()).run();
  if(!created.meta.changes)return replay(await db.prepare('SELECT * FROM platform_examples WHERE product_id=? AND version=? AND key_hash=?').bind(product.id,product.version,keyHash).first());
  const started=Date.now();let result;
  try{
+  await creatorBeneficiary(db,product,handler);
   const output=await handler.run(handler.input.parse(product.example_input));
   if(!handler.output.safeParse(output).success||!await handler.success(output))throw new Error('example_contract_failed');
   result={example:true,example_id:id,product_id:product.id,version:product.version,payment:{status:'not_required',amount_settled_atomic:0},output,
