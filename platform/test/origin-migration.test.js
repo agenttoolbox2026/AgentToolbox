@@ -85,10 +85,18 @@ test('preserving expired unpaid rows keeps history but does not make a quote or 
  const s=setup();try{
   const p=await s.prepare(),q=await s.quote(p.prepared_id),before=JSON.stringify({preparations:s.db.sqlite.prepare('SELECT * FROM platform_preparations').all(),quotes:s.db.sqlite.prepare('SELECT * FROM platform_quotes').all()});
   s.setDate(new Date(s.now().getTime()+90000000));await expirePreparations(s.db,s.now(),{preserveRecords:true});
-  assert.equal(JSON.stringify({preparations:s.db.sqlite.prepare('SELECT * FROM platform_preparations').all(),quotes:s.db.sqlite.prepare('SELECT * FROM platform_quotes').all()}),before);
+  const original=JSON.parse(before);original.preparations.forEach(p=>{p.result_json=null;p.preview_json=null;});
+  assert.equal(JSON.stringify({preparations:s.db.sqlite.prepare('SELECT * FROM platform_preparations').all(),quotes:s.db.sqlite.prepare('SELECT * FROM platform_quotes').all()}),JSON.stringify(original));
   const value={version:product.version,prepared_id:p.prepared_id,quote_id:q.quote_id,payment_amount_atomic:'10001',max_charge_usdc_atomic:'10001'};
   await assert.rejects(s.invoke({origin:AGI,payload:s.payment(OLD,'10001'),value}),e=>e.code==='quote_expired');assert.equal(s.counts.adapter,0);assert.equal(s.counts.settle,0);
   await assert.rejects(s.prepare(AGI),e=>e.code==='preparation_expired');
+ }finally{s.close();}
+});
+test('preserve-records maintenance retains recent unpaid output until the previous cleanup threshold',async()=>{
+ const s=setup();try{
+  await s.prepare();const before=JSON.stringify(s.db.sqlite.prepare('SELECT * FROM platform_preparations').all());
+  s.setDate(new Date(s.now().getTime()+901000));await expirePreparations(s.db,s.now(),{preserveRecords:true});
+  assert.equal(JSON.stringify(s.db.sqlite.prepare('SELECT * FROM platform_preparations').all()),before);
  }finally{s.close();}
 });
 test('tracking disabled preserves existing metrics and financial records while recording no new events',async()=>{
