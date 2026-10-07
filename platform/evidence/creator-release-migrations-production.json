@@ -1,0 +1,32 @@
+{
+  "source_commit": "a36f2abb9f8310cc503dd0eb57ba6c0880b7b7cb",
+  "source_tree": "82cf9303b2458fcb11fb4d33ac0afb3b6808c687",
+  "migrations": [
+    {
+      "name": "0008_creator_updates.sql",
+      "sha256": "5f389f5b6139feca2c0a515953c84eaad03c53b5c83685157ceae856ff9b699a"
+    },
+    {
+      "name": "0009_contract_pins.sql",
+      "sha256": "4112463cfe1a1c2853d1a42532bb0c009bf1f04c44b13d905361664f7e1b3edc"
+    },
+    {
+      "name": "0010_referrals.sql",
+      "sha256": "e86a6b3e429e302f6917bf4fe079eb058e3ca7b40e6ff5fc0e205937d4c963af"
+    }
+  ],
+  "production_migration_count": 10,
+  "schema_readback_confirmed": true,
+  "legacy_private_and_financial_counts_unchanged": true,
+  "new_metadata_records": 0,
+  "referral_accounts": 0,
+  "referral_allocations": 0,
+  "foreign_key_check_passed": true,
+  "tests_passed": 204,
+  "tests_failed": 0,
+  "tests_skipped": 0,
+  "public_worker_updated": true,
+  "current_public_worker_version": "c5983f59-14a5-460b-b548-6b42b064de62",
+  "verified_at": "2026-10-07T08:42:09.259134+00:00",
+  "worker_source_commit": "68f5ababf9bc5229d9e1a7ccf6484f927e272d83"
+}

@@ -1,0 +1,65 @@
+{
+  "screenshots": [
+    {
+      "device": "desktop",
+      "path": "/",
+      "file": "/tmp/agenttoolbox-release-screenshots/agenttoolbox-desktop-home.png",
+      "library_file_id": "libfile_f7a0efa287588191bc5d3108ca04e755",
+      "metadata_applied": true,
+      "version": 1
+    },
+    {
+      "device": "desktop",
+      "path": "/humans",
+      "file": "/tmp/agenttoolbox-release-screenshots/agenttoolbox-desktop-humans.png",
+      "library_file_id": "libfile_d985cb36fdf88191ac85af825f760d7d",
+      "metadata_applied": true
+    },
+    {
+      "device": "desktop",
+      "path": "/submit-tool",
+      "file": "/tmp/agenttoolbox-release-screenshots/agenttoolbox-desktop-sell.png",
+      "library_file_id": "libfile_79cb7ecc13b88191a413a2337e8c8b58",
+      "metadata_applied": true
+    },
+    {
+      "device": "desktop",
+      "path": "/update-tool",
+      "file": "/tmp/agenttoolbox-release-screenshots/agenttoolbox-desktop-update.png",
+      "library_file_id": "libfile_f36dde6ed8e0819190ed8cb93b5facd0",
+      "metadata_applied": true
+    },
+    {
+      "device": "mobile",
+      "path": "/",
+      "file": "/tmp/agenttoolbox-release-screenshots/agenttoolbox-mobile-home.png",
+      "library_file_id": "libfile_df390dcfc7408191ab57990fbbc19d81",
+      "metadata_applied": true,
+      "version": 1
+    },
+    {
+      "device": "mobile",
+      "path": "/humans",
+      "file": "/tmp/agenttoolbox-release-screenshots/agenttoolbox-mobile-humans.png",
+      "library_file_id": "libfile_e6240127795c81918114da633f224db3",
+      "metadata_applied": true
+    },
+    {
+      "device": "mobile",
+      "path": "/submit-tool",
+      "file": "/tmp/agenttoolbox-release-screenshots/agenttoolbox-mobile-sell.png",
+      "library_file_id": "libfile_171e874a0d1c819185f1505cbdbd07f0",
+      "metadata_applied": true
+    },
+    {
+      "device": "mobile",
+      "path": "/update-tool",
+      "file": "/tmp/agenttoolbox-release-screenshots/agenttoolbox-mobile-update.png",
+      "library_file_id": "libfile_cd69bb485ea0819195e8a336f1d95712",
+      "metadata_applied": true
+    }
+  ],
+  "verified_at": "2026-10-07T08:42:09.259134+00:00",
+  "source_commit": "68f5ababf9bc5229d9e1a7ccf6484f927e272d83",
+  "worker_version": "c5983f59-14a5-460b-b548-6b42b064de62"
+}
