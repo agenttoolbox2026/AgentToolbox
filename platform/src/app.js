@@ -52,7 +52,7 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
     if(method==='OPTIONS')return finish(new Response(null,{status:204}));
     if(!await limit(client))throw new PlatformError(429,'rate_limited','Wait before retrying.');
     if(path==='/health' && ['GET','HEAD'].includes(method))return finish(Response.json({ok:true,service:'agenttoolbox',api_version:'1'}));
-    if(path.startsWith('/agenttoolbox-icon')||['/style.css','/site.js'].includes(path)) {
+    if(path.startsWith('/agenttoolbox-icon')||['/style.css','/site.js','/retry-envelope.js'].includes(path)) {
       if(!['GET','HEAD'].includes(method))throw new PlatformError(405,'method_not_allowed','Use GET.');
       return finish(assets?await assets.fetch(request):new Response(null,{status:404}));
     }

@@ -1,3 +1,4 @@
+import {retryFingerprint,validateRetryEnvelope,retryBodyFingerprint} from './retry-envelope.js';
 for(const button of document.querySelectorAll('[data-copy]'))button.addEventListener('click',async()=>{
  try{await navigator.clipboard.writeText(document.getElementById(button.dataset.copy).textContent);button.textContent='Copied';setTimeout(()=>{button.textContent='Copy JSON';},1800);}catch{button.textContent='Select text to copy';}
 });
@@ -62,6 +63,26 @@ const newCapability=prefix=>prefix+btoa(String.fromCharCode(...crypto.getRandomV
 const commitment=async secret=>Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(secret))),v=>v.toString(16).padStart(2,'0')).join('');
 const showResult=(form,data)=>{const result=form.querySelector('.workflow-result');result.textContent=JSON.stringify(data,null,2);result.hidden=false;};
 const workflowError=error=>error.name==='TimeoutError'?'Response timed out. Keep the same input, capability and request ID for a safe retry.':error.message;
+function creatorRetry(form,kind,build,restore){
+ const area=form.querySelector('[data-request-envelope]'),details=area.closest('details'),status=form.querySelector('[role="status"]');let envelope=null;
+ const display=()=>{area.value=JSON.stringify(envelope,null,2);details.open=true;};
+ form.querySelector('[data-copy-request]').addEventListener('click',async()=>{try{if(!envelope)throw new Error();await navigator.clipboard.writeText(JSON.stringify(envelope,null,2));status.textContent='Private retry request copied. Save it with your capability stored separately.';}catch{status.textContent='Prepare a request first, then select and copy its JSON if the clipboard is unavailable.';}});
+ form.querySelector('[data-restore-request]').addEventListener('click',async()=>{try{
+  if(area.value.length>20000)throw new Error('Retry request is too large.');
+  const value=validateRetryEnvelope(JSON.parse(area.value),kind),capability=form.elements.capability.value.trim();
+  if(!/^atbc_[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(capability)||await commitment(capability)!==value.body.creator_secret_hash)throw new Error('Paste the original private capability separately before restoring this request.');
+  restore(value,capability);envelope=value;display();status.textContent='Exact request restored. Review the proposal and accept its terms before sending. No request has been sent.';
+ }catch(error){status.textContent=error.message;}});
+ return async()=>{
+  const {path,body,capability}=await build(),fingerprint=retryFingerprint({path,body});
+  if(!envelope||retryBodyFingerprint(envelope)!==fingerprint){
+   envelope=validateRetryEnvelope({api_version:'1',kind,path,body:{...body,request_id:crypto.randomUUID()}},kind);display();
+   status.textContent='Request prepared; nothing sent. Copy and save the retry JSON, then click submit again. Keep your capability separately.';return null;
+  }
+  display();return {path:envelope.path,body:envelope.body,capability};
+ };
+}
+const restoreProposal=(form,body)=>{for(const name of ['name','summary','endpoint_url'])form.elements[name].value=body.proposal[name];for(const name of ['input_schema','output_schema'])form.elements[name].value=JSON.stringify(body.proposal[name],null,2);form.elements.consent.checked=false;};
 for(const form of document.querySelectorAll('.preview-form')){
  const button=form.querySelector('[type="submit"]'),status=form.querySelector('[role="status"]'),copy=form.querySelector('[data-copy-preparation]');button.hidden=false;
  let previousInput=null,context=null,body=null;
@@ -79,17 +100,18 @@ for(const form of document.querySelectorAll('.preview-form')){
 }
 for(const form of document.querySelectorAll('.submission-form')){
  const button=form.querySelector('[type="submit"]'),status=form.querySelector('[role="status"]');button.hidden=false;
- let requestId=null,previousBody=null;
+ const request=creatorRetry(form,'creator_submission',async()=>{
+  const values=new FormData(form),capability=values.get('capability').trim();
+  return {path:'/v1/tool-submissions',capability,body:{terms_version:form.dataset.terms,creator_secret_hash:await commitment(capability),proposal:{name:values.get('name').trim(),summary:values.get('summary').trim(),endpoint_url:values.get('endpoint_url').trim(),input_schema:JSON.parse(values.get('input_schema')),output_schema:JSON.parse(values.get('output_schema'))}}};
+ },value=>restoreProposal(form,value.body));
  form.querySelector('[data-generate-creator]').addEventListener('click',()=>{if(form.elements.capability.value){status.textContent='Keep the existing capability for retries. Clear it deliberately only to use a different creator capability.';return;}form.elements.capability.value=newCapability('atbc_');status.textContent='Capability generated in this tab only. Copy and save it privately before submitting.';});
  form.querySelector('[data-copy-creator]').addEventListener('click',async()=>{try{if(!form.elements.capability.value)throw new Error();await navigator.clipboard.writeText(form.elements.capability.value);status.textContent='Capability copied. Save it privately; it cannot be recovered.';}catch{status.textContent='Copy failed. Generate or paste a capability, then copy it using your browser.';}});
  form.addEventListener('submit',async event=>{
   event.preventDefault();if(button.disabled||!form.reportValidity())return;button.disabled=true;status.textContent='Submitting private proposal…';
   try{
-   const values=new FormData(form),capability=values.get('capability').trim();
-   const data={terms_version:form.dataset.terms,creator_secret_hash:await commitment(capability),proposal:{name:values.get('name').trim(),summary:values.get('summary').trim(),endpoint_url:values.get('endpoint_url').trim(),input_schema:JSON.parse(values.get('input_schema')),output_schema:JSON.parse(values.get('output_schema'))}};
-   const serialized=JSON.stringify(data);if(serialized!==previousBody){requestId=crypto.randomUUID();previousBody=serialized;}
-   const response=await fetch('/v1/tool-submissions',{method:'POST',headers:{'Content-Type':'application/json','X-Creator-Capability':capability},body:JSON.stringify({...data,request_id:requestId}),signal:AbortSignal.timeout(15000)});
-   const result=await response.json();if(!response.ok)throw new Error(result.error?.message??'Proposal was not saved.');showResult(form,result);status.textContent='Private proposal saved for owner review. No fee charged. Keep the submission ID and capability.';
+   const saved=await request();if(!saved){button.textContent='Submit saved request · free';return;}
+   const response=await fetch(saved.path,{method:'POST',headers:{'Content-Type':'application/json','X-Creator-Capability':saved.capability},body:JSON.stringify(saved.body),signal:AbortSignal.timeout(15000)});
+   const result=await response.json();if(!response.ok)throw new Error(result.error?.message??'Proposal was not saved.');showResult(form,result);status.textContent='Private proposal saved. Status: '+result.state+'. No fee charged. Keep the submission ID and capability.';
   }catch(error){status.textContent=workflowError(error);}finally{button.disabled=false;}
  });
 }
@@ -103,7 +125,15 @@ for(const form of document.querySelectorAll('.submission-status-form')){
 
 for(const form of document.querySelectorAll('.tool-update-form')){
  const load=form.querySelector('[data-load-approved]'),fields=form.querySelector('[data-update-fields]'),button=form.querySelector('[type="submit"]'),status=form.querySelector('[role="status"]');load.hidden=false;
- let context=null,previousBody=null,requestId=null;
+ let context=null;
+ const request=creatorRetry(form,'creator_update',async()=>{
+  const values=new FormData(form),capability=values.get('capability').trim(),tool=values.get('tool_id').trim();
+  if(tool!==context.tool||capability!==context.capability)throw new Error('Read the approved version again or restore your exact retry request with this tool and capability.');
+  return {path:'/v1/creator-tools/'+encodeURIComponent(tool)+'/updates',capability,body:{terms_version:context.terms_version,creator_secret_hash:await commitment(capability),base_version:values.get('base_version'),expected_head_revision:Number(values.get('expected_head_revision')),proposed_version:values.get('proposed_version').trim(),proposal:{name:values.get('name').trim(),summary:values.get('summary').trim(),endpoint_url:values.get('endpoint_url').trim(),input_schema:JSON.parse(values.get('input_schema')),output_schema:JSON.parse(values.get('output_schema'))}}};
+ },(value,capability)=>{
+  const tool=value.path.split('/')[3];context={tool,capability,terms_version:value.body.terms_version};form.elements.tool_id.value=tool;
+  restoreProposal(form,value.body);for(const name of ['base_version','expected_head_revision','proposed_version'])form.elements[name].value=value.body[name];fields.hidden=false;button.textContent='Submit saved update';
+ });
  for(const name of ['tool_id','capability'])form.elements[name].addEventListener('input',()=>{context=null;fields.hidden=true;});
  load.addEventListener('click',async()=>{
   if(load.disabled||!form.elements.tool_id.reportValidity()||!form.elements.capability.reportValidity())return;
@@ -120,12 +150,9 @@ for(const form of document.querySelectorAll('.tool-update-form')){
  form.addEventListener('submit',async event=>{
   event.preventDefault();if(button.disabled||!context||!form.reportValidity())return;button.disabled=true;status.textContent='Submitting private update…';
   try{
-   const values=new FormData(form),capability=values.get('capability').trim(),tool=values.get('tool_id').trim();
-   if(tool!==context.tool||capability!==context.capability)throw new Error('Read the approved version again with this tool and capability.');
-   const data={terms_version:context.terms_version,creator_secret_hash:await commitment(capability),base_version:values.get('base_version'),expected_head_revision:Number(values.get('expected_head_revision')),proposed_version:values.get('proposed_version').trim(),proposal:{name:values.get('name').trim(),summary:values.get('summary').trim(),endpoint_url:values.get('endpoint_url').trim(),input_schema:JSON.parse(values.get('input_schema')),output_schema:JSON.parse(values.get('output_schema'))}};
-   const serialized=JSON.stringify({tool,...data});if(serialized!==previousBody){requestId=crypto.randomUUID();previousBody=serialized;}
-   const response=await fetch('/v1/creator-tools/'+encodeURIComponent(tool)+'/updates',{method:'POST',headers:{'Content-Type':'application/json','X-Creator-Capability':capability},body:JSON.stringify({...data,request_id:requestId}),signal:AbortSignal.timeout(15000)}),result=await response.json();
-   if(!response.ok)throw new Error(result.error?.message??'Update was not saved.');showResult(form,result);status.textContent='Private update saved for review. Your approved version is retained. Keep the update ID and original capability.';
+   const saved=await request();if(!saved){button.textContent='Submit saved update';return;}
+   const response=await fetch(saved.path,{method:'POST',headers:{'Content-Type':'application/json','X-Creator-Capability':saved.capability},body:JSON.stringify(saved.body),signal:AbortSignal.timeout(15000)}),result=await response.json();
+   if(!response.ok)throw new Error(result.error?.message??'Update was not saved.');showResult(form,result);status.textContent='Private update saved. Status: '+result.state+'. '+(result.state==='approved'?'Approved metadata updated; installed execution is reviewed separately.':'Your approved version is retained.')+' Keep the update ID and original capability.';
   }catch(error){status.textContent=workflowError(error);}finally{button.disabled=false;}
  });
 }

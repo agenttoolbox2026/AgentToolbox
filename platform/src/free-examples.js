@@ -93,7 +93,7 @@ const manifests=Object.fromEntries(Object.entries(examples).map(([product_id,exa
  api_version:'1',fixture_version:'1',product_id,version:'0.1.0',publisher:'AgentToolbox',provenance:'first_party_synthetic_fixture',
  example_kind:'offline_contract_examples',execution:'none',payment:{status:'not_required',amount_settled_atomic:'0'},fixed_clock:FIXED_TIME,
  interpretation:'Static authored examples, not live remote observations, payment verification, customer outcomes or proof of usefulness. Fixture URLs identify mocked responses; do not invoke the live service with these fixture inputs.',
- expected_format:'input_valid tests the input schema; outcome_qualifies tests the handler success predicate, not a payment. checks compare exact values at RFC 6901 JSON Pointers into the output; unlisted fields are not asserted. failure_reason names the handler failure code when no output is returned.',
+ expected_format:'input_valid means the complete handler input validation passed, including runtime restrictions such as supported hosts, schema keywords and a valid seed. It is not just validation against the published JSON Schema, which cannot express every runtime restriction. outcome_qualifies tests the handler success predicate, not a payment. checks compare exact values at RFC 6901 JSON Pointers into the output; unlisted fields are not asserted. failure_reason names the handler failure code when no output is returned.',
  contract_path:'/v1/products/'+product_id,criteria_path:'/v1/products/'+product_id+'/criteria',...example,
 }]));
 freeze(manifests);

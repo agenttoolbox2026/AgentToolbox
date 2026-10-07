@@ -1,0 +1,105 @@
+{
+  "base_release_commit": "ad5cb1ae076e5b151fd1f286620fdd0f2519764d",
+  "tests": {
+    "passed": 209,
+    "failed": 0,
+    "skipped": 0
+  },
+  "syntax_check_passed": true,
+  "whitespace_check_passed": true,
+  "wrangler_dry_run_passed": true,
+  "browser": {
+    "origin": "http://127.0.0.1:8790",
+    "checks": [
+      {
+        "device": "desktop",
+        "path": "/",
+        "title": "AgentToolbox",
+        "overflow": false
+      },
+      {
+        "device": "desktop",
+        "path": "/products/docs-pack/preview",
+        "title": "AgentToolbox",
+        "overflow": false
+      },
+      {
+        "device": "desktop",
+        "path": "/products/contract-cases/preview",
+        "title": "AgentToolbox",
+        "overflow": false
+      },
+      {
+        "device": "desktop",
+        "path": "/submit-tool",
+        "title": "AgentToolbox",
+        "overflow": false
+      },
+      {
+        "device": "desktop",
+        "path": "/update-tool",
+        "title": "AgentToolbox",
+        "overflow": false
+      },
+      {
+        "device": "desktop",
+        "prepare_before_post": true,
+        "submission_uncertain_success_reload_replay": true,
+        "update_uncertain_success_reload_replay_after_head_change": true,
+        "export_contains_raw_capability": false,
+        "browser_storage_used": false,
+        "xss_executed": false,
+        "public_live_writes": 0
+      },
+      {
+        "device": "mobile",
+        "path": "/",
+        "title": "AgentToolbox",
+        "overflow": false
+      },
+      {
+        "device": "mobile",
+        "path": "/products/docs-pack/preview",
+        "title": "AgentToolbox",
+        "overflow": false
+      },
+      {
+        "device": "mobile",
+        "path": "/products/contract-cases/preview",
+        "title": "AgentToolbox",
+        "overflow": false
+      },
+      {
+        "device": "mobile",
+        "path": "/submit-tool",
+        "title": "AgentToolbox",
+        "overflow": false
+      },
+      {
+        "device": "mobile",
+        "path": "/update-tool",
+        "title": "AgentToolbox",
+        "overflow": false
+      },
+      {
+        "device": "mobile",
+        "prepare_before_post": true,
+        "submission_uncertain_success_reload_replay": true,
+        "update_uncertain_success_reload_replay_after_head_change": true,
+        "export_contains_raw_capability": false,
+        "browser_storage_used": false,
+        "xss_executed": false,
+        "public_live_writes": 0
+      }
+    ],
+    "browser_errors": [],
+    "production_writes": 0
+  },
+  "production_deployed": false,
+  "production_writes": 0,
+  "payment_signatures": 0,
+  "settlements": 0,
+  "schema_changes": false,
+  "payment_origin_changes": false,
+  "activation_stage_redesign": "owned by the separate agent-first presentation builder"
+}
