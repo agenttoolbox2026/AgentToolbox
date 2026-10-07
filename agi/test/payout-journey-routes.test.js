@@ -69,9 +69,9 @@ async function fixture(t,kind){
 function syntheticChain(manifest){
  const transactionHash='0x'+'33'.repeat(32),blockHash='0x'+'44'.repeat(32),finalHash='0x'+'55'.repeat(32),topic=a=>'0x'+a.slice(2).padStart(64,'0'),data='0x'+BigInt(manifest.amount_atomic).toString(16).padStart(64,'0');
  const tx={hash:transactionHash,chainId:'0x2105',nonce:'0x7',from:manifest.from,to:manifest.asset,value:'0x0',input:manifest.transaction.data,blockNumber:'0x10',blockHash,transactionIndex:'0x0'},log={address:manifest.asset,topics:['0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',topic(manifest.from),topic(manifest.to)],data,transactionHash,blockNumber:'0x10',blockHash,transactionIndex:'0x0',logIndex:'0x2',removed:false};
- const receipt={transactionHash,from:manifest.from,to:manifest.asset,status:'0x1',blockNumber:'0x10',blockHash,transactionIndex:'0x0',logs:[log]},canonical={number:'0x10',hash:blockHash,timestamp:'0x'+(BigInt(Math.floor(Date.now()/1000))+5n).toString(16)},finalized={number:'0x20',hash:finalHash},calls=[];
+ const receipt={transactionHash,from:manifest.from,to:manifest.asset,status:'0x1',blockNumber:'0x10',blockHash,transactionIndex:'0x0',logs:[log]},canonical={number:'0x10',hash:blockHash,timestamp:'0x'+(BigInt(Math.floor(Date.now()/1000))+5n).toString(16),transactions:[transactionHash]},finalized={number:'0x20',hash:finalHash},calls=[];
  const rpc=async(method,params)=>{calls.push(method);if(method==='eth_chainId')return '0x2105';if(method==='eth_getTransactionByHash')return tx;if(method==='eth_getTransactionReceipt')return receipt;if(method==='eth_getBlockByNumber')return params[0]==='finalized'||params[0]==='0x20'?finalized:canonical;throw new Error('Unexpected synthetic RPC method.');};
- return {rpc,transactionHash,receipt,log,calls};
+ return {rpc,transactionHash,tx,receipt,log,canonical,calls};
 }
 for(const kind of ['creator','referral'])test(`real AGI ${kind} payout journey preserves one lost-response request and pays only after verified chain evidence`,async t=>{
  const f=await fixture(t,kind);let loseResponse=true;const sent=[];
@@ -97,7 +97,30 @@ for(const kind of ['creator','referral'])test(`real AGI ${kind} payout journey p
  await assert.rejects(operator.reconcileOperatorPayout(event({rpc:chain.rpc,transactionHash:chain.transactionHash})),/wrong transfer event/);
  const pending=await reloaded.resolve(f.capability);assert.equal(pending.state,'submitted');assert.equal(pending.payout.receipt,null);assert.doesNotMatch(payoutRequestText(pending,{kind}),/Paid: the backend verified/);
  assert.equal(f.db.sqlite.prepare(`SELECT count(*) n FROM platform_${kind}_payout_evidence`).get().n,0);
- chain.log.data=originalData;payout=await operator.reconcileOperatorPayout(event({rpc:chain.rpc,transactionHash:chain.transactionHash}));assert.equal(payout.state,'paid');
+ chain.log.data=originalData;
+ const otherHash='0x'+'66'.repeat(32),hashes=n=>Array.from({length:n},(_,i)=>'0x'+(i+1).toString(16).padStart(64,'0'));
+ const membershipFaults=[
+  ['missing',block=>{delete block.transactions;return block;}],
+  ['empty',block=>({...block,transactions:[]})],
+  ['contradictory',block=>({...block,transactions:[otherHash]})],
+  ['wrong index',block=>({...block,transactions:[otherHash,chain.transactionHash]})],
+  ['object hash',block=>({...block,transactions:[{hash:chain.transactionHash}]})],
+  ['duplicate',block=>({...block,transactions:[chain.transactionHash,chain.transactionHash]})],
+  ['oversized',block=>({...block,transactions:[chain.transactionHash,...hashes(2048)]})],
+ ];
+ for(const canonicalRead of [1,2])for(const [label,mutate] of membershipFaults){
+  let reads=0;
+  const rpc=async(method,params)=>{const value=await chain.rpc(method,params);if(method==='eth_getBlockByNumber'&&params[0]==='0x10'&&++reads===canonicalRead)return mutate({...value});return value;};
+  await assert.rejects(operator.reconcileOperatorPayout(event({rpc,transactionHash:chain.transactionHash})),/Payout receipt rejected/,`${label} on canonical read ${canonicalRead}`);
+  assert.equal(reads,canonicalRead);
+  const held=await reloaded.resolve(f.capability);assert.equal(held.state,'submitted');assert.equal(held.payout.revision,payout.revision);assert.equal(held.payout.receipt,null);
+  const balance=await reloaded.read(f.toolId,f.capability);assert.equal(balance.earnings.reserved_atomic,f.amount);assert.equal(balance.earnings.available_atomic,'0');assert.equal(balance.earnings.confirmed_paid_atomic,'0');
+  assert.equal(f.db.sqlite.prepare(`SELECT count(*) n FROM platform_${kind}_payout_evidence`).get().n,0);
+ }
+ // The exact receipt index at the accepted 2,048-hash boundary must also work.
+ chain.tx.transactionIndex=chain.receipt.transactionIndex=chain.log.transactionIndex='0x7ff';
+ chain.canonical.transactions=[...hashes(2047),chain.transactionHash];
+ payout=await operator.reconcileOperatorPayout(event({rpc:chain.rpc,transactionHash:chain.transactionHash}));assert.equal(payout.state,'paid');
  const paid=await reloaded.resolve(f.capability);assert.match(payoutRequestText(paid,{kind}),/Paid: the backend verified a finalized canonical Base USDC transfer/);assert.equal(paid.payout.receipt.transaction_hash,chain.transactionHash);assert.equal(paid.payout.receipt.block_number,'0x10');assert.equal(paid.payout.receipt.log_index,'0x2');
  for(const mutate of [data=>{data.payout.receipt.basis='unfinalized';},data=>{data.payout.receipt.block_number='16';},data=>{data.payout.amount_atomic='1';}]){
   const malicious=createPayoutRequestsClient({kind,cryptoImpl:webcrypto,fetchImpl:async(path,init)=>{const response=await f.request(path,init),data=await response.json();mutate(data);return Response.json(data);}});await malicious.restore(text,f.capability);await assert.rejects(malicious.resolve(f.capability),/unexpected or inconsistent/);assert.equal(malicious.snapshot().phase,'uncertain');
