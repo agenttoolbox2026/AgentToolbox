@@ -26,6 +26,26 @@ test('wallet HTML and script keep secrets out of documents, asset requests and n
  assert.equal(assetRequests[0].url,origin+'/creator-wallet.js');assert.equal([...assetRequests[0].headers].length,0);
 });
 
+test('every payout journey module is private-cache safe and receives no visitor credentials through assets',async()=>{
+ const worker=createAgi(),seen=[];
+ const env={ASSETS:{fetch:async request=>{seen.push(request);return new Response('// fixture',{headers:{'content-type':'text/javascript'}});}}};
+ const headers={'X-Creator-Capability':capability,'X-Referral-Capability':'atbf_'+Buffer.alloc(32,17).toString('base64url'),Authorization:'private-auth',Cookie:'private-cookie'};
+ const modules=['creator-wallet','creator-payout-journey','wallet-proof','creator-earnings','payout-requests','referral-account','referral-wallet'];
+ for(const name of modules){
+  const response=await worker.fetch(new Request(origin+'/'+name+'.js?private=query',{headers}),env);
+  assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');
+  assert.equal(seen.at(-1).url,origin+'/'+name+'.js');assert.deepEqual([...seen.at(-1).headers],[]);
+ }
+ const referral=await worker.fetch(new Request(origin+'/referrals?capability=private-query',{headers}),env);
+ assert.equal(referral.status,200);assert.equal(referral.headers.get('cache-control'),'no-store');
+ const html=await referral.text();assert.doesNotMatch(html,/private-query|private-auth|private-cookie/);
+ assert.equal((html.match(/id="referral-capability"/g)??[]).length,1);
+ for(const name of ['data-referral-wallet','data-wallet-proof','data-creator-earnings','data-payout-requests'])assert(html.includes(name));
+ assert.equal((html.match(/<script /g)??[]).length,1);
+ assert.equal((await worker.fetch(new Request(origin+'/referrals',{method:'POST',body:'private'}),env)).status,405);
+ assert.equal(await(await worker.fetch(new Request(origin+'/referrals',{method:'HEAD'}),env)).text(),'');
+});
+
 test('wallet browser client restores a lost response through real AGI routes without duplicating records',async t=>{
  t.mock.method(globalThis,'fetch',()=>{throw new Error('No external requests in wallet integration tests.');});
  const db=database();t.after(()=>db.close());

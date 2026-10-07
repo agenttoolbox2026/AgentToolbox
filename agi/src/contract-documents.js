@@ -3,7 +3,7 @@ import {markdownText} from './machine.js';
 import {isPublishedTool} from './catalog.js';
 const json=value=>JSON.stringify(value,null,2);
 const block=value=>'```json\n'+json(value)+'\n```';
-const identity=p=>`Created by: ${markdownText(p.provider.name)} (${markdownText(p.provider.type==='first_party'?'first-party':p.provider.type)}).\nVersion: ${p.version}. ${p.experimental?'Experimental.':''}`;
+const identity=p=>`Created by: ${markdownText(p.provider.name)} (${markdownText(p.provider.type==='first_party'?'first-party':p.provider.type)}).\nVersion: ${p.version}. ${p.maturity==='beta'?'Beta.':''}`;
 const links=p=>`[Tool guide](/tools/${p.id}) · [Success checks](/tools/${p.id}/checks)${p.links.examples?` · [Synthetic examples](/tools/${p.id}/examples)`:''} · [Reviews](${p.links.reviews}) · [Private feedback](/feedback?tool=${p.id})`;
 
 export function contractDocument(model,tool,kind){
@@ -67,11 +67,13 @@ ${tool.limits?'## Limits\n\n'+block(tool.limits):''}
 
 export function sellerTermsDocument(model){return `# Seller terms — AgentToolbox
 
-Free during the 100% off promotion (list price $0.50 USDC). Approved creators retain 90% lifetime gross entitlement under their original frozen terms. Approval covers metadata; publication, safe execution and payout processing remain separate stages. No payout service or wallet ownership verification is implied.
+Free during the 100% off promotion (list price $0.50 USDC). Approved creators retain 90% lifetime gross entitlement under their original frozen terms. Approval records the entitlement. A reviewed implementation must be compiled and installed before publication and execution. Current [payout operations](/creator-wallet) add destination proof, private earnings, owner-reviewed requests and finalized receipt status without changing the accepted financial terms.
 
 [Seller guide](/sell) · [Submit a private proposal](/submit-tool) · [Canonical terms JSON](${model.origin}/v1/creator-terms)
 
-## Current contract
+## Frozen financial contract
+
+Launch-time transfer limitations in these historical terms do not describe the current request workflow. Payout requests require separate destination proof and owner approval; the owner signs externally.
 
 Keep the exact accepted terms_version and your private capability for status and versioned updates. Never share private keys, wallet seed phrases or capability secrets in proposal text or feedback.
 

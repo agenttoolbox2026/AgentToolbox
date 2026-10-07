@@ -2,14 +2,15 @@
   "name": "AgentToolbox",
   "origin": "https://agi.agenttoolbox2026.workers.dev",
   "siteOrigin": "https://agi.agenttoolbox2026.workers.dev",
-  "registryVersion": "2026-10-07.2",
+  "registryVersion": "2026-10-07.3",
   "tools": [
     {
       "id": "docs-pack",
       "version": "0.1.0",
       "name": "Docs Pack",
       "status": "active",
-      "experimental": true,
+      "maturity": "beta",
+      "experimental": false,
       "summary": "Get query-matched excerpts from up to 5 documentation pages.",
       "provider": {
         "id": "agenttoolbox",
@@ -22,7 +23,8 @@
         "documentation",
         "excerpts",
         "context",
-        "batch"
+        "batch",
+        "beta"
       ],
       "outcome": {
         "description": "Exact excerpts with source URLs, titles, hashes, offsets and matching terms.",
@@ -148,7 +150,7 @@
         "decimals": 6,
         "business_maximum": null,
         "payments_enabled": true,
-        "price_status": "experimental hypothesis; willingness to pay unproven",
+        "price_status": "beta; willingness to pay unproven",
         "live_payment_verified": false
       },
       "preview": {
@@ -464,12 +466,13 @@
       "name": "QuoteProof",
       "version": "0.1.0",
       "status": "active",
-      "experimental": true,
+      "maturity": "beta",
+      "experimental": false,
       "summary": "Check quotes against supported documentation, with source evidence.",
       "problem": "Check quotes against supported documentation, with source evidence.",
       "tags": [
         "quote-proof",
-        "experimental"
+        "beta"
       ],
       "provider": {
         "id": "agenttoolbox",
@@ -550,7 +553,7 @@
         "decimals": 6,
         "business_maximum": null,
         "payments_enabled": true,
-        "price_status": "experimental; willingness to pay unproven",
+        "price_status": "beta; willingness to pay unproven",
         "live_payment_verified": false
       },
       "preview": {
@@ -1027,12 +1030,13 @@
       "name": "ContractCases",
       "version": "0.1.0",
       "status": "active",
-      "experimental": true,
+      "maturity": "beta",
+      "experimental": false,
       "summary": "Generate checked boundary and negative cases for supported JSON Schemas.",
       "problem": "Generate checked boundary and negative cases for supported JSON Schemas.",
       "tags": [
         "contract-cases",
-        "experimental"
+        "beta"
       ],
       "provider": {
         "id": "agenttoolbox",
@@ -1274,7 +1278,7 @@
         "decimals": 6,
         "business_maximum": null,
         "payments_enabled": true,
-        "price_status": "experimental; willingness to pay unproven",
+        "price_status": "beta; willingness to pay unproven",
         "live_payment_verified": false
       },
       "preview": {
@@ -1682,12 +1686,13 @@
       "name": "MCP WireCheck",
       "version": "0.1.0",
       "status": "active",
-      "experimental": true,
+      "maturity": "beta",
+      "experimental": false,
       "summary": "Check MCP discovery and tools/list on your public workers.dev endpoint.",
       "problem": "Check MCP discovery and tools/list on your public workers.dev endpoint.",
       "tags": [
         "mcp-wirecheck",
-        "experimental"
+        "beta"
       ],
       "provider": {
         "id": "agenttoolbox",
@@ -1787,7 +1792,7 @@
         "decimals": 6,
         "business_maximum": null,
         "payments_enabled": true,
-        "price_status": "experimental; willingness to pay unproven",
+        "price_status": "beta; willingness to pay unproven",
         "live_payment_verified": false
       },
       "preview": {
