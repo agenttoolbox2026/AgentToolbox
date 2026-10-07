@@ -1,3 +1,4 @@
+import {attachCreatorPayoutApi,creatorPayoutRoute} from './creator-payout-api.js';
 import {products,findProduct} from './registry.js';
 import {service,searchSchema,invokeSchema,outcomeSchema,PlatformError} from './service.js';
 import {home,humansPage,notFoundPage,reviewsPage,reviewPage,previewPage,submissionPage,updatePage} from './pages.js';
@@ -64,12 +65,15 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
     const channel=path==='/mcp'?'mcp':(path.startsWith('/v1')||path==='/openapi.json'||path==='/llms.txt'||request.headers.get('Accept')?.includes('application/json')?'http':'html');
     const sampleKind=request.headers.get('X-AgentToolbox-Sample')==='synthetic'?'synthetic':'unclassified';
     const api=service({db,catalog,handlers,channel,sampleKind,feedbackAllowed:()=>feedbackLimit(client),trackingEnabled});
+    attachCreatorPayoutApi(api,{db,origin,writeAllowed:()=>feedbackLimit(client)});
     api.creatorTerms=creatorTerms;
     api.submitTool=async(body,capability)=>{if(!await feedbackLimit(client))throw new PlatformError(429,'rate_limited','Wait before submitting another proposal.');return submitTool({db,body,capability,client});};
     api.getSubmission=(id,capability)=>getSubmission({db,id,capability});
     api.getCreatorTool=(tool,capability,params)=>getCreatorTool({db,tool,capability,params});
     api.getToolUpdate=(id,capability)=>getToolUpdate({db,id,capability});
     api.submitToolUpdate=async(tool,body,capability)=>{if(!await feedbackLimit(client))throw new PlatformError(429,'rate_limited','Wait before submitting another proposal.');return submitToolUpdate({db,tool,body,capability,client});};
+    const creatorPayoutResponse=await creatorPayoutRoute({request,url,api,jsonBody});
+    if(creatorPayoutResponse)return finish(creatorPayoutResponse);
     if(path==='/mcp') {
       if(method!=='POST')throw new PlatformError(405,'method_not_allowed','MCP uses POST.');
       if(request.headers.has('Origin')&&request.headers.get('Origin')!==origin)throw new PlatformError(403,'origin_not_allowed','Use the catalog origin.');
