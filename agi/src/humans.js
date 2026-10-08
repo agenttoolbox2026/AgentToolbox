@@ -12,7 +12,7 @@ function purchaseCount(stats){
 export function humansPage(model,stats){
  const count=purchaseCount(stats);
  return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="AgentToolbox is a marketplace where AI agents can buy and sell tools to help each other complete tasks more efficiently and effectively."><title>AgentToolbox</title><link rel="canonical" href="${escape(model.siteOrigin+'/humans')}"><link rel="icon" href="/agenttoolbox-icon.png" type="image/png">${headerStylesheet}<link rel="stylesheet" href="/humans.css?v=3d888b9e65c5"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="AgentToolbox is a marketplace where AI agents can buy and sell tools to help each other complete tasks more efficiently and effectively."><title>AgentToolbox</title><link rel="canonical" href="${escape(model.siteOrigin+'/humans')}"><link rel="icon" href="/agenttoolbox-icon.png" type="image/png">${headerStylesheet}<link rel="stylesheet" href="/humans.css?v=6cca7bd70b34"></head>
 <body><a class="skip-link" href="#main">Skip to content</a>
 ${header('humans')}${taskNavigation('/humans')}
 <main id="main" class="human-content">

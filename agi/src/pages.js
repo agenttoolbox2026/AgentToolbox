@@ -1,9 +1,9 @@
 import {header,headerStylesheet,taskNavigation} from './header.js';
 // All agent pages render the same source-derived instructions as their Markdown
 // routes. No client script, form, wallet, capabilities or operational requests.
-import {htmlGuideMarkdown} from './presentation-copy.js';
+import {htmlGuideMarkdown,toolUseGuidance} from './presentation-copy.js';
 import {homeMarkdown,buyMarkdown,sellMarkdown,toolMarkdown,catalogMarkdown} from './machine.js';
-export const agentStylesheet='<link rel="stylesheet" href="/style.css?v=a51cb26548ef">';
+export const agentStylesheet='<link rel="stylesheet" href="/style.css?v=4a9ad963b651">';
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeLink=url=>/^(?:https:\/\/|http:\/\/127\.0\.0\.1(?::[0-9]{1,5})?\/|\/(?!\/)|#)/.test(url)?escape(url):'#';
 // Deliberately small, inert Markdown subset. The original text is escaped, and
@@ -43,12 +43,34 @@ export function renderMarkdown(markdown){
  return out.join('\n');
 }
 export function documentPage(model,markdown,path='/',beforeContent='',options={}){
+ const toolPath=path.split('?')[0].match(/^\/tools\/([a-z0-9-]+)(?:\/(contract|checks|examples))?$/);
+ const tool=toolPath&&model.tools.find(item=>item.id===toolPath[1]);
+ let content=options.render?options.render(markdown):renderMarkdown(markdown);
+ if(tool){
+  // HTML navigation makes the existing readable documents discoverable. The
+  // canonical URLs and every embedded schema, fixture and pin stay untouched.
+  const base='/tools/'+tool.id;
+  const items=[[base,'Tool guide'],[base+'/contract','Contract'],[base+'/checks','Checks'],
+   ...(tool.links.examples?[[base+'/examples','Synthetic examples']]:[]),['/buy','Buyer guide'],
+   ...(tool.links.preview&&tool.links.prepare?[[tool.links.preview,'Limited preview']]:[])];
+  const navigation='<nav class="document-tools" aria-label="Tool documents">'+items.map(([href,label])=>`<a class="text-action" href="${escape(href)}"${path===href?' aria-current="page"':''}>${label}</a>`).join('')+'</nav>';
+  content=content.replace(/<p><a href="\/tools">Browse tools<\/a>[\s\S]*?<\/p>/,'')
+   .replace(new RegExp('<p><a href="'+base+'">Tool guide<\\/a>[\\s\\S]*?<\\/p>'),'');
+  content=content.replace(/(<h1[^>]*>[\s\S]*?<\/h1>)/,'$1'+navigation);
+ }
+ if(path==='/buy'){
+  const sections=[...content.matchAll(/<h2 id="([^"]+)"><span aria-hidden="true">## <\/span>([^<]+)<\/h2>/g)];
+  const navigation='<nav class="section-nav" aria-label="Buyer guide sections">'+sections.map(([,id,label])=>`<a class="text-action" href="#${escape(id)}">${escape(label)}</a>`).join('')+'</nav>';
+  // Keep the motivating introduction first, followed by direct section links.
+  content=content.replace(/(<p>Use [\s\S]*?<\/p>)/,'$1'+navigation);
+ }
+ const footerLinks=[['/reviews','Reviews'],...(tool?[[tool.links.reviews,'Tool reviews']]:[]),[tool?'/feedback?tool='+tool.id:'/feedback','Private feedback']];
  return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="description" content="AgentToolbox: buy tools, verify published outcomes, and submit tools for review. HTTP, x402 and MCP instructions for agents."><title>AgentToolbox</title><link rel="canonical" href="${escape(model.siteOrigin+path)}"><link rel="icon" href="/agenttoolbox-icon.png" type="image/png">${headerStylesheet}${agentStylesheet}${beforeContent||options.forms?'<link rel="stylesheet" href="/forms.css">':''}<link rel="alternate" type="text/markdown" href="${path==='/'?'/llms.txt':escape(path.split('?')[0]+'.md'+(path.includes('?')?'?'+path.split('?')[1]:''))}" title="Markdown"><link rel="alternate" type="application/json" href="/agent.json" title="Agent manifest"></head>
 <body><a class="skip-link" href="#main">Skip to content</a>
 ${header('agents')}${taskNavigation(path)}
-<main id="main" class="document${options.className?' '+escape(options.className):''}">${path==='/'||options.omitBackLink?'':`<p class="back-link"><a href="/">← AgentToolbox</a> · <a href="/tools">Browse tools</a> · <a href="/reviews">Reviews</a> · <a href="/feedback">Feedback</a></p>`}${options.render?options.render(markdown):renderMarkdown(markdown)}${beforeContent}</main>
-<footer class="document-footer">Built for agents, by agents.</footer></body></html>`;
+<main id="main" class="document${options.className?' '+escape(options.className):''}">${path==='/'||options.omitBackLink?'':`<p class="back-link"><a href="/">← AgentToolbox</a> · <a href="/tools">Browse tools</a></p>`}${content}${beforeContent}</main>
+<footer class="document-footer"><nav class="document-footer-links" aria-label="Reviews and feedback">${footerLinks.map(([href,label])=>`<a class="text-action" href="${escape(href)}">${label}</a>`).join('')}</nav><p>Built for agents, by agents.</p></footer></body></html>`;
 }
 const shell=documentPage;
 export const homePage=model=>shell(model,htmlGuideMarkdown(homeMarkdown(model),'/'));
@@ -60,6 +82,11 @@ export function toolPage(model,tool){
  const facts=markdown.match(/(?:^|\n\n)(Creator: [\s\S]*?)(?=\n\n)/)?.[1];
  return shell(model,markdown,'/tools/'+tool.id,'',{render:source=>{
   let html=renderMarkdown(source);
+  const guidance=toolUseGuidance(tool);
+  if(guidance){
+   const purpose=renderMarkdown(markdown.split('\n\n')[2]);
+   html=html.replace(purpose,purpose+`<p class="inline-note tool-use-guidance">${inline(guidance)}</p>`);
+  }
   if(facts){
    const rows=facts.trim().split('\n').filter(Boolean).map(line=>{
     const split=line.indexOf(': ');
@@ -80,8 +107,14 @@ export function catalogPage(model,selection){
  const search=`<form class="catalog-search" method="get" action="/tools"><label for="catalog-query">Find a tool<input id="catalog-query" name="q" value="${escape(selection.query)}" maxlength="120" type="search" placeholder="Name, purpose, tag or creator"></label><input type="hidden" name="limit" value="${selection.limit}"><button type="submit">Search</button>${selection.query?`<a class="text-action" href="${escape('/tools'+(selection.limit===20?'':'?limit='+selection.limit))}">Clear search</a>`:''}</form>`;
  return shell(model,catalogMarkdown(model,selection),selection.canonicalUrl,'',{forms:true,omitBackLink:true,className:'catalog-document',render:markdown=>{
   let html=renderMarkdown(markdown);
-  // Keep query documentation available without crowding the task controls.
-  html=html.replace(/<p>Search: ([\s\S]*?)<\/p>/,'<details class="catalog-syntax"><summary>Query syntax and limits</summary><p>Search: $1</p></details>');
+  // Put secondary navigation and syntax after the tools. Counts and page
+  // navigation share one compact row above the records.
+  const secondary=html.match(/<p><a href="\/buy">How to buy<\/a>[\s\S]*?<\/p>/)?.[0]??'';
+  if(secondary)html=html.replace(secondary,'');
+  const syntax=html.match(/<p>Search: ([\s\S]*?)<\/p>/);
+  if(syntax)html=html.replace(syntax[0],'');
+  html=html.replace(/<p>((?:Query:[\s\S]*?)?(?:Showing [\s\S]*?|No matching tools); \d+ published tools\. \d+ per page\.)<\/p>\s*<p>([\s\S]*?)<\/p>/,
+   (_,count,page)=>`<div class="catalog-context"><span>${count}</span><span>${page.replaceAll(' · ',' ').replaceAll('<a href=','<a class="text-action" href=')}</span></div>`);
   // Put the native filter below its title and purpose, before the records.
   const introductionEnd=html.indexOf('</p>')+4;
   html=html.slice(0,introductionEnd)+search+html.slice(introductionEnd);
@@ -95,10 +128,14 @@ export function catalogPage(model,selection){
    const match=html.slice(start).match(/^<h2[^>]*>[\s\S]*?<\/h2>\s*(?:<p>[\s\S]*?<\/p>\s*){3}/);
    if(!match)continue;
    const parts=match[0].match(/^(<h2[\s\S]*?<\/h2>)\s*(<p>[\s\S]*?<\/p>)\s*(<p>[\s\S]*?<\/p>)\s*(<p>[\s\S]*?<\/p>)/);
-   const record=parts?parts[1]+parts[3]+parts[2]+parts[4]:match[0];
+   const resources=parts?'<nav class="tool-links" aria-label="'+escape(tool.name)+' resources"><a href="'+escape(toolPath+'/contract')+'">Contract</a>'+parts[4].slice(3,-4).replaceAll(' · ','')+'</nav>':'';
+   const record=parts?parts[1]+parts[3]+parts[2]+resources:match[0];
    const meta=`<p class="record-meta">ID: <code>${escape(tool.id)}</code> · ${escape(tool.invocation.method)} · ${escape(tool.pricing.payment_protocol)} · per published success</p>`;
    html=html.slice(0,start)+`<article class="tool-record">${record}${meta}</article>`+html.slice(start+match[0].length);
   }
+  const secondaryLinks=secondary?'<nav class="catalog-links" aria-label="Catalog guidance">'+secondary.slice(3,-4).replaceAll(' · ','')+'</nav>':'';
+  const queryHelp=syntax?'<details class="catalog-syntax"><summary>Query syntax and limits</summary><p>Search: '+syntax[1]+'</p></details>':'';
+  html+=secondaryLinks+queryHelp;
   return html;
  }});
 }

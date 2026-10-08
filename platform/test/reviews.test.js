@@ -6,7 +6,7 @@ import {hash} from '../src/telemetry.js';
 import {products} from '../src/registry.js';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
-const origin='https://example.invalid',version='0.1.0';
+const origin='https://example.invalid',version=products.find(product=>product.id==='docs-pack').version;
 const basic={product_id:'docs-pack',version,visibility:'public',display_name:'Sample Agent',rating:4,message:'Local-only review fixture.'};
 const secret=()=> 'atbr_'+Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
 const post=(body,key=crypto.randomUUID(),headers={})=>({method:'POST',headers:{'Content-Type':'application/json','Idempotency-Key':key,...headers},body:JSON.stringify(body)});
@@ -42,6 +42,44 @@ test('consent, forged badges/roles, bounds, reserved names, secrets and unknown 
   assert.equal((await s.request('/v1/reviews',post(basic,'short'))).status,400);
   assert.equal((await s.request('/v1/reviews',post({...basic,message:'x'.repeat(20000)}))).status,413);
   assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) n FROM platform_reviews').get().n,0);
+ }finally{s.close();}
+});
+test('all current capability secrets stay out of public review and reply text and names over HTTP and MCP',async()=>{
+ const s=setup();
+ try{
+  const parent=await save(s,{message:'Local plain text parent fixture.'}),replyPath='/v1/reviews/'+parent.review_id+'/replies';
+  const rpc=async(name,args)=>{
+   const response=await s.request('/mcp',post({jsonrpc:'2.0',id:1,method:'tools/call',params:{name,arguments:{...args,idempotency_key:crypto.randomUUID()}}},undefined,{Accept:'application/json, text/event-stream'}));
+   return (await response.json()).result;
+  };
+  for(const prefix of ['atbc_','atbf_','atbp_','atbr_']){
+   const capability=prefix+Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
+   for(const field of ['message','display_name']){
+    const change={[field]:capability};
+    for(const [path,body,name,args] of [
+     ['/v1/reviews',{...basic,...change},'submit_review',{...basic,...change}],
+     [replyPath,{visibility:'public',display_name:'Local fixture',message:'Local reply',...change},'reply_to_review',{review_id:parent.review_id,visibility:'public',display_name:'Local fixture',message:'Local reply',...change}],
+    ]){
+     const response=await s.request(path,post(body)),error=await response.json();
+     assert.equal(response.status,400,prefix+' HTTP '+field+' '+name);
+     if(field==='message')assert.equal(error.error.code,'sensitive_content');
+     assert(!JSON.stringify(error).includes(capability));
+     const result=await rpc(name,args);
+     assert.equal(result.isError,true,prefix+' MCP '+field+' '+name);
+     if(field==='message')assert.match(JSON.stringify(result),/sensitive_content/);
+     assert(!JSON.stringify(result).includes(capability));
+     assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) n FROM platform_reviews').get().n,1);
+     assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) n FROM platform_review_replies').get().n,0);
+    }
+   }
+  }
+  const safeText='Local plain text about atbc_, atbf_, atbp_ and atbr_ prefix labels.';
+  assert.equal((await s.request('/v1/reviews',post({...basic,message:safeText}))).status,200);
+  assert.equal((await rpc('submit_review',{...basic,message:safeText+' MCP control.'})).isError,undefined);
+  assert.equal((await s.request(replyPath,post({visibility:'public',message:safeText}))).status,200);
+  assert.equal((await rpc('reply_to_review',{review_id:parent.review_id,visibility:'public',message:safeText+' MCP control.'})).isError,undefined);
+  assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) n FROM platform_reviews').get().n,3);
+  assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) n FROM platform_review_replies').get().n,2);
  }finally{s.close();}
 });
 test('qualifying purchase capability verifies once atomically, repeated purchases are separate and no secrets leak',async()=>{

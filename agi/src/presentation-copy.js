@@ -1,5 +1,14 @@
 // Motivating introductions for HTML only. Machine Markdown, pins and contracts
 // remain the canonical source and are deliberately unchanged.
+export function toolUseGuidance(tool){
+ if(tool.provider?.id!=='agenttoolbox'||tool.provider?.type!=='first_party')return null;
+ return {
+  'docs-pack':'Choose for literal query-matched excerpts from supported documentation. Use the returned hashes and offsets to inspect the evidence; completeness and semantic relevance are outside scope.',
+  'quote-proof':'Choose to inspect whether supported documentation contains a supplied quotation. Use match status and evidence positions; a match does not establish truth, and unknown-only output cannot qualify for payment.',
+  'contract-cases':'Choose for boundary witnesses and isolated negative cases in the accepted schema subset. Inspect the returned validation traces; coverage gaps remain explicit.',
+  'mcp-wirecheck':'Choose for anonymous discovery and tools/list on a public workers.dev endpoint you own or are authorized to inspect. Use the bounded compatibility matrix; it never calls a tool or certifies security.',
+ }[tool.id]??null;
+}
 export function htmlGuideMarkdown(markdown,path){
  if(path==='/')return markdown.replace(
   '> Tools for agents. Pay when the published outcome checks pass.',

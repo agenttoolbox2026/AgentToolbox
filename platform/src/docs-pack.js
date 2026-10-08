@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {hash} from './telemetry.js';
 import {passesCriteria} from './criteria.js';
+import {decodeHtmlEntities,inlineHidden} from './html-extraction.js';
 
 export const DOC_HOSTS=Object.freeze(['developers.cloudflare.com','docs.payai.network','docs.x402.org','docs.python.org','nodejs.org','developer.mozilla.org','docs.github.com','www.typescriptlang.org']);
 export const MAX_SOURCE_BYTES=262144;
@@ -62,36 +63,63 @@ export async function boundedBytes(response,limit){
 }
 export async function htmlText(html){
  if(typeof HTMLRewriter==='undefined')fail('html_runtime_unavailable');
- let excluded=0,scoped=0,bodyDepth=0,title='',heading=null;const all=[],main=[],anchors=[];
- const blocked=new Set(['script','style','nav','footer','header','aside','form','svg','noscript','template']);
+ let excluded=0,scoped=0,title='',titleNode='',heading=null,pre=null,nodeText='',nodeIncluded=false,allChars=0,mainChars=0;
+ const all=[],main=[],anchors=[],ids=new Map();
+ const blocked=new Set(['head','script','style','nav','footer','header','aside','form','svg','noscript','template','iframe','object','canvas']);
  const blocks=new Set(['p','div','section','article','main','h1','h2','h3','h4','h5','h6','pre','li','tr','blockquote']);
- const append=t=>{if(!excluded&&bodyDepth){all.push(t);if(scoped)main.push(t);}};
+ const append=t=>{if(!excluded){if(pre){pre.parts.push(t);return;}all.push(t);allChars+=t.length;if(scoped){main.push(t);mainChars+=t.length;}}};
  const parser=new HTMLRewriter().on('*',{element(el){
-  const tag=el.tagName,hidden=el.hasAttribute('hidden')||el.getAttribute('aria-hidden')==='true',ignore=blocked.has(tag)||hidden;
+  const tag=el.tagName,ignore=blocked.has(tag)||inlineHidden(el),rawId=el.getAttribute('id'),id=rawId===null?null:decodeHtmlEntities(rawId);
+  if(id)ids.set(id,(ids.get(id)??0)+1);
   if(tag==='meta'&&['robots','agenttoolboxdocs'].includes((el.getAttribute('name')??'').toLowerCase())&&/noindex|nosnippet|noai/i.test(el.getAttribute('content')??''))fail('source_disallows_excerpts');
   const voidTag=['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr'].includes(tag);
   if(ignore&&!voidTag)excluded++;
-  if(tag==='body')bodyDepth++;
   if(tag==='main'||tag==='article')scoped++;
-  if(tag==='br'||blocks.has(tag))append('\n');
-  if(/^h[1-6]$/.test(tag)){append('#'.repeat(Number(tag[1]))+' ');if(!excluded)heading={text:'',id:el.getAttribute('id')};}
-  if(tag==='pre')append('```\n');
-  if(!voidTag)el.onEndTag(()=>{if(/^h[1-6]$/.test(tag)&&heading){anchors.push(heading);heading=null;}if(tag==='pre')append('\n```');if(blocks.has(tag))append('\n');if(ignore)excluded--;if(tag==='main'||tag==='article')scoped--;if(tag==='body')bodyDepth--;});
- }}).on('title',{text(t){title+=t.text;}}).onDocument({text(t){append(t.text);if(heading&&!excluded)heading.text+=t.text;}});
+  if(!ignore&&(tag==='br'||blocks.has(tag)))append('\n');
+  let currentHeading=null;
+  if(/^h[1-6]$/.test(tag)&&!excluded){currentHeading=heading={text:'',id,start_char:allChars,main_start_char:scoped?mainChars:null};append('#'.repeat(Number(tag[1]))+' ');}
+  if(tag==='pre'){if(pre)fail('extraction_uncertain');pre={parts:[],included:!excluded};}
+  if(!voidTag)el.onEndTag(()=>{
+   if(currentHeading){anchors.push(currentHeading);if(heading===currentHeading)heading=null;}
+   if(tag==='pre'){
+    const saved=pre;pre=null;
+    if(saved?.included){
+     const value=saved.parts.join('');let longest=2;
+     for(const run of value.matchAll(/`+/g))longest=Math.max(longest,run[0].length);
+     // A source fence remains data within one complete preformatted block.
+     const fence='`'.repeat(longest+1);append(fence+'\n'+value+'\n'+fence);
+    }
+   }
+   if(blocks.has(tag))append('\n');if(ignore)excluded--;if(tag==='main'||tag==='article')scoped--;
+  });
+ }}).on('title',{text(chunk){titleNode+=chunk.text;if(chunk.lastInTextNode){title+=decodeHtmlEntities(titleNode);titleNode='';}}}).onDocument({text(chunk){
+  // Entity references and UTF-8 input can span streaming callback boundaries.
+  if(!nodeText)nodeIncluded=!excluded;
+  nodeText+=chunk.text;
+  if(chunk.lastInTextNode){
+   if(nodeIncluded){const value=decodeHtmlEntities(nodeText);append(value);if(heading)heading.text+=value;}
+   nodeText='';
+  }
+ }});
  await parser.transform(new Response(html)).arrayBuffer();
- return {text:(main.join('').trim()?main:all).join(''),title:title.trim().slice(0,180),anchors};
+ if(nodeText||titleNode||pre)fail('extraction_uncertain');
+ const useMain=!!main.join('').trim();
+ return {text:(useMain?main:all).join(''),title:title.trim().slice(0,180),anchors:anchors.filter(a=>!useMain||a.main_start_char!==null).map(a=>({text:a.text,id:a.id&&ids.get(a.id)===1?a.id:null,start_char:useMain?a.main_start_char:a.start_char}))};
 }
 // Preserve source code indentation and line breaks. Offsets refer to this text.
-export function normalizeText(text){
- const normalized=text.replace(/\r\n?/g,'\n').trim();
+function normalizedDocument(text){
+ const contractions=[];let removed=0;
+ const lineNormalized=text.replace(/\r\n?/g,(value,at)=>{if(value.length===2){removed++;contractions.push({end:at+2,removed});}return '\n';});
+ let trimmed=lineNormalized.trim(),cut=lineNormalized.length-lineNormalized.trimStart().length;
  // Published Markdown metadata and index/navigation precede the first H1 on
  // these documentation hosts. Keep the document body; offsets/hash describe it.
- if(normalized.startsWith('---\n')){
-  const end=normalized.indexOf('\n---',4),heading=normalized.indexOf('\n# ',end+4);
-  if(end>=0&&heading>=0&&heading<4096)return normalized.slice(heading+1).trim();
+ if(trimmed.startsWith('---\n')){
+  const end=trimmed.indexOf('\n---',4),heading=trimmed.indexOf('\n# ',end+4);
+  if(end>=0&&heading>=0&&heading<4096){cut+=heading+1;trimmed=trimmed.slice(heading+1).trim();}
  }
- return normalized;
+ return {text:trimmed,position(index){let lo=0,hi=contractions.length-1,delta=0;while(lo<=hi){const mid=(lo+hi)>>>1;if(contractions[mid].end<=index){delta=contractions[mid].removed;lo=mid+1;}else hi=mid-1;}return index-delta-cut;}};
 }
+export const normalizeText=text=>normalizedDocument(text).text;
 export function codeBlocks(text){
  const blocks=[];let opened=null,at=0;
  for(const line of text.split('\n')){const fence=line.match(/^ {0,3}(`{3,}|~{3,})/);if(fence){
@@ -100,15 +128,28 @@ export function codeBlocks(text){
  }at+=line.length+1;}
  if(opened)blocks.push({start:opened.start,end:text.length,closed:false});return blocks;
 }
-export function extractExcerpts(text,query,budget){
- const wanted=terms(query),lower=text.toLowerCase(),candidates=[],blocks=codeBlocks(text),window=Math.min(900,budget);
+function lowerCaseIndex(text){
+ // Lowercase can expand a UTF-16 character (for example İ -> i + combining
+ // dot). Keep the actual whole-string lowercase semantics and map only length
+ // changes; context-sensitive lowercase substitutions preserve their length.
+ const changes=[];let original=0,folded=0;
+ for(const character of text){const width=character.length,lowerWidth=character.toLowerCase().length;if(width!==lowerWidth)changes.push({original,originalEnd:original+width,folded,foldedEnd:folded+lowerWidth,delta:folded+lowerWidth-original-width});original+=width;folded+=lowerWidth;}
+ return {text:text.toLowerCase(),position(index,end=false){
+  let lo=0,hi=changes.length-1,prior=null;while(lo<=hi){const mid=(lo+hi)>>>1;if(changes[mid].folded<=index){prior=changes[mid];lo=mid+1;}else hi=mid-1;}
+  if(prior&&index<prior.foldedEnd)return end?prior.originalEnd:prior.original;
+  return index-(prior?.delta??0)+(end?1:0);
+ },foldedPosition(index){let lo=0,hi=changes.length-1,prior=null;while(lo<=hi){const mid=(lo+hi)>>>1;if(changes[mid].original<=index){prior=changes[mid];lo=mid+1;}else hi=mid-1;}if(prior&&index<prior.originalEnd)return prior.folded;return index+(prior?.delta??0);}};
+}
+export function extractExcerpts(text,query,budget,anchors=[]){
+ const wanted=terms(query),lower=lowerCaseIndex(text),candidates=[],blocks=codeBlocks(text),window=Math.min(900,budget);
  const headings=[...text.matchAll(/^#{1,6}\s+(.+)$/gm)].filter(h=>!blocks.some(b=>h.index>=b.start&&h.index<b.end));
  // At most 64 occurrences per term: bounded scanning, no caller-supplied regex.
- for(const term of wanted){let at=0;for(let i=0;i<64;i++){const found=lower.indexOf(term,at);if(found<0)break;at=found+term.length;
+ for(const term of wanted){let at=0;for(let i=0;i<64;i++){const foldedFound=lower.text.indexOf(term,at);if(foldedFound<0)break;at=foldedFound+term.length;
+  const found=lower.position(foldedFound),foundEnd=lower.position(foldedFound+term.length-1,true);
   const oversized=blocks.find(b=>b.start<=found&&found<b.end&&(!b.closed||b.end-b.start>window));
-  if(oversized){at=oversized.end;continue;}
+  if(oversized){at=Math.max(at,lower.foldedPosition(oversized.end));continue;}
   let start=Math.max(0,found-180),end=Math.min(text.length,start+window);
-  if(found+term.length>end)end=found+term.length;
+  if(foundEnd>end)end=foundEnd;
   start=Math.max(0,end-window);
   for(const b of blocks){if(start<b.end&&end>b.start){
    if(!b.closed||b.end-b.start>window){if(found>=b.end)start=b.end;else end=b.start;}
@@ -122,7 +163,9 @@ export function extractExcerpts(text,query,budget){
  for(const c of candidates){if(picked.length===2||remaining<100)break;if(picked.some(p=>c.start<p.end_char&&c.end>p.start_char))continue;
   if(c.end-c.start>remaining)continue;
   const end=c.end,value=text.slice(c.start,end),matched=wanted.filter(t=>value.toLowerCase().includes(t));if(!matched.length)continue;
-  picked.push({text:value,start_char:c.start,end_char:end,heading:headings.filter(h=>h.index<=c.found).at(-1)?.[1]?.slice(0,180)??null,anchor:null,matched_terms:matched});remaining-=value.length;
+  const heading=headings.filter(h=>h.index<=c.found).at(-1),anchor=heading&&anchors.find(a=>a.start_char===heading.index&&a.text.trim().slice(0,180)===heading[1].slice(0,180)&&a.id&&a.id.length<=120&&!/[\u0000-\u001f\u007f]/.test(a.id));
+  const fragment=anchor&&anchor.id.isWellFormed()?'#'+encodeURIComponent(anchor.id):null;
+  picked.push({text:value,start_char:c.start,end_char:end,heading:heading?.[1]?.slice(0,180)??null,anchor:fragment&&fragment.length<=512?fragment:null,matched_terms:matched});remaining-=value.length;
  }
  return picked.sort((a,b)=>a.start_char-b.start_char);
 }
@@ -172,8 +215,8 @@ export function createDocsPack({fetcher=fetch,htmlExtractor=htmlText,now=()=>new
       if(/<meta\b[^>]*(?:name\s*=\s*["'](?:robots|agenttoolboxdocs)["'])[^>]*(?:noindex|nosnippet|noai)/i.test(source))fail('source_disallows_excerpts');
       extracted=await htmlExtractor(source);
      }else extracted={text:source,title:(source.match(/^#\s+(.+)$/m)?.[1]??'').slice(0,180)};
-     const text=normalizeText(extracted.text),excerpts=extractExcerpts(text,input.query,eachBudget);if(!excerpts.length)fail('no_matching_excerpt');
-     for(const excerpt of excerpts){const anchor=extracted.anchors?.find(a=>a.text.trim().slice(0,180)===excerpt.heading&&a.id&&a.id.length<=120);if(anchor)excerpt.anchor='#'+encodeURIComponent(anchor.id);}
+     const normalized=normalizedDocument(extracted.text),text=normalized.text,anchors=(extracted.anchors??[]).filter(a=>Number.isInteger(a.start_char)).map(a=>({...a,start_char:normalized.position(a.start_char)}));
+     const excerpts=extractExcerpts(text,input.query,eachBudget,anchors);if(!excerpts.length)fail('no_matching_excerpt');
      return {url:original,final_url:url,status:200,selection_status:'matched',content_type:type,source_bytes:bytes.length,source_sha256:await hash(bytes),text_sha256:await hash(text),title:extracted.title,text_chars:text.length,code_blocks_omitted:codeBlocks(text).filter(b=>!b.closed||b.end-b.start>Math.min(900,eachBudget)).length,excerpts};
     }));
     const output={query:input.query,fetched_at:now().toISOString(),source_content:'untrusted_data',sources,excerpt_chars:sources.flatMap(s=>s.excerpts).reduce((n,e)=>n+e.text.length,0),max_excerpt_chars:input.max_excerpt_chars,match_method:'case-insensitive literal terms; ranked by distinct term coverage'};

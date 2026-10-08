@@ -11,6 +11,7 @@ import {createQuote,loadQuote,minimumPolicy,capabilityHash} from './preparations
 import {creatorBeneficiary} from './submissions.js';
 import {referralBeneficiary} from './referrals.js';
 import {contractPins,paymentRequirementsPin} from './contract-pins.js';
+import {inputOrPreparedJsonSchema} from './request-json-schema.js';
 // Preserve the historical fingerprint serializer byte-for-byte. The stricter
 // published contract/payment pin profile lives separately in contract-pins.js.
 export function canonical(value) {
@@ -19,7 +20,7 @@ export function canonical(value) {
  return JSON.stringify(value);
 }
 export function invocationJsonSchema(product){
- const schema=z.toJSONSchema(invokeSchema);
+ const schema=inputOrPreparedJsonSchema(z.toJSONSchema(invokeSchema));
  schema.properties.version={type:'string',const:product.version};
  if(product.input_schema)schema.properties.input=product.input_schema;
  schema.properties.payment_amount_atomic.description+=' Product minimum: '+minimumAmount(product)+'. Must equal the exact quoted/signed amount.';

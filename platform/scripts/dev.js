@@ -21,7 +21,7 @@ export async function start({port=8787,persist=false,handlers}={}){
  await new Promise(resolve=>server.listen(port,'127.0.0.1',resolve));
  const origin='http://127.0.0.1:'+server.address().port;
  app=createPlatform({db,origin,handlers:handlers??{'docs-pack':createDocsPack(),'quote-proof':createQuoteProof(),'contract-cases':createContractCases(),'mcp-wirecheck':createMcpWireCheck()},assets:{fetch:async r=>{
-  const path=new URL(r.url).pathname;const files={'/agenttoolbox-icon.png':'image/png','/style.css':'text/css','/site.js':'text/javascript'};
+  const path=new URL(r.url).pathname;const files={'/agenttoolbox-icon.png':'image/png','/style.css':'text/css','/site.js':'text/javascript','/retry-envelope.js':'text/javascript'};
   if(!files[path])return new Response(null,{status:404});
   return new Response(readFileSync(new URL('../public'+path,import.meta.url)),{headers:{'Content-Type':files[path]}});
  }}});

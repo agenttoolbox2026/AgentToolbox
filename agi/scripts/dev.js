@@ -4,7 +4,7 @@ import {Readable} from 'node:stream';
 import {createAgi} from '../src/worker.js';
 import {createModel} from '../src/model.js';
 import {database} from '../../platform/scripts/local-db.js';
-const assets={'/style.css':'text/css','/humans.css':'text/css','/header.css':'text/css','/forms.css':'text/css','/workflow.css':'text/css','/site.js':'text/javascript','/retry-envelope.js':'text/javascript','/creator-wallet.js':'text/javascript','/creator-payout-journey.js':'text/javascript','/wallet-proof.js':'text/javascript','/creator-earnings.js':'text/javascript','/payout-requests.js':'text/javascript','/referral-account.js':'text/javascript','/referral-wallet.js':'text/javascript','/agenttoolbox-icon.png':'image/png'};
+const assets={'/style.css':'text/css','/humans.css':'text/css','/header.css':'text/css','/forms.css':'text/css','/workflow.css':'text/css','/site.js':'text/javascript','/retry-envelope.js':'text/javascript','/creator-wallet.js':'text/javascript','/creator-payout-journey.js':'text/javascript','/wallet-proof.js':'text/javascript','/busy-controls.js':'text/javascript','/creator-earnings.js':'text/javascript','/payout-requests.js':'text/javascript','/referral-account.js':'text/javascript','/referral-wallet.js':'text/javascript','/agenttoolbox-icon.png':'image/png'};
 export async function start({port=8791,scripts=true}={}){
  const db=database(':memory:');let worker,env;
  const server=createServer(async(req,res)=>{

@@ -1,3 +1,4 @@
+import {FIRST_PARTY_VERSION} from '../src/product-versions.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {z} from 'zod';
@@ -22,7 +23,7 @@ const input={version:'1.0.0',input:{value:4},max_charge_usdc_atomic:0};
 test('same beta product in HTML, JSON, Markdown and OpenAPI; retired remains uncallable',async()=>{
  const {request,close}=setup();try{
   const active=await(await request('/v1/products')).json();assert.deepEqual(active.products.map(p=>p.id),['docs-pack','quote-proof','contract-cases','mcp-wirecheck']);
-  assert(active.products.every(p=>p.maturity==='beta'&&p.status==='active'&&p.version==='0.1.0'&&p.tags.includes('beta')));
+  assert(active.products.every(p=>p.maturity==='beta'&&p.status==='active'&&p.version===FIRST_PARTY_VERSION&&p.tags.includes('beta')));
   for(const p of active.products){const detail=await(await request('/v1/products/'+p.id)).json();assert.equal(detail.product.maturity,'beta');assert.equal(detail.product.experimental,false);}
   const html=await(await request('/')).text();assert.match(html,/Docs Pack/);assert.match(html,/\$0.01/);assert.ok(!html.includes('Our approach'));
   assert.equal((html.match(/>BETA<\/span>/g)??[]).length,4);assert(!html.includes('EXPERIMENTAL'));
@@ -117,7 +118,7 @@ test('official MCP SDK discovers active paid HTTP contract and retired stop',asy
    const tools=await client.listTools();assert.deepEqual(tools.tools.map(t=>t.name).sort(),['claim_creator_payout_wallet','claim_referral_payout_wallet','create_creator_wallet_challenge','create_referral_wallet_challenge','get_creator_earnings','get_creator_payout_request','get_creator_payout_wallet','get_creator_terms','get_creator_tool','get_product','get_referral_account','get_referral_earnings','get_referral_payout_request','get_referral_payout_wallet','get_referral_terms','get_review','get_tool_submission','get_tool_update','invoke_product','leave_feedback','list_creator_payout_requests','list_products','list_referral_payout_requests','list_review_replies','list_reviews','register_referral','reply_to_review','report_outcome','request_creator_payout','request_referral_payout','submit_review','submit_tool','submit_tool_update','verify_creator_wallet','verify_referral_wallet']);
   const list=await client.callTool({name:'list_products',arguments:{}});assert.deepEqual(list.structuredContent.products.map(p=>p.id),['docs-pack','quote-proof','contract-cases','mcp-wirecheck']);
   assert(list.structuredContent.products.every(p=>p.maturity==='beta'));
-  const paid=await client.callTool({name:'invoke_product',arguments:{product_id:'docs-pack',version:'0.1.0',input:{},max_charge_usdc_atomic:10000,idempotency_key:'mcp_paid_abcdefghijklmnopqrstuvwxyz'}});assert.equal(paid.isError,true);assert.match(paid.content[0].text,/paid_http_required/);
+  const paid=await client.callTool({name:'invoke_product',arguments:{product_id:'docs-pack',version:FIRST_PARTY_VERSION,input:{},max_charge_usdc_atomic:10000,idempotency_key:'mcp_paid_abcdefghijklmnopqrstuvwxyz'}});assert.equal(paid.isError,true);assert.match(paid.content[0].text,/paid_http_required/);
   const detail=await client.callTool({name:'get_product',arguments:{product_id:'retry-gate'}});assert.equal(detail.structuredContent.product.status,'retired');
   const retired=await client.callTool({name:'invoke_product',arguments:{product_id:'retry-gate',version:'0.1.0',input:{},max_charge_usdc_atomic:0,idempotency_key:'mcp_test_abcdefghijklmnopqrstuvwxyz'}});assert.equal(retired.isError,true);assert.match(retired.content[0].text,/product_retired/);
  }finally{await client.close();await run.close();}

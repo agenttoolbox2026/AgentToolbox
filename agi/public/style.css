@@ -28,3 +28,15 @@
 .inline-note{color:var(--quote);border-left:2px solid var(--quote);padding-left:12px}
 @media(max-width:400px){.metadata-table{grid-template-columns:minmax(72px,90px) minmax(0,1fr)}}
 .document .tool-record h2 a{display:inline-flex;align-items:center;min-height:44px}
+
+/* Small supporting rows keep the useful result ahead of secondary context. */
+.document .catalog-context{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 16px;font-size:13px;line-height:1.7;color:var(--muted);margin:16px 0}
+.document :where(.catalog-links,.tool-links,.document-tools,.section-nav),.document-footer-links{display:flex;align-items:center;flex-wrap:wrap;gap:0 16px;font-size:13px;line-height:1.7}
+.document :where(.catalog-links,.tool-links,.document-tools,.section-nav) a,.document-footer-links a{display:inline-flex;align-items:center;min-height:44px;max-width:100%}
+.document :where(.catalog-links,.document-tools,.section-nav){margin:0 0 16px}
+.document .tool-record .tool-links{margin:0 0 8px}
+.document-footer-links{margin:0 0 12px}
+.document .section-nav a{gap:3px;text-decoration:none}
+.document .section-nav a::before{content:"["}.document .section-nav a::after{content:"]"}
+.document .section-nav a:hover{text-decoration:underline}
+@media(max-width:600px){.document :where(.catalog-links,.tool-links,.document-tools,.section-nav),.document-footer-links{gap:0 14px}.document .catalog-context{gap:4px 12px}}

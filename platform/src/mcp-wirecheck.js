@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {InitializeResultSchema,ListToolsResultSchema} from '@modelcontextprotocol/sdk/types.js';
 import {passesCriteria,WIRE_DECISIVE_REASONS} from './criteria.js';
+import {FIRST_PARTY_VERSION} from './product-versions.js';
 
 // Cloudflare owns and routes workers.dev; customers select Worker/account
 // labels, not arbitrary A/AAAA/CNAME records or destination IPs. See the
@@ -58,8 +59,8 @@ export const mcpWireCheckOutput=z.strictObject({
  complete:z.boolean(),preview_supported:z.literal(false),
 });
 
-class CheckFailure extends Error{constructor(code){super(code);this.code=code;}}
-const fail=code=>{throw new CheckFailure(code);};
+class CheckFailure extends Error{constructor(code,{inconclusive=false}={}){super(code);this.code=code;this.inconclusive=inconclusive;}}
+const fail=(code,options)=>{throw new CheckFailure(code,options);};
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 const own=(value,key)=>Object.prototype.hasOwnProperty.call(value,key);
 const mediaType=response=>{const type=(response.headers.get('content-type')??'').split(';')[0].trim().toLowerCase();return !type?'none':['application/json','text/event-stream'].includes(type)?type:'other';};
@@ -71,16 +72,25 @@ function replayCommands(endpoint,version,sessionRequired){
   const command=(method,id)=>base+` --header 'MCP-Protocol-Version: ${version}' --header 'Mcp-Method: ${method}' --data-raw `+quoted(JSON.stringify({jsonrpc:'2.0',id,method,params:{_meta:modernMeta()}}));
   return {initialize:null,initialized:null,discover:command('server/discover',1),tools_list:command('tools/list',2),session_header_required:false};
  }
- const init=JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:version,capabilities:{},clientInfo:{name:'AgentToolbox-WireCheck',version:'0.1.0'}}});
+ const init=JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:version,capabilities:{},clientInfo:{name:'AgentToolbox-WireCheck',version:FIRST_PARTY_VERSION}}});
  const subsequent=base+` --header 'MCP-Protocol-Version: ${version}'`+(sessionRequired?' --header "Mcp-Session-Id: ${MCP_SESSION_ID:?set locally from the initialize response}"':'');
  return {initialize:base+' --data-raw '+quoted(init),initialized:subsequent+' --data-raw '+quoted(JSON.stringify({jsonrpc:'2.0',method:'notifications/initialized'})),discover:null,tools_list:subsequent+' --data-raw '+quoted(JSON.stringify({jsonrpc:'2.0',id:2,method:'tools/list',params:{}})),session_header_required:sessionRequired};
 }
 
-const modernMeta=()=>({'io.modelcontextprotocol/protocolVersion':'2026-07-28','io.modelcontextprotocol/clientInfo':{name:'AgentToolbox-WireCheck',version:'0.1.0'},'io.modelcontextprotocol/clientCapabilities':{}});
-const modernDiscovery=z.object({resultType:z.literal('complete').optional(),supportedVersions:z.array(z.string()).min(1).max(20),capabilities:z.object({tools:z.object({}).optional()}).catchall(z.unknown())});
-// 2026 permits non-object output schemas. Do not reuse the SDK 1.32.1
-// legacy outputSchema restriction, or pretend to validate schema semantics.
-const modernTools=z.object({resultType:z.literal('complete').optional(),tools:z.array(z.object({name:z.string(),inputSchema:z.object({type:z.literal('object')}).catchall(z.unknown()),outputSchema:z.union([z.object({}).catchall(z.unknown()),z.boolean()]).optional()})),nextCursor:z.string().optional()});
+const modernMeta=()=>({'io.modelcontextprotocol/protocolVersion':'2026-07-28','io.modelcontextprotocol/clientInfo':{name:'AgentToolbox-WireCheck',version:FIRST_PARTY_VERSION},'io.modelcontextprotocol/clientCapabilities':{}});
+// Modern complete discovery/list results require their discriminator and cache
+// hints. Earlier revisions retain the installed SDK's separate legacy shapes.
+// https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching
+const metadata=z.object({}).catchall(z.unknown());
+const modernComplete={resultType:z.literal('complete'),ttlMs:z.number().min(0).refine(Number.isInteger),cacheScope:z.enum(['public','private']),_meta:metadata.optional()};
+const modernDiscovery=z.object({...modernComplete,supportedVersions:z.array(z.string()).min(1).max(20),capabilities:z.object({tools:z.object({listChanged:z.boolean().optional()}).catchall(z.unknown()).optional()}).catchall(z.unknown()),instructions:z.string().optional()});
+// Modern output schemas are JSON Schema objects that may describe any root
+// value, e.g. {type:'array'}. Inspect wire field types, not schema semantics.
+const modernTool=z.object({name:z.string(),title:z.string().optional(),description:z.string().optional(),
+ inputSchema:z.object({$schema:z.string().optional(),type:z.literal('object')}).catchall(z.unknown()),
+ outputSchema:z.object({$schema:z.string().optional()}).catchall(z.unknown()).optional(),
+ annotations:z.object({title:z.string().optional(),readOnlyHint:z.boolean().optional(),destructiveHint:z.boolean().optional(),idempotentHint:z.boolean().optional(),openWorldHint:z.boolean().optional()}).catchall(z.unknown()).optional(),_meta:metadata.optional()});
+const modernTools=z.object({...modernComplete,tools:z.array(modernTool),nextCursor:z.string().optional()});
 function inspectHeaderAnnotations(root){
  const stack=[{node:root,reachable:true,property:false,depth:0}],seen=new Set();let count=0;
  while(stack.length){
@@ -92,9 +102,9 @@ function inspectHeaderAnnotations(root){
    if(!property||!reachable||typeof name!=='string'||!name||!/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/.test(name)||!['string','integer','boolean'].includes(node.type)||seen.has(name.toLowerCase()))fail('invalid_header_annotation');
    seen.add(name.toLowerCase());
   }
-  for(const key of ['properties','patternProperties','$defs','definitions','dependentSchemas'])if(object(node[key]))for(const child of Object.values(node[key]))stack.push({node:child,reachable:reachable&&key==='properties',property:key==='properties',depth:depth+1});
-  for(const key of ['anyOf','oneOf','allOf','prefixItems'])if(Array.isArray(node[key]))for(const child of node[key])stack.push({node:child,reachable:false,property:false,depth:depth+1});
-  for(const key of ['items','additionalProperties','unevaluatedProperties','contains','not','if','then','else','propertyNames'])if(object(node[key]))stack.push({node:node[key],reachable:false,property:false,depth:depth+1});
+  for(const key of ['properties','patternProperties','$defs','definitions','dependentSchemas','dependencies'])if(object(node[key]))for(const child of Object.values(node[key]))stack.push({node:child,reachable:reachable&&key==='properties',property:key==='properties',depth:depth+1});
+  for(const key of ['anyOf','oneOf','allOf','prefixItems','items'])if(Array.isArray(node[key]))for(const child of node[key])stack.push({node:child,reachable:false,property:false,depth:depth+1});
+  for(const key of ['items','additionalProperties','unevaluatedProperties','unevaluatedItems','contentSchema','contains','not','if','then','else','propertyNames'])if(object(node[key]))stack.push({node:node[key],reachable:false,property:false,depth:depth+1});
  }
 }
 
@@ -120,6 +130,27 @@ async function readReply(response,id,entry,state,signal,notification=false){
  if(!response.body){if(notification)return null;fail('sse_incomplete');}
  const reader=response.body.getReader(),decoder=new TextDecoder('utf-8',{fatal:true});
  let buffer='',events=0,bytes=0;
+ const consumeSse=(final=false)=>{
+  // Retain an incomplete CR so a CRLF split across chunks stays one newline.
+  const pendingCr=!final&&buffer.endsWith('\r');
+  buffer=(pendingCr?buffer.slice(0,-1):buffer).replace(/\r\n|\r/g,'\n')+(pendingCr?'\r':'');
+  let end;
+  while((end=buffer.indexOf('\n\n'))!==-1){
+   const event=buffer.slice(0,end);buffer=buffer.slice(end+2);
+   if(++events>MCP_WIRE_LIMITS.max_sse_events)fail('sse_event_limit');
+   const data=[];let eventName;
+   for(const line of event.split('\n')){
+    if(line.startsWith(':'))continue;
+    const colon=line.indexOf(':'),field=colon<0?line:line.slice(0,colon),value=colon<0?'':line.slice(colon+1).replace(/^ /,'');
+    if(field==='data')data.push(value);else if(field==='event')eventName=value;
+   }
+   if(eventName&&eventName!=='message')continue;
+   if(!data.join('\n'))continue;
+   const message=envelope(parseJson(data.join('\n')),id,true);
+   if(message)return message;
+  }
+  return null;
+ };
  const read=()=>new Promise((resolve,reject)=>{
   const abort=()=>reject(new CheckFailure('timeout'));
   if(signal.aborted)return abort();
@@ -133,6 +164,7 @@ async function readReply(response,id,entry,state,signal,notification=false){
     try{buffer+=decoder.decode();}catch{fail('invalid_json');}
     if(notification){if(bytes)fail('invalid_notification_ack');return null;}
     if(entry.media_type==='application/json')return envelope(parseJson(buffer),id);
+    const message=consumeSse(true);if(message)return message;
     fail('sse_incomplete');
    }
    bytes+=chunk.value.byteLength;
@@ -142,17 +174,7 @@ async function readReply(response,id,entry,state,signal,notification=false){
    if(notification)fail('invalid_notification_ack');
    try{buffer+=decoder.decode(chunk.value,{stream:true});}catch{fail('invalid_json');}
    if(entry.media_type!=='text/event-stream')continue;
-   // Normalize CRLF and CR only after retaining an incomplete final CR.
-   let end;
-   while((end=/\r\n\r\n|\n\n|\r\r/.exec(buffer))){
-    const event=buffer.slice(0,end.index);buffer=buffer.slice(end.index+end[0].length);
-    if(++events>MCP_WIRE_LIMITS.max_sse_events)fail('sse_event_limit');
-    const lines=event.split(/\r\n|\r|\n/),data=lines.filter(line=>line.startsWith('data:')).map(line=>line.slice(5).replace(/^ /,'')),eventName=lines.find(line=>line.startsWith('event:'))?.slice(6).trim();
-    if(eventName&&eventName!=='message')continue;
-    if(!data.join('\n'))continue;
-    const message=envelope(parseJson(data.join('\n')),id,true);
-    if(message)return message;
-   }
+   const message=consumeSse();if(message)return message;
   }
  }finally{await reader.cancel().catch(()=>{});reader.releaseLock();}
 }
@@ -178,7 +200,7 @@ export function createMcpWireCheck({fetchImpl=fetch,now=()=>new Date(),requestTi
      if(state.requests>=MCP_WIRE_LIMITS.max_requests)fail('request_limit');
      const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.min(perRequest,remaining));
      const entry={method,http_status:null,media_type:'none',response_kind:'incomplete',response_bytes:0,rpc_error_code:null,tool_count:null,session_present:false};row.transcript.push(entry);
-     const headers={'Content-Type':'application/json','Accept':'application/json, text/event-stream','User-Agent':'AgentToolbox-WireCheck/0.1 (+https://agi.agenttoolbox2026.workers.dev/humans)'};
+     const headers={'Content-Type':'application/json','Accept':'application/json, text/event-stream','User-Agent':'AgentToolbox-WireCheck/'+FIRST_PARTY_VERSION+' (+https://agi.agenttoolbox2026.workers.dev/humans)'};
      if(modern){headers['MCP-Protocol-Version']=version;headers['Mcp-Method']=method;params={...(params??{}),_meta:modernMeta()};}
      else if(method!=='initialize'){headers['MCP-Protocol-Version']=row.effective_version;if(session)headers['Mcp-Session-Id']=session;}
      const message={jsonrpc:'2.0',...(id===undefined?{}:{id}),method,...(params===undefined?{}:{params})};
@@ -236,7 +258,7 @@ export function createMcpWireCheck({fetchImpl=fetch,now=()=>new Date(),requestTi
       row.effective_version=version;
       if(!discovery.data.capabilities.tools)fail('tools_capability_absent');
      }else{
-      const result=await exchange('initialize',{protocolVersion:version,capabilities:{},clientInfo:{name:'AgentToolbox-WireCheck',version:'0.1.0'}},1);
+      const result=await exchange('initialize',{protocolVersion:version,capabilities:{},clientInfo:{name:'AgentToolbox-WireCheck',version:FIRST_PARTY_VERSION}},1);
       const init=InitializeResultSchema.safeParse(result);if(!init.success)fail('invalid_initialize_shape');
       row.discovery_valid=true;
       if(!MCP_WIRE_VERSIONS.includes(init.data.protocolVersion))fail('unsupported_negotiated_version');
@@ -252,7 +274,12 @@ export function createMcpWireCheck({fetchImpl=fetch,now=()=>new Date(),requestTi
       const listing=(modern?modernTools:ListToolsResultSchema).safeParse(result);if(!listing.success)fail('invalid_tools_shape');
       if(names.size+listing.data.tools.length>MCP_WIRE_LIMITS.max_tools)fail('tool_limit');
       row.transcript.at(-1).tool_count=listing.data.tools.length;
-      for(const tool of listing.data.tools){if(names.has(tool.name))fail('duplicate_tool_name');names.add(tool.name);if(modern)inspectHeaderAnnotations(tool.inputSchema);}
+      const pageNames=new Set();
+      for(const tool of listing.data.tools){if(pageNames.has(tool.name))fail('duplicate_tool_name');pageNames.add(tool.name);if(modern)inspectHeaderAnnotations(tool.inputSchema);}
+      // A changing paginated list can repeat a name across pages. This is not
+      // proof of an invalid page or a stable complete listing; stop inconclusively.
+      if([...pageNames].some(name=>names.has(name))){row.pagination='limited';fail('duplicate_tool_name',{inconclusive:true});}
+      for(const name of pageNames)names.add(name);
       row.tool_count=names.size;
       if(listing.data.nextCursor===undefined){row.pagination='complete';break;}
       cursor=listing.data.nextCursor;
@@ -263,7 +290,7 @@ export function createMcpWireCheck({fetchImpl=fetch,now=()=>new Date(),requestTi
      row.status='compatible';row.reason='checked_scope_passed';row.failure_location=null;
     }catch(error){
      row.reason=error instanceof CheckFailure&&reasons.includes(error.code)?error.code:'network_error';
-     row.status=decisive.has(row.reason)?'incompatible':['version_not_supported','method_not_supported','requested_version_not_negotiated','unsupported_negotiated_version'].includes(row.reason)?'unsupported':row.reason==='authentication_required'?'auth_required':['access_blocked','redirect_not_followed'].includes(row.reason)?'blocked':'unknown';row.failure_location=phase;
+     row.status=error instanceof CheckFailure&&error.inconclusive?'unknown':decisive.has(row.reason)?'incompatible':['version_not_supported','method_not_supported','requested_version_not_negotiated','unsupported_negotiated_version'].includes(row.reason)?'unsupported':row.reason==='authentication_required'?'auth_required':['access_blocked','redirect_not_followed'].includes(row.reason)?'blocked':'unknown';row.failure_location=phase;
     }
     versions.push(row);
    }

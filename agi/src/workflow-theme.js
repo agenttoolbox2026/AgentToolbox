@@ -2,7 +2,7 @@ import {shell as platformShell} from '../../platform/src/pages.js';
 import {header,headerStylesheet,taskNavigation} from './header.js';
 import {agentStylesheet} from './pages.js';
 
-export const formsStylesheet='<link rel="stylesheet" href="/forms.css?v=f212cbfe4dfb">';
+export const formsStylesheet='<link rel="stylesheet" href="/forms.css?v=0ef2300c1a33">';
 
 // Derive the recognized shell from the actual renderer instead of maintaining
 // another copy of its scripts, version tags or trusted header/footer markup.

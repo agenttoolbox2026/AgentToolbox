@@ -3,7 +3,7 @@ import {attachCreatorPayoutApi,creatorPayoutRoute} from './creator-payout-api.js
 import {attachBeneficiaryPayoutApi,beneficiaryPayoutRoute} from './beneficiary-payout-api.js';
 import {products,findProduct} from './registry.js';
 import {service,searchSchema,invokeSchema,outcomeSchema,PlatformError} from './service.js';
-import {home,humansPage,notFoundPage,reviewsIndexPage,feedbackPage,reviewsPage,reviewPage,previewPage,submissionPage,updatePage} from './pages.js';
+import {home,humansPage,notFoundPage,workflowErrorPage,reviewsIndexPage,feedbackPage,reviewsPage,reviewPage,previewPage,submissionPage,updatePage} from './pages.js';
 import {publicPurchases} from './purchases.js';
 import {markdown,openapi} from './discovery.js';
 import {mcp} from './mcp.js';
@@ -186,6 +186,14 @@ export function createPlatform({db,origin,catalog:sourceCatalog=products,handler
     throw new PlatformError(405,'method_not_allowed','Method is not supported.');
   }catch(e){
     const known=e instanceof PlatformError;
+    // Public document errors keep a browser recovery path. API URLs, writes,
+    // and callers explicitly requesting JSON retain the existing JSON error.
+    const document=['GET','HEAD'].includes(method)&&!request.headers.get('Accept')?.includes('application/json')&&(path==='/feedback'||/^\/products\/[a-z0-9-]{1,64}\/(preview|reviews)$/.test(path)||/^\/reviews\/[0-9a-f-]{36}$/.test(path));
+    if(document){
+      const recovery=path==='/feedback'?['/feedback','Choose a tool for private feedback']:path.endsWith('/preview')?['/tools','Browse available tools']:['/reviews','Choose a tool to review'];
+      const response=html(workflowErrorPage(known?e.message:'The service could not open this page. Try again later.',...recovery),known?e.status:503);
+      if(known&&e.status===429)response.headers.set('Retry-After','60');return finish(response);
+    }
     return finish(Response.json({error:{code:known?e.code:'service_unavailable',message:known?e.message:'The service could not complete this request.',...(known&&Object.keys(e.details).length?{details:e.details}:{})}},{status:known?e.status:503,headers:known&&e.status===429?{'Retry-After':'60'}:{}}));
   }
  };

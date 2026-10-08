@@ -95,3 +95,10 @@
 .document .catalog-syntax p{margin:8px 0 0}
 .workflow-document :where(input:not([type="checkbox"]),select){min-height:44px}
 .workflow-document :where(input,textarea,select):user-invalid{border-color:var(--quote);outline:1px solid var(--quote)}
+
+/* Emphasize the next submission without competing with the document title. */
+.workflow-document button[type="submit"]:not(:disabled),.workflow-document .primary-action:not(:disabled),.document .catalog-search button{color:var(--link);border-color:var(--link);background:var(--surface)}
+.workflow-document button[type="submit"]:not(:disabled):hover,.workflow-document .primary-action:not(:disabled):hover,.document .catalog-search button:hover{color:var(--link-hover);border-color:var(--link-hover)}
+.workflow-document :where(.workflow,.reviews)>label,.workflow-document .workflow-actions{max-width:672px}
+.workflow-document [role="status"]:not(:empty){display:block;line-height:1.7}
+@media print{.workflow-document button[type="submit"]:not(:disabled),.workflow-document .primary-action:not(:disabled),.document .catalog-search button{color:#111;border-color:#777;background:#fff}}
