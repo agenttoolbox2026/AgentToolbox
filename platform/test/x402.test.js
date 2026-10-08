@@ -25,9 +25,9 @@ async function setup({settle,db:overrideDb,handler:overrideHandler}={}){
  const now=Math.floor(Date.now()/1000);
  const payload={x402Version:2,resource:{url,description:'Mock fixture',mimeType:'application/json'},accepted:adapter.requirements,
  payload:{signature:'0x'+'00'.repeat(65),authorization:{from:payer,to:payTo,value:'1000',validAfter:String(now-1),validBefore:String(now+300),nonce}}};
- const execute=async({signed=true,value=body,customPayload=payload,customKey=key,method='POST',path=url,customConfig=config,synthetic=true,customNow=()=>new Date()}={})=>{
+ const execute=async({signed=true,value=body,customPayload=payload,customKey=key,method='POST',path=url,customConfig=config,customProduct=product,customHandler=overrideHandler??handler,synthetic=true,customNow=()=>new Date()}={})=>{
   const request=new Request(path,{method,headers:{...(signed?{'PAYMENT-SIGNATURE':encodePaymentSignatureHeader(customPayload)}:{}),...(synthetic?{'X-AgentToolbox-Sample':'synthetic'}:{})}});
-  return paidInvocation({request,body:value,key:customKey,product,handler:{...(overrideHandler??handler),run:async p=>{counts.execute++;return (overrideHandler??handler).run(p);}},db,config:customConfig,adapterFactory:async()=>adapter,now:customNow});
+  return paidInvocation({request,body:value,key:customKey,product:customProduct,handler:{...customHandler,run:async p=>{counts.execute++;return customHandler.run(p);}},db,config:customConfig,adapterFactory:async()=>adapter,now:customNow});
  };
  return {db,counts,adapter,payload,execute,close:()=>db.close()};
 }
@@ -149,6 +149,20 @@ test('settled replay works after authorization expiry; retained output expires w
   await assert.rejects(s.execute({customNow:()=>new Date(Date.now()+90000000)}),e=>e.code==='paid_result_expired');
   assert.equal(s.counts.settle,1);assert.equal(s.db.sqlite.prepare('SELECT result_json FROM platform_payments').get().result_json,null);
   assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) AS n FROM platform_payment_ledger').get().n,3);
+ }finally{s.close();}
+});
+test('completed purchase replays the frozen old result after a new product version and schema ship',async()=>{
+ const s=await setup();try{
+  const originalResponse=await s.execute(),original=await originalResponse.json();
+  const receipt=originalResponse.headers.get('PAYMENT-RESPONSE');
+  const updated={...product,version:'1.0.1',pricing:{...product.pricing,amount_atomic:2000}};
+  const changedHandler={...handler,input:z.strictObject({new_input:z.string()}),output:z.strictObject({new_output:z.string()}),run:async()=>{throw new Error('New handler must never run for frozen replay');},success:async()=>false};
+  const replay=await s.execute({customProduct:updated,customHandler:changedHandler,customNow:()=>new Date(Date.now()+3600000)});
+  assert.deepEqual(await replay.json(),original);assert.equal(replay.headers.get('PAYMENT-RESPONSE'),receipt);
+  assert.deepEqual(s.counts,{verify:1,settle:1,execute:1});
+  assert.equal(s.db.sqlite.prepare('SELECT version FROM platform_payments').get().version,'1.0.0');
+  await assert.rejects(s.execute({customProduct:updated,customHandler:changedHandler,value:{...body,version:'1.0.1'}}),e=>e.code==='authorization_already_used'||e.code==='invalid_input');
+  assert.deepEqual(s.counts,{verify:1,settle:1,execute:1});
  }finally{s.close();}
 });
 test('paid usefulness report is private, idempotent and never causes a payment',async()=>{

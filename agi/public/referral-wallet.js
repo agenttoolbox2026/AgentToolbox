@@ -139,8 +139,8 @@ export function bindReferralWallet(form,{client=createWalletClient(),navigatorIm
  const display=()=>{const state=client.snapshot();area.value=state.envelope??'';prepared.hidden=!state.envelope;address.readOnly=!!state.envelope;revision.value=state.revision===null?'':String(state.revision);find('[data-new-wallet]').disabled=state.phase==='uncertain';};
  const run=async action=>{
   if(running||client.snapshot().busy)return;running=true;
-  const previous=controls.map(control=>control.disabled);controls.forEach(control=>{control.disabled=true;});
-  try{await action();}catch(error){status.textContent=error instanceof WalletClientError?error.message:'Wallet status is unavailable. Keep any exact retry request and try again.';}finally{controls.forEach((control,index)=>{control.disabled=previous[index];});running=false;display();}
+  const priorFocus=documentImpl?.activeElement,previous=controls.map(control=>control.disabled);controls.forEach(control=>{control.disabled=true;control.setAttribute?.('aria-busy','true');});
+  try{await action();}catch(error){status.textContent=error instanceof WalletClientError?error.message:'Wallet status is unavailable. Keep any exact retry request and try again.';}finally{controls.forEach((control,index)=>{control.disabled=previous[index];control.setAttribute?.('aria-busy','false');});running=false;display();if(documentImpl?.activeElement===documentImpl?.body&&priorFocus&&!priorFocus.disabled&&!priorFocus.hidden)priorFocus.focus();}
  };
  const showEnvelope=()=>{saved.checked=false;display();status.textContent=client.snapshot().phase==='prepared'?'Exact request ready for review. Nothing sent. Copy or download it, then save your capability separately.':'Retained exact request. It may already have been recorded; keep it unchanged. Copy or download it and keep your capability separately.';};
  form.addEventListener('submit',event=>{event.preventDefault();return run(async()=>{
@@ -160,7 +160,8 @@ export function bindReferralWallet(form,{client=createWalletClient(),navigatorIm
  find('[data-copy-wallet]').addEventListener('click',()=>run(async()=>{const text=client.snapshot().envelope;if(!text)fail('Prepare a request first.');try{await navigatorImpl.clipboard.writeText(text);status.textContent='Retry request copied. Save it with your capability kept separately.';}catch{area.focus();area.select();status.textContent='Clipboard unavailable. Copy the selected JSON and save it before sending.';}}));
  find('[data-export-wallet]').addEventListener('click',()=>run(async()=>{const text=client.snapshot().envelope;if(!text)fail('Prepare a request first.');const url=URLImpl.createObjectURL(new Blob([text+'\n'],{type:'application/json'})),link=documentImpl.createElement('a');link.href=url;link.download='agenttoolbox-referral-wallet-request.json';documentImpl.body.append(link);link.click();link.remove();setTimeout(()=>URLImpl.revokeObjectURL(url),1000);status.textContent='Retry request download requested. Keep your capability separately.';}));
  find('[data-wallet-file]').addEventListener('change',()=>run(async()=>{const file=find('[data-wallet-file]').files?.[0];if(!file)return;if(file.size>maxEnvelopeBytes)fail('Retry request file is too large.');importArea.value=await file.text();status.textContent='File loaded for review. Paste the original capability, then restore the exact request.';}));
- capability.addEventListener('input',()=>{client.clearRead();current.hidden=true;result.hidden=true;revision.value='';saved.checked=false;});
+ const invalidate=()=>{client.clearRead();current.hidden=true;result.hidden=true;revision.value='';saved.checked=false;status.textContent='Capability changed. Read current status again with the intended capability.';};
+ for(const event of ['input','change'])capability.addEventListener(event,invalidate);
  address.addEventListener('input',()=>{saved.checked=false;});
  globalThis.addEventListener?.('pagehide',()=>{capability.value='';});
  form.noValidate=true;

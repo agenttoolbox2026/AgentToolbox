@@ -77,7 +77,7 @@ test('form actions, capability inputs, hidden controls and data attributes survi
   const themedForms=blocks(themeWorkflowHtml(original),'form');
   assert.deepEqual(themedForms,originalForms,name+': preserve complete forms.');
   for(const form of themedForms){
-   assert.match(form,/^<form\b[^>]*method="post"/,name);
+   if(/class="review-filters"/.test(form)){assert.match(form,/method="get"/);assert.doesNotMatch(form,/capability|review_secret|name="message"/);}else assert.match(form,/^<form\b[^>]*method="post"/,name);
    assert.match(form,/^<form\b[^>]*action="\/(?!\/)[^"?#]*"/,name);
   }
  }
@@ -85,8 +85,8 @@ test('form actions, capability inputs, hidden controls and data attributes survi
  for(const html of [submission,update]){
   assert.match(html,/<input type="password" name="capability" autocomplete="off" spellcheck="false" maxlength="48" required pattern="atbc_\[A-Za-z0-9_-\]\{43\}">/);
   assert.match(html,/<textarea data-request-envelope rows="5" maxlength="20000" spellcheck="false" autocomplete="off"><\/textarea>/);
-  assert.match(html,/<button type="button" data-copy-request>Copy retry request<\/button>/);
-  assert.match(html,/<button type="button" data-restore-request>Restore retry request<\/button>/);
+  assert.match(html,/<button type="button" data-copy-request hidden>Copy retry request<\/button>/);
+  assert.match(html,/<button type="button" data-restore-request hidden>Restore retry request<\/button>/);
  }
  assert.match(update,/<fieldset data-update-fields hidden>/);
  assert.match(update,/name="expected_head_revision" type="number" readonly required min="0" max="2147483646"/);

@@ -1,3 +1,4 @@
+import {FIRST_PARTY_VERSION} from './product-versions.js';
 // Public, static fixtures authored by AgentToolbox. Importing or reading a
 // manifest never invokes a handler, fetches a URL or touches a payment ledger.
 const FIXED_TIME='2026-10-07T00:00:00.000Z';
@@ -18,8 +19,8 @@ const documentFixture=(body,type='text/plain',robots='User-agent: *\nAllow: /')=
 ]});
 const rpc=(method,version,id,result)=>({method,protocol_version:version,request_id:id,response:id===null?{status:202,headers:{},body:null}:response(JSON.stringify({jsonrpc:'2.0',id,result}),'application/json')});
 const initialize=(capabilities={tools:{}})=>rpc('initialize',OLD,1,{protocolVersion:OLD,capabilities,serverInfo:{name:'AgentToolbox offline fixture',version:'0'}});
-const discover=(capabilities={tools:{}})=>rpc('server/discover',MODERN,1,{resultType:'complete',supportedVersions:[MODERN],capabilities});
-const list=version=>rpc('tools/list',version,2,{...(version===MODERN?{resultType:'complete'}:{}),tools:[{name:'fixture_lookup',inputSchema:{type:'object',properties:{query:{type:'string'}}}}]});
+const discover=(capabilities={tools:{}})=>rpc('server/discover',MODERN,1,{ttlMs:0,cacheScope:'public',resultType:'complete',supportedVersions:[MODERN],capabilities});
+const list=version=>rpc('tools/list',version,2,{...(version===MODERN?{ttlMs:0,cacheScope:'public',resultType:'complete'}:{}),tools:[{name:'fixture_lookup',inputSchema:{type:'object',properties:{query:{type:'string'}}}}]});
 const wireInput=versions=>({endpoint:ENDPOINT,protocol_versions:versions,authority:AUTHORITY});
 const quoteInput=quotes=>({urls:[DOC_URL],quotes:quotes.map(quote=>({source_index:0,quote}))});
 const boundedInteger={schema:{$schema:draft,type:'integer',minimum:1,maximum:3},valid_example:2,max_cases:12};
@@ -64,8 +65,8 @@ const examples={
   cases:[
    {id:'integer_boundaries',description:'An integer allowance from 1 through 3 yields both endpoints and isolated below/above/type failures.',input:boundedInteger,fixture:{kind:'none'},expected:expectation(true,[
     check('/schema_sha256','adb45e34363271e35a1ce39ba9d8f514e154eeeebe7eacfff613764bdccdce7c'),
-    check('/cases',[contractCase('case-1',1,'minimum',true),contractCase('case-2',0,'minimum',false),contractCase('case-3',3,'maximum',true),contractCase('case-4',4,'maximum',false),contractCase('case-5',null,'type',false,1)]),
-    check('/summary/positive_cases',2),check('/summary/negative_cases',3),check('/coverage_gaps',[]),
+    check('/cases',[contractCase('case-1',2,'type',true),contractCase('case-2',0,'minimum',false),contractCase('case-3',1,'minimum',true),contractCase('case-4',4,'maximum',false),contractCase('case-5',3,'maximum',true),contractCase('case-6',2.5,'type',false)]),
+    check('/summary/positive_cases',3),check('/summary/negative_cases',3),check('/coverage_gaps',[]),
    ])},
    {id:'unsupported_keyword',description:'The format keyword is unsupported; it is rejected rather than silently ignored.',input:{schema:{$schema:draft,type:'string',format:'email'},valid_example:'fixture@example.invalid',max_cases:12},fixture:{kind:'none'},expected:rejected},
    {id:'invalid_seed',description:'The starting example must already satisfy the complete accepted schema.',input:{...boundedInteger,valid_example:0},fixture:{kind:'none'},expected:rejected},
@@ -90,7 +91,7 @@ const examples={
 
 const freeze=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;};
 const manifests=Object.fromEntries(Object.entries(examples).map(([product_id,example])=>[product_id,{
- api_version:'1',fixture_version:'1',product_id,version:'0.1.0',publisher:'AgentToolbox',provenance:'first_party_synthetic_fixture',
+ api_version:'1',fixture_version:'1',product_id,version:FIRST_PARTY_VERSION,publisher:'AgentToolbox',provenance:'first_party_synthetic_fixture',
  example_kind:'offline_contract_examples',execution:'none',payment:{status:'not_required',amount_settled_atomic:'0'},fixed_clock:FIXED_TIME,
  interpretation:'Static authored examples, not live remote observations, payment verification, customer outcomes or proof of usefulness. Fixture URLs identify mocked responses; do not invoke the live service with these fixture inputs.',
  expected_format:'input_valid means the complete handler input validation passed, including runtime restrictions such as supported hosts, schema keywords and a valid seed. It is not just validation against the published JSON Schema, which cannot express every runtime restriction. outcome_qualifies tests the handler success predicate, not a payment. checks compare exact values at RFC 6901 JSON Pointers into the output; unlisted fields are not asserted. failure_reason names the handler failure code when no output is returned.',

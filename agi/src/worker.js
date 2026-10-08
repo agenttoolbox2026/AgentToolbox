@@ -21,7 +21,7 @@ const security={
  'Permissions-Policy':'camera=(), microphone=(), geolocation=(), payment=()',
  'Strict-Transport-Security':'max-age=31536000',
 };
-const assetPaths=new Set(['/style.css','/humans.css','/header.css','/forms.css','/workflow.css','/site.js','/retry-envelope.js','/creator-wallet.js','/creator-payout-journey.js','/wallet-proof.js','/creator-earnings.js','/payout-requests.js','/referral-account.js','/referral-wallet.js','/agenttoolbox-icon.png']);
+const assetPaths=new Set(['/style.css','/humans.css','/header.css','/forms.css','/workflow.css','/site.js','/retry-envelope.js','/creator-wallet.js','/creator-payout-journey.js','/wallet-proof.js','/busy-controls.js','/creator-earnings.js','/payout-requests.js','/referral-account.js','/referral-wallet.js','/agenttoolbox-icon.png']);
 const acceptType=request=>{
  const types=(request.headers.get('Accept')??'text/html').split(',').map((part,index)=>{
   const [mime,...params]=part.trim().toLowerCase().split(';');
@@ -60,7 +60,7 @@ export function createAgi({model:sourceModel=generated,platformOptions={},compil
    if(!read)return json(request,{error:{code:'method_not_allowed'}},405,{Allow:'GET, HEAD','Cache-Control':'no-store'});
    const asset=await assetFetch(request),headers=new Headers(asset.headers);
    for(const [k,v]of Object.entries(security))headers.set(k,v);
-   headers.set('Cache-Control',['/site.js','/retry-envelope.js','/creator-wallet.js','/creator-payout-journey.js','/wallet-proof.js','/creator-earnings.js','/payout-requests.js','/referral-account.js','/referral-wallet.js','/workflow.css','/forms.css'].includes(path)?'no-store':'public, max-age=3600');
+   headers.set('Cache-Control',['/site.js','/retry-envelope.js','/creator-wallet.js','/creator-payout-journey.js','/wallet-proof.js','/busy-controls.js','/creator-earnings.js','/payout-requests.js','/referral-account.js','/referral-wallet.js','/workflow.css','/forms.css'].includes(path)?'no-store':'public, max-age=3600');
    return new Response(request.method==='HEAD'?null:asset.body,{status:asset.status,headers});
   }
   if(path==='/creator-wallet'||path==='/referrals'){

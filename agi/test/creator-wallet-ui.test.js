@@ -228,7 +228,8 @@ test('concurrent sends are rejected without another fetch or request identity',a
 });
 
 class Element{
- constructor(){this.value='';this.textContent='';this.hidden=true;this.disabled=false;this.checked=false;this.events={};}
+ constructor(){this.value='';this.textContent='';this.hidden=true;this.disabled=false;this.checked=false;this.events={};this.attributes={};}
+ setAttribute(name,value){this.attributes[name]=value;}
  addEventListener(event,handler){this.events[event]=handler;}
  emit(event,value={}){return this.events[event]?.(value);}
  focus(){this.focused=true;}
@@ -264,9 +265,17 @@ test('capability controls lock during reads and a changed identity cannot expose
  const fixture=setup([()=>new Promise(resolve=>{finish=resolve;entered();})]),ui=formFixture(fixture.client);
  const pending=ui.get('data-read-status').emit('click');
  await fetching;assert.equal(ui.get('data-capability').disabled,true);
+ assert.equal(ui.get('data-read-status').attributes['aria-busy'],'true');assert.match(ui.status.textContent,/Reading current wallet status/);
  ui.get('data-capability').value=otherCapability;ui.get('data-capability').emit('input');finish(json(history(claim(4))));await pending;
  assert.equal(ui.get('data-wallet-current').hidden,true);assert.equal(ui.get('data-current-revision').value,'');
  assert.equal(fixture.client.snapshot().revision,null);
+ assert.equal(ui.get('data-read-status').attributes['aria-busy'],'false');
+ await assert.rejects(fixture.client.prepare(address,otherCapability),/Read current wallet status/);
+});
+
+test('a change-only capability edit clears creator wallet status and its revision',async()=>{
+ const fixture=setup([json(history(claim(4)))]),ui=formFixture(fixture.client);await ui.get('data-read-status').emit('click');assert.equal(ui.get('data-wallet-current').hidden,false);
+ ui.get('data-capability').value=otherCapability;ui.get('data-capability').emit('change');assert.equal(ui.get('data-wallet-current').hidden,true);assert.equal(ui.get('data-current-revision').value,'');assert.equal(fixture.client.snapshot().revision,null);assert.match(ui.status.textContent,/Capability changed/);
  await assert.rejects(fixture.client.prepare(address,otherCapability),/Read current wallet status/);
 });
 

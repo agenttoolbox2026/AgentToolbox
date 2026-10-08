@@ -93,7 +93,7 @@ test('local benchmark: competent free whitespace/literal search agrees on 8 cont
  t.diagnostic('8/8 agreement with an ordinary local String.indexOf + whitespace normalizer. No speed, accuracy, demand, or superiority claim; QuoteProof adds bounded retrieval and evidence packaging.');
 });
 
-test('real Workers HTMLRewriter: 20 controlled cases have zero false matches and retain validated anchors',async t=>{
+test('real Workers HTMLRewriter rejects hidden and uncertain text and retains decoded unique anchors',async t=>{
  const require=createRequire(import.meta.url),wrangler=require.resolve('wrangler');
  const {build}=require(require.resolve('esbuild',{paths:[wrangler]}));
  const {Miniflare,convertV4MiniflareOptions}=require(require.resolve('miniflare',{paths:[wrangler]}));
@@ -117,16 +117,34 @@ test('real Workers HTMLRewriter: 20 controlled cases have zero false matches and
   {html:wrap('<p hidden>hidden quotation</p><p>Visible text</p>'),quote:'hidden quotation',expected:'unknown'},
   {html:wrap('<p aria-hidden="true">hidden quotation</p><p>Visible text</p>'),quote:'hidden quotation',expected:'unknown'},
   {html:wrap('<p style="display:none">hidden quotation</p><p>Visible text</p>'),quote:'hidden quotation',expected:'unknown'},
+  {html:wrap('<p style="display:/**/none">hidden quotation</p><p>Visible text</p>'),quote:'hidden quotation',expected:'unknown'},
+  {html:wrap('<p aria-hidden="TRUE">hidden quotation</p><p>Visible text</p>'),quote:'hidden quotation',expected:'unknown'},
+  {html:wrap('<p style="display:none;display:block">Visible quotation</p>'),quote:'Visible quotation',expected:'exact_match'},
+  {html:wrap('<p style="display:none!important;display:block">hidden quotation</p>'),quote:'hidden quotation',expected:'unknown'},
+  {html:wrap('<p style="--note:\'display:none\'">Visible quotation</p>'),quote:'Visible quotation',expected:'exact_match'},
+  {html:wrap('<p style="display:none;--note:\';display:block;\'">hidden quotation</p>'),quote:'hidden quotation',expected:'unknown'},
+  {html:wrap('<p style="display:none!important;--note:\';display:block!important;\'">hidden quotation</p>'),quote:'hidden quotation',expected:'unknown'},
+  {html:wrap('<p style="--note:\';display:none;\';display:block">Visible quotation</p>'),quote:'Visible quotation',expected:'exact_match'},
+  {html:wrap('<p style="display:none!/**/important;display:block">hidden quotation</p>'),quote:'hidden quotation',expected:'unknown'},
+  ...['\n','\r','\f','&#10;','&#13;','&#12;'].map(line=>({html:wrap('<p style="--note:\'bad'+line+';display:none;--tail:\'">hidden quotation</p>'),quote:'hidden quotation',expected:'unknown'})),
+  ...['display:none;\u00a0display:block','display:none;\ufeffdisplay:block','display:none!important;display:block!\u00a0important','display:none;display:bloc\u212a'].map(style=>({html:wrap('<p style="'+style+'">hidden quotation</p>'),quote:'hidden quotation',expected:'unknown'})),
+  {html:wrap('<p style=\'background:url(a");display:none;--tail:")\'>hidden quotation</p>'),quote:'hidden quotation',expected:'unknown'},
+  {html:wrap('<p style="display:var(--layout)">Uncertain quotation</p>'),quote:'Uncertain quotation',expected:'unknown'},
+  {html:wrap('<p>Alpha<span hidden>hidden</span>Beta</p>'),quote:'Alpha Beta',expected:'unknown'},
+  {html:wrap('<p>Alpha<span hidden>hidden</span>Beta</p>'),quote:'AlphaBeta',expected:'exact_match'},
+  ...['&#x;','&#;','&#-1;'].map(entity=>({html:wrap('<p>Invalid '+entity+' text</p>'),quote:entity,expected:'unknown'})),
   {html:wrap('<div id="app"></div><script>render()</script>'),quote:'rendered quotation',expected:'unknown'},
   {html:wrap('<p>Exact Case</p>'),quote:'exact case',expected:'unknown'},
   {html:wrap('<section id="safe-anchor"><p>Anchored text</p></section>'),quote:'Anchored text',expected:'exact_match',anchor:'#safe-anchor'},
   {html:wrap('<p id="duplicate-id">One text</p><p id="duplicate-id">Other text</p>'),quote:'One text',expected:'exact_match',anchor:null},
+  {html:wrap('<p id="A&amp;B">Anchored text</p>'),quote:'Anchored text',expected:'exact_match',anchor:'#A%26B'},
+  {html:wrap('<p id="A&amp;B">One text</p><p id="A&#38;B">Other text</p>'),quote:'One text',expected:'exact_match',anchor:null},
   {html:'<html><head><meta content="nosnippet" name="robots"></head><body>Blocked quotation</body></html>',quote:'Blocked quotation',expected:'unknown'},
   {html:wrap('<p>Server refused access</p>'),status:403,quote:'Server refused access',expected:'unknown'},
  ];
  try{
   const response=await mf.dispatchFetch('https://fixture.invalid/',{method:'POST',body:JSON.stringify(cases)});assert.equal(response.status,200);const results=await response.json();
   for(const [i,c] of cases.entries()){assert.equal(results[i].results[0].status,c.expected,`case ${i+1}: ${c.quote}`);if(Object.hasOwn(c,'anchor'))assert.equal(results[i].results[0].evidence[0].anchor_fragment,c.anchor);assert.equal(quoteProofOutput.safeParse(results[i]).success,true);}
-  t.diagnostic('20/20 controlled HTML cases passed in workerd; zero false match results on the declared fixtures. This is fixture coverage, not a measured web-wide accuracy guarantee.');
+  t.diagnostic(cases.length+'/'+cases.length+' controlled HTML cases passed in workerd. This is fixture coverage, not a web-wide accuracy guarantee.');
  }finally{await mf.dispose();}
 });

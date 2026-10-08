@@ -104,6 +104,23 @@ test('local comparison against precompiled free Ajv validation',{skip:!process.e
 });
 
 // Optional external evidence runs are explicit, never a silently passing validator.
+test('unpaired surrogate object keys are rejected in schemas and seeds',()=>{
+ const schema={$schema:'https://json-schema.org/draft/2020-12/schema',type:'object',properties:{'\ud800':{type:'string'}}};
+ assert.equal(handler.input.safeParse({schema,valid_example:{'\ud800':'ok'}}).success,false);
+ const safe={$schema:'https://json-schema.org/draft/2020-12/schema',type:'object',properties:{label:{type:'string'}},additionalProperties:true};
+ assert.equal(handler.input.safeParse({schema:safe,valid_example:{'\ud800':'ok'}}).success,false);
+ assert.equal(handler.input.safeParse({schema:{$schema:'https://json-schema.org/draft/2020-12/schema',type:'object',properties:{'😀':{type:'string'}}},valid_example:{'😀':'ok'}}).success,true);
+});
+test('witnesses preserve Unicode seeds, isolate in-range fractions, and disclose empty item coverage',async()=>{
+ const unicode=await handler.run({schema:s({type:'string',minLength:2,maxLength:2}),valid_example:'💩💩',max_cases:24});
+ assert(unicode.cases.some(c=>c.expected_verdict==='valid'&&c.value==='💩💩'));
+ const batch=await handler.run({schema:s({type:'array',items:{type:'integer',minimum:1,maximum:999}}),valid_example:[1,2],max_cases:24});
+ assert(batch.cases.some(c=>c.expected_verdict==='invalid'&&c.keyword==='type'&&Array.isArray(c.value)&&c.value.some(n=>typeof n==='number'&&!Number.isInteger(n))));
+ const empty=await handler.run({schema:s({type:'array',items:{type:'integer',minimum:1}}),valid_example:[],max_cases:24});
+ assert(empty.coverage_gaps.some(g=>g.schema_pointer==='/items'&&g.keyword==='items'));
+ for(const output of [unicode,batch,empty]){assert(handler.success(output));assert(JSON.stringify(output).length<14000);}
+});
+
 // CONTRACT_CASES_PYTHON names a Python environment with jsonschema==4.26.0.
 test('independent Python Draft202012Validator agrees on every generated fixture',{skip:!process.env.CONTRACT_CASES_PYTHON},async()=>{
  const corpus=[];for(const input of inputs){const output=await handler.run(input);for(const c of output.cases)corpus.push({schema:input.schema,value:c.value,expected:c.expected_verdict==='valid',errors:c.validation.errors.length});}

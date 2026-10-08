@@ -217,7 +217,8 @@ test('concurrent sends are rejected without another fetch or request identity',a
 });
 
 class Element{
- constructor(){this.value='';this.textContent='';this.hidden=true;this.disabled=false;this.checked=false;this.events={};}
+ constructor(){this.value='';this.textContent='';this.hidden=true;this.disabled=false;this.checked=false;this.events={};this.attributes={};}
+ setAttribute(name,value){this.attributes[name]=value;}
  addEventListener(event,handler){this.events[event]=handler;}
  emit(event,value={}){return this.events[event]?.(value);}
  focus(){this.focused=true;}
@@ -253,9 +254,17 @@ test('capability controls lock during reads and a changed identity cannot expose
  const fixture=setup([()=>new Promise(resolve=>{finish=resolve;entered();})]),ui=formFixture(fixture.client);
  const pending=ui.get('data-read-status').emit('click');
  await fetching;assert.equal(ui.get('data-capability').disabled,true);
+ assert.equal(ui.get('data-read-status').attributes['aria-busy'],'true');assert.match(ui.status.textContent,/Reading current wallet status/);
  ui.get('data-capability').value=otherCapability;ui.get('data-capability').emit('input');finish(json(history(claim(4))));await pending;
  assert.equal(ui.get('data-wallet-current').hidden,true);assert.equal(ui.get('data-current-revision').value,'');
  assert.equal(fixture.client.snapshot().revision,null);
+ assert.equal(ui.get('data-read-status').attributes['aria-busy'],'false');
+ await assert.rejects(fixture.client.prepare(address,otherCapability),/Read current wallet status/);
+});
+
+test('a change-only capability edit clears referral wallet status and its revision',async()=>{
+ const fixture=setup([json(history(claim(4)))]),ui=formFixture(fixture.client);await ui.get('data-read-status').emit('click');assert.equal(ui.get('data-wallet-current').hidden,false);
+ ui.get('data-capability').value=otherCapability;ui.get('data-capability').emit('change');assert.equal(ui.get('data-wallet-current').hidden,true);assert.equal(ui.get('data-current-revision').value,'');assert.equal(fixture.client.snapshot().revision,null);assert.match(ui.status.textContent,/Capability changed/);
  await assert.rejects(fixture.client.prepare(address,otherCapability),/Read current wallet status/);
 });
 
@@ -343,13 +352,38 @@ test('wallet read errors and malformed server messages cannot leak a capability 
  }
 });
 
-function accountUi(client){
+function accountUi(client,{clipboardError=false,documentImpl}={}){
  const names=['data-capability','data-referral-capability-saved','data-referral-terms-accepted','data-registration-prepared','data-registration-envelope','data-registration-saved','data-account-status','data-account-result','data-registration-import','data-referral-registration','data-new-registration','data-generate-referral','data-reveal-referral','data-copy-referral','data-read-referral','data-prepare-registration','data-copy-registration','data-export-registration','data-restore-registration','data-registration-file'];
  const elements=new Map(names.map(name=>['['+name+']',new Element()]));
- const section={dataset:{termsVersion},querySelector:selector=>{assert(elements.has(selector),selector);return elements.get(selector);},querySelectorAll:()=>[...elements.values()]};
+ const attributes={},section={dataset:{termsVersion},setAttribute:(name,value)=>{attributes[name]=value;},querySelector:selector=>{assert(elements.has(selector),selector);return elements.get(selector);},querySelectorAll:()=>[...elements.values()]};
  const get=name=>elements.get('['+name+']'),copied=[];get('data-capability').value=capability;get('data-capability').type='password';get('data-capability').dispatchEvent=event=>get('data-capability').emit(event.type);
- bindReferralAccount(section,{client,cryptoImpl:webcrypto,navigatorImpl:{clipboard:{writeText:async text=>copied.push(text)}}});return {get,copied};
+ bindReferralAccount(section,{client,cryptoImpl:webcrypto,documentImpl,navigatorImpl:{clipboard:{writeText:async text=>{if(clipboardError)throw Error('Clipboard denied');copied.push(text);}}}});return {get,copied,attributes};
 }
+
+test('referral account reads and registration announce progress until the exact request finishes',async()=>{
+ for(const mode of ['read','registration']){
+  let finish,entered;const fetching=new Promise(resolve=>{entered=resolve;}),fixture=registrationFixture([()=>new Promise(resolve=>{finish=resolve;entered();})]),view=accountUi(fixture.client),get=view.get;
+  if(mode==='registration'){get('data-referral-capability-saved').checked=true;get('data-referral-terms-accepted').checked=true;await get('data-prepare-registration').emit('click');get('data-registration-saved').checked=true;}
+  const pending=mode==='read'?get('data-read-referral').emit('click'):get('data-referral-registration').emit('submit',{preventDefault(){}});await fetching;
+  assert.match(get('data-account-status').textContent,mode==='read'?/Reading the private referral account/:/Sending the retained registration request/);assert.equal(get('data-read-referral').attributes['aria-busy'],'true');assert.equal(get('data-capability').disabled,true);
+  finish(json(account()));await pending;assert.equal(get('data-read-referral').attributes['aria-busy'],'false');assert.equal(get('data-capability').disabled,false);assert.equal(fixture.calls.length,1);
+ }
+});
+
+test('private capability clipboard fallback reveals and selects an enabled field without transmission',async()=>{
+ const fixture=registrationFixture(),view=accountUi(fixture.client,{clipboardError:true}),get=view.get,input=get('data-capability');
+ input.focus=()=>{assert.equal(input.disabled,false);input.focused=true;};input.select=()=>{assert.equal(input.disabled,false);input.selected=true;};
+ await get('data-copy-referral').emit('click');assert.equal(input.type,'text');assert.equal(input.focused,true);assert.equal(input.selected,true);assert.equal(get('data-reveal-referral').textContent,'Hide capability');assert.equal(fixture.calls.length,0);assert.equal(get('data-account-status').textContent.includes(capability),false);
+});
+
+test('referral account read restores only lost keyboard focus and change-only edits hide the account',async()=>{
+ for(const moved of [false,true]){
+  let finish,entered;const fetching=new Promise(resolve=>{entered=resolve;}),documentImpl={body:{}},fixture=registrationFixture([()=>new Promise(resolve=>{finish=resolve;entered();})]),view=accountUi(fixture.client,{documentImpl}),get=view.get,button=get('data-read-referral'),other={};let disabled=false;
+  Object.defineProperty(button,'disabled',{get:()=>disabled,set:value=>{disabled=value;if(value&&documentImpl.activeElement===button)documentImpl.activeElement=documentImpl.body;}});button.focus=()=>{assert.equal(disabled,false);documentImpl.activeElement=button;};documentImpl.activeElement=button;
+  const pending=button.emit('click');await fetching;if(moved)documentImpl.activeElement=other;finish(json(account()));await pending;assert.equal(documentImpl.activeElement,moved?other:button);
+  assert.equal(get('data-account-result').hidden,false);get('data-capability').value=otherCapability;get('data-capability').emit('change');assert.equal(get('data-account-result').hidden,true);
+ }
+});
 
 test('registration UI requires separately saved capability, accepted terms and exact saved request before posting',async()=>{
  const fixture=registrationFixture([json(account())]),ui=accountUi(fixture.client),get=ui.get;

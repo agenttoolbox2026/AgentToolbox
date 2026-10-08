@@ -30,7 +30,7 @@ test('every payout journey module is private-cache safe and receives no visitor 
  const worker=createAgi(),seen=[];
  const env={ASSETS:{fetch:async request=>{seen.push(request);return new Response('// fixture',{headers:{'content-type':'text/javascript'}});}}};
  const headers={'X-Creator-Capability':capability,'X-Referral-Capability':'atbf_'+Buffer.alloc(32,17).toString('base64url'),Authorization:'private-auth',Cookie:'private-cookie'};
- const modules=['creator-wallet','creator-payout-journey','wallet-proof','creator-earnings','payout-requests','referral-account','referral-wallet'];
+ const modules=['creator-wallet','creator-payout-journey','wallet-proof','busy-controls','creator-earnings','payout-requests','referral-account','referral-wallet'];
  for(const name of modules){
   const response=await worker.fetch(new Request(origin+'/'+name+'.js?private=query',{headers}),env);
   assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'no-store');

@@ -1,8 +1,8 @@
 # AgentToolbox
 
-Agent-first home: **https://agnttoolbx.agenttoolbox2026.workers.dev**
+Agent-first home: **https://agi.agenttoolbox2026.workers.dev**
 
-Four experimental tools at a **default $0.01 USDC per successful call on Base**
+Four beta tools at a **default $0.01 USDC per successful call on Base**
 using x402 v2:
 
 - **Docs Pack:** query-matched excerpts from supported documentation sources.
@@ -33,7 +33,7 @@ our integration checks.
 Free example — no wallet, no payment, fixed public inputs:
 
 ```sh
-curl -s "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack/example" | python3 -m json.tool | head -60
+curl -s "https://agi.agenttoolbox2026.workers.dev/v1/products/docs-pack/example" | python3 -m json.tool | head -60
 ```
 
 The default paid path needs no separate quote. This unsigned request returns
@@ -45,14 +45,28 @@ again. The server settles only after the whole result validates:
 
 ```sh
 IDEMPOTENCY_KEY="$(python3 -c 'import uuid; print(uuid.uuid4().hex + uuid.uuid4().hex[:32])')"
-curl -s -X POST "https://agnttoolbx.agenttoolbox2026.workers.dev/v1/products/docs-pack/invoke" \
+curl -s -X POST "https://agi.agenttoolbox2026.workers.dev/v1/products/docs-pack/invoke" \
   -H 'Content-Type: application/json' \
   -H "Idempotency-Key: $IDEMPOTENCY_KEY" \
-  -d '{"version":"0.1.0","input":{"urls":["https://docs.python.org/3/library/asyncio.html"],"query":"event loop","max_excerpt_chars":4000},"max_charge_usdc_atomic":"10000"}'
+  -d '{"version":"0.1.1","input":{"urls":["https://docs.python.org/3/library/asyncio.html"],"query":"event loop","max_excerpt_chars":4000},"max_charge_usdc_atomic":"10000"}'
 ```
 
 Runnable scripts: [`examples/free-call.sh`](examples/free-call.sh),
-[`examples/paid-call.sh`](examples/paid-call.sh). An unsigned challenge is not a
+[`examples/paid-call.sh`](examples/paid-call.sh). The second script performs only
+three synthetic read-only discovery GETs and saves the complete unsigned body,
+key and verified contract hashes; it does not invoke, authorize or pay.
+
+For local full-runtime input preflight and a buyer-owned wallet handoff:
+
+```sh
+node examples/prepare-first-request.js contract-cases unsigned-request.json
+# Optional third argument: path to your input JSON file.
+```
+
+This helper refuses a live contract that differs from its installed checkout.
+Inspect the saved amount, network, asset and receiver before using an x402 v2
+wallet client. Save its complete original authorization before sending; never
+overwrite a request after uncertain delivery. An unsigned challenge is not a
 completed purchase or verification that a wallet can pay.
 
 Free offline test cases at `/v1/products/{id}/examples` expose inputs, mocked
@@ -74,7 +88,7 @@ call. See [pricing and preview flow](docs/buyer-chosen-pricing.md).
 - Free test cases: `/v1/products/{id}/examples`; live fixed example: `/v1/products/docs-pack/example`
 - Read-only payment challenge: `GET` or `HEAD /v1/products/{id}/invoke`
 - Paid invocation: `POST /v1/products/{id}/invoke` (HTTP x402 v2)
-- MCP Registry: `io.github.agenttoolbox2026/docs-pack` (v0.1.0)
+- Original MCP Registry entry: `io.github.agenttoolbox2026/docs-pack` (v0.1.0). Read current product versions from the live catalog.
 - Machine instructions: `/llms.txt`; schemas: `/openapi.json`
 - Crawler payment discovery: `/.well-known/x402` (discovery v1, payment v2)
 - Human observer page: `/humans`; public paid-purchase total: `/v1/stats`
@@ -94,8 +108,9 @@ supply. Inspect `/v1/creator-terms`, then submit through `POST /v1/tool-submissi
 or MCP `submit_tool`. Current frozen terms offer a $0.50 USDC list submission fee
 at 100% off: **$0 is charged**. Approved creators earn **90% of their tool's lifetime
 gross revenue**, with no operating-cost or referral deductions. Rejection refunds
-the actual fee paid; the current promotion has no fee paid or refund due. No
-nonzero fee, refund or payout transfers are enabled.
+the actual fee paid; the current promotion has no fee paid or refund due. Nonzero submission fees remain disabled. Public payout requests are enabled;
+reservation, owner approval, external wallet signing and finalized transfer
+verification remain separate. Request acceptance is not a transfer.
 
 Approved creators can propose versioned metadata updates using their original
 capability: `GET /v1/creator-tools/{tool_id}`,
@@ -126,7 +141,8 @@ products only**. Register a private capability at `/v1/referrals`, share the
 returned public code, and have the buyer include `referral_code` in its original
 paid request. A qualifying settled operation accrues once. Creator products and
 their existing revenue share are excluded. Attribution does not prove distinct
-agents or customer acquisition. **No payout processor or transfers are enabled.**
+agents or customer acquisition. Public requests retain the frozen entitlement; private owner processing and
+external signing are required. The website does not sign or send a transfer.
 Read the frozen terms at `/v1/referral-terms` and the [referral contract](docs/referrals.md).
 
 ## Run
@@ -136,11 +152,12 @@ Node.js 24+ and pnpm 11.19.0:
 ```sh
 pnpm install --frozen-lockfile
 pnpm --dir platform install --frozen-lockfile
-pnpm dev
+pnpm agi:dev
 pnpm test
+pnpm agi:test
 pnpm check
-pnpm worker:check
-pnpm smoke https://agnttoolbx.agenttoolbox2026.workers.dev
+pnpm agi:check
+node agi/scripts/readback.js https://agi.agenttoolbox2026.workers.dev
 pnpm report:remote
 ```
 

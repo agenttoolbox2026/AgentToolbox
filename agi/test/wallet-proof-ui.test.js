@@ -205,11 +205,32 @@ test('concurrent requests and identity changes cannot publish stale private stat
  await assert.rejects(f.client.read(cap),/Wait/);f.client.clearRead();finish(json(history()));await assert.rejects(reading,/Capability changed/);assert.equal(f.client.snapshot().current,null);assert.equal(f.calls.length,1);await assert.rejects(f.client.prepareChallenge(other));
 });
 
-class Element {constructor(){this.value='';this.textContent='';this.disabled=false;this.hidden=true;this.checked=false;this.events={};}addEventListener(name,fn){this.events[name]=fn;}emit(name,event={}){return this.events[name]?.(event);}focus(){}select(){}}
-function ui(client){
+class Element {constructor(){this.value='';this.textContent='';this.disabled=false;this.hidden=true;this.checked=false;this.events={};this.attributes={};}setAttribute(name,value){this.attributes[name]=value;}addEventListener(name,fn){this.events[name]=fn;}emit(name,event={}){return this.events[name]?.(event);}focus(){assert.equal(this.disabled,false,'disabled fields cannot receive keyboard focus');this.focused=true;}select(){assert.equal(this.disabled,false,'manual copy must select an enabled field');this.selected=true;}}
+function ui(client,{clipboardError=false,documentImpl}={}){
  const names=['envelope','prepared','new','verify','signing','message','binding','saved','result','read','current','prepare','challenge','prepare-verify','signature','restore','import','copy','export','file','expired-recovery','retire'];const elements=new Map(names.map(n=>['[data-proof-'+n+']',new Element()])),status=new Element(),root=new Element(),capabilityInput=new Element();capabilityInput.value=cap;elements.set('[role="status"]',status);root.querySelector=s=>{assert(elements.has(s),s);return elements.get(s);};root.querySelectorAll=()=>[...elements.values()];const copied=[];
- bindWalletProof(root,{client,capabilityInput,navigatorImpl:{clipboard:{writeText:async text=>copied.push(text)}}});return {get:name=>elements.get('[data-proof-'+name+']'),status,capabilityInput,copied};
+ bindWalletProof(root,{client,capabilityInput,documentImpl,navigatorImpl:{clipboard:{writeText:async text=>{if(clipboardError)throw Error('Clipboard denied');copied.push(text);}}}});return {get:name=>elements.get('[data-proof-'+name+']'),status,capabilityInput,copied,root};
 }
+
+test('proof reads announce progress and clear busy state after success or failure',async()=>{
+ for(const responseValue of [json(history()),json({},503)]){
+  let finish,entered;const fetching=new Promise(resolve=>{entered=resolve;}),f=setup([()=>new Promise(resolve=>{finish=resolve;entered();})]),view=ui(f.client),pending=view.get('read').emit('click');
+  await fetching;assert.match(view.status.textContent,/Reading the current wallet for ownership proof/);assert.equal(view.get('read').attributes['aria-busy'],'true');assert.equal(view.get('read').disabled,true);
+  finish(responseValue);await pending;assert.equal(view.get('read').attributes['aria-busy'],'false');assert.equal(view.get('read').disabled,false);
+ }
+});
+
+test('clipboard rejection focuses enabled exact proof JSON for manual copying without another request',async()=>{
+ const f=setup([json(history())]),view=ui(f.client,{clipboardError:true});await view.get('read').emit('click');await view.get('prepare').emit('click');const saved=f.client.snapshot().envelope,calls=f.calls.length;
+ await view.get('copy').emit('click');assert.equal(view.get('envelope').disabled,false);assert.equal(view.get('envelope').focused,true);assert.equal(view.get('envelope').selected,true);assert.equal(view.get('envelope').value,saved);assert.match(view.status.textContent,/Copy the selected JSON/);assert.equal(f.calls.length,calls);assert.equal(posts(f).length,0);
+});
+
+test('proof read restores lost keyboard focus without overriding a different current focus',async()=>{
+ for(const moved of [false,true]){
+  let finish,entered;const fetching=new Promise(resolve=>{entered=resolve;}),documentImpl={body:{}},f=setup([()=>new Promise(resolve=>{finish=resolve;entered();})]),view=ui(f.client,{documentImpl}),button=view.get('read'),other={};let disabled=false;
+  Object.defineProperty(button,'disabled',{get:()=>disabled,set:value=>{disabled=value;if(value&&documentImpl.activeElement===button)documentImpl.activeElement=documentImpl.body;}});button.focus=()=>{assert.equal(disabled,false);documentImpl.activeElement=button;};documentImpl.activeElement=button;
+  const pending=button.emit('click');await fetching;if(moved)documentImpl.activeElement=other;finish(json({},503));await pending;assert.equal(documentImpl.activeElement,moved?other:button);
+ }
+});
 
 test('UI demands saved JSON at both POST stages, hides raw signature in results and clears stale identity display',async()=>{
  const f=setup([json(history()),json(challenge()),json(verified())]),view=ui(f.client);

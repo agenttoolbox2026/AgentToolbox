@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {FIRST_PARTY_VERSION} from './product-versions.js';
 import {hash} from './telemetry.js';
 import {passesCriteria} from './criteria.js';
 
@@ -22,7 +23,7 @@ function jsonBound(value,{nodes=L.instance_nodes,depth=L.instance_depth,string=1
   if(typeof v==='string'){if(v.length>string||/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u.test(v))fail('input_limit');return;}
   if(typeof v!=='object'||seen.has(v))fail('input_limit');seen.add(v);
   if(Array.isArray(v)){if(v.length>array)fail('input_limit');for(const item of v)visit(item,d+1);}
-  else{if(![Object.prototype,null].includes(Object.getPrototypeOf(v)))fail('input_limit');const keys=Object.keys(v);if(keys.length>32)fail('input_limit');for(const k of keys){if(k.length>128)fail('input_limit');const descriptor=Object.getOwnPropertyDescriptor(v,k);if(!own(descriptor,'value'))fail('input_limit');visit(descriptor.value,d+1);}}
+  else{if(![Object.prototype,null].includes(Object.getPrototypeOf(v)))fail('input_limit');const keys=Object.keys(v);if(keys.length>32)fail('input_limit');for(const k of keys){if(k.length>128||!k.isWellFormed())fail('input_limit');const descriptor=Object.getOwnPropertyDescriptor(v,k);if(!own(descriptor,'value'))fail('input_limit');visit(descriptor.value,d+1);}}
   seen.delete(v);
  }
  visit(value,0);
@@ -90,21 +91,22 @@ export const contractCasesInput=z.strictObject({schema:z.record(z.string(),z.unk
 const errorSchema=z.strictObject({instance_pointer:z.string().max(2048),schema_pointer:z.string().max(2048),keyword:z.string().max(32)});
 const caseSchema=z.strictObject({id:z.string().max(12),kind:z.enum(['positive_boundary','negative_mutation']),instance_pointer:z.string().max(2048),schema_pointer:z.string().max(2048),keyword:z.string().max(32),value:z.unknown(),expected_verdict:z.enum(['valid','invalid']),validation:z.strictObject({valid:z.boolean(),checked_assertions:z.number().int().positive(),errors:z.array(errorSchema).max(1)})});
 const gapSchema=z.strictObject({instance_pointer:z.string(),schema_pointer:z.string(),keyword:z.string(),reason:z.enum(['coupled_constraints','no_isolated_candidate','case_or_byte_budget','optional_property_not_in_example','candidate_budget'])});
-export const contractCasesOutput=z.strictObject({tool:z.literal('contract-cases'),version:z.literal('0.1.0'),schema_sha256:z.string().regex(/^[a-f0-9]{64}$/),seed_valid:z.literal(true),validator:z.literal('AgentToolbox bounded JSON Schema 2020-12 subset'),source_content:z.literal('untrusted_data'),cases:z.array(caseSchema).min(2).max(L.cases),summary:z.strictObject({positive_cases:z.number().int().positive(),negative_cases:z.number().int().positive(),candidates_checked:z.number().int().min(1).max(L.candidates),omitted_candidates:z.number().int().min(0),generation_capped:z.boolean(),coverage_gaps:z.number().int().min(0)}),coverage_gaps:z.array(gapSchema).max(12),coverage_gaps_omitted:z.number().int().min(0),coverage:z.literal('Selected boundary witnesses only; not exhaustive, not a proof of schema or implementation correctness.')});
+export const contractCasesOutput=z.strictObject({tool:z.literal('contract-cases'),version:z.literal(FIRST_PARTY_VERSION),schema_sha256:z.string().regex(/^[a-f0-9]{64}$/),seed_valid:z.literal(true),validator:z.literal('AgentToolbox bounded JSON Schema 2020-12 subset'),source_content:z.literal('untrusted_data'),cases:z.array(caseSchema).min(2).max(L.cases),summary:z.strictObject({positive_cases:z.number().int().positive(),negative_cases:z.number().int().positive(),candidates_checked:z.number().int().min(1).max(L.candidates),omitted_candidates:z.number().int().min(0),generation_capped:z.boolean(),coverage_gaps:z.number().int().min(0)}),coverage_gaps:z.array(gapSchema).max(12),coverage_gaps_omitted:z.number().int().min(0),coverage:z.literal('Selected boundary witnesses only; not exhaustive, not a proof of schema or implementation correctness.')});
 function replace(root,path,value){if(!path.length)return clone(value);const result=clone(root);let node=result;for(const p of path.slice(0,-1))node=node[p];set(node,path.at(-1),clone(value));return result;}
 // Adjacent representable binary64 values avoid arbitrary epsilon assumptions.
 function adjacent(value,up){if(value===0)return up?Number.MIN_VALUE:-Number.MIN_VALUE;const b=new ArrayBuffer(8),view=new DataView(b);view.setFloat64(0,value);let bits=view.getBigUint64(0);bits+=(value>0)===up?1n:-1n;view.setBigUint64(0,bits);return view.getFloat64(0);}
 function* localCandidates(s,v){
  const offer=(value,keyword,kind='positive_boundary',suffix=[])=>({value,keyword,kind,suffix});
+ yield offer(clone(v),'type');
  if(own(s,'enum'))for(const value of s.enum)yield offer(value,'enum');
  if(own(s,'const'))yield offer(s.const,'const');
  if(s.type==='string'){
-  const length=n=>'a'.repeat(n);
+  const length=n=>([...v][0]??'a').repeat(n);
   yield offer(length(s.minLength??0),own(s,'minLength')?'minLength':'type');
   if(own(s,'maxLength'))yield offer(length(s.maxLength),'maxLength');
   if((s.minLength??0)>0)yield offer(length(s.minLength-1),'minLength','negative_mutation');
   if(own(s,'maxLength'))yield offer(length(s.maxLength+1),'maxLength','negative_mutation');
-  for(const keyword of ['enum','const'])if(own(s,keyword))for(const value of ['',...['a','b','x','\u0000'].map(c=>c+[...v].slice(1).join('')),'contract-case'])yield offer(value,keyword,'negative_mutation');
+  for(const keyword of ['enum','const'])if(own(s,keyword))for(const value of ['',...['a','b','c','d','x','\u0000',...Array.from({length:9},(_,i)=>String.fromCodePoint(0xe000+i))].map(c=>c+[...v].slice(1).join('')),'contract-case'])yield offer(value,keyword,'negative_mutation');
  }
  if(s.type==='number'||s.type==='integer'){
   const integer=s.type==='integer';
@@ -116,11 +118,15 @@ function* localCandidates(s,v){
   }
   for(const value of [0,1,-1])yield offer(value,'type');
   for(const keyword of ['enum','const'])if(own(s,keyword))for(const value of [0,1,-1,integer?v-1:adjacent(v,false),integer?v+1:adjacent(v,true)])yield offer(value,keyword,'negative_mutation');
-  if(integer)yield offer(0.5,'type','negative_mutation');
+  if(integer)for(const value of [...new Set([v+0.5,v-0.5,0.5])])yield offer(value,'type','negative_mutation');
  }
  if(s.type==='boolean'||s.type==='null')for(const value of s.type==='boolean'?[false,true]:[null]){yield offer(value,'type');for(const keyword of ['enum','const'])if(own(s,keyword))yield offer(value,keyword,'negative_mutation');}
  if(s.type==='object'){
   const minimal=clone(v);for(const k of Object.keys(minimal))if(!(s.required??[]).includes(k))delete minimal[k];yield offer(minimal,'type');
+  for(const keyword of ['const','enum'])if(own(s,keyword)){
+   yield offer({},keyword,'negative_mutation');
+   const changed=clone(v);let k='__contract_case_variant';while(own(changed,k))k+='_';set(changed,k,null);yield offer(changed,keyword,'negative_mutation');
+  }
   for(const k of s.required??[]){const value=clone(v);delete value[k];yield offer(value,'required','negative_mutation',[k]);}
   if(s.additionalProperties===false){let k='__contract_case_extra';while(own(s.properties??{},k)||own(v,k))k+='_';const value=clone(v);set(value,k,null);yield offer(value,'additionalProperties','negative_mutation',[k]);}
  }
@@ -148,7 +154,10 @@ function targets(schema,value){
    for(const path of paths)result.push({instance_pointer:pointer(path),schema_pointer:pointer([...sp,keyword]),keyword,...(!present?{reason:'optional_property_not_in_example'}:{})});
   }
   if(s.type==='object')for(const k of Object.keys(s.properties??{}))walk(s.properties[k],v?.[k],[...ip,k],[...sp,'properties',k],present&&own(v,k));
-  if(s.type==='array')for(let i=0;i<Math.min(v?.length??0,2);i++)walk(s.items,v[i],[...ip,i],[...sp,'items']);
+  if(s.type==='array'){
+   if(!v?.length)result.push({instance_pointer:pointer(ip),schema_pointer:pointer([...sp,'items']),keyword:'items',reason:'no_isolated_candidate'});
+   for(let i=0;i<Math.min(v?.length??0,2);i++)walk(s.items,v[i],[...ip,i],[...sp,'items']);
+  }
  }
  walk(schema,value,[],[]);return result;
 }
@@ -174,7 +183,7 @@ export function createContractCases(){
     (valid?positive:negative).push(item);
    }
    if(!positive.length||!negative.length)fail('no_meaningful_cases');
-   const output={tool:'contract-cases',version:'0.1.0',schema_sha256:await hash(key(input.schema)),seed_valid:true,validator:'AgentToolbox bounded JSON Schema 2020-12 subset',source_content:'untrusted_data',cases:[],summary:{positive_cases:0,negative_cases:0,candidates_checked:checked,omitted_candidates:omitted,generation_capped:capped,coverage_gaps:0},coverage_gaps:[],coverage_gaps_omitted:0,coverage};
+   const output={tool:'contract-cases',version:FIRST_PARTY_VERSION,schema_sha256:await hash(key(input.schema)),seed_valid:true,validator:'AgentToolbox bounded JSON Schema 2020-12 subset',source_content:'untrusted_data',cases:[],summary:{positive_cases:0,negative_cases:0,candidates_checked:checked,omitted_candidates:omitted,generation_capped:capped,coverage_gaps:0},coverage_gaps:[],coverage_gaps_omitted:0,coverage};
    // Alternate signs so case/byte caps cannot crowd out either verdict.
    for(let i=0;i<Math.max(positive.length,negative.length);i++)for(const item of [positive[i],negative[i]])if(item){
     if(output.cases.length>=input.max_cases){output.summary.omitted_candidates++;output.summary.generation_capped=true;continue;}

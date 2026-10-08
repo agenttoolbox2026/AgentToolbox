@@ -6,7 +6,8 @@ import {createPlatform} from '../src/app.js';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync,readdirSync} from 'node:fs';
 import {expirePaidResults} from '../src/purchases.js';
-const origin='https://example.invalid',version='0.1.0';
+import {products} from '../src/registry.js';
+const origin='https://example.invalid',version=products.find(product=>product.id==='docs-pack').version;
 const key='feedback_test_abcdefghijklmnopqrstuvwxyz';
 const basic={product_id:'docs-pack',version,helpful:true,message:'Useful exact excerpts.'};
 function setup(options={}){
@@ -30,6 +31,35 @@ test('feedback validates bounds and sensitive fields, stays private and replays 
   assert.equal(s.db.sqlite.prepare("SELECT COUNT(*) AS n FROM platform_activity WHERE event='feedback_submitted'").get().n,1);
   assert.equal((await s.request('/v1/feedback')).status,404);
   assert.equal((await s.request('/admin/api/overview')).status,404);
+ }finally{s.close();}
+});
+test('all current capability secrets are rejected from private feedback over HTTP and MCP before storage',async()=>{
+ const s=setup();
+ try{
+  const rpc=async body=>{
+   const response=await s.request('/mcp',post({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'leave_feedback',arguments:{...body,idempotency_key:crypto.randomUUID()}}},undefined,{Accept:'application/json, text/event-stream'}));
+   return (await response.json()).result;
+  };
+  for(const prefix of ['atbc_','atbf_','atbp_','atbr_']){
+   const capability=prefix+Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
+   for(const field of ['message','task_description']){
+    const body={...basic,[field]:'Local secret canary '+capability};
+    const response=await s.request('/v1/feedback',post(body,crypto.randomUUID())),error=await response.json();
+    assert.equal(response.status,400,prefix+' HTTP '+field);
+    assert.equal(error.error.code,'sensitive_content');
+    assert(!JSON.stringify(error).includes(capability));
+    const result=await rpc(body);
+    assert.equal(result.isError,true,prefix+' MCP '+field);
+    assert.match(JSON.stringify(result),/sensitive_content/);
+    assert(!JSON.stringify(result).includes(capability));
+    assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) n FROM platform_feedback').get().n,0,prefix+' must never be stored');
+   }
+  }
+  const safe={...basic,message:'Local plain text about atbc_, atbf_, atbp_ and atbr_ prefix labels.'};
+  assert.equal((await s.request('/v1/feedback',post(safe,crypto.randomUUID()))).status,200);
+  assert.equal((await rpc({...safe,message:safe.message+' MCP control.'})).isError,undefined);
+  assert.equal(s.db.sqlite.prepare('SELECT COUNT(*) n FROM platform_feedback').get().n,2);
+  assert.equal(s.executions,0);
  }finally{s.close();}
 });
 test('real example IDs link feedback and inherit synthetic classification; HEAD and replay do not execute',async()=>{

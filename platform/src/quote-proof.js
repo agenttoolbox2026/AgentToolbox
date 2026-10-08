@@ -43,18 +43,7 @@ export const quoteProofOutput=z.strictObject({
  }
 });
 
-// Limited entity support is intentional. Unknown/invalid entities make the whole
-// HTML extraction uncertain instead of manufacturing a positive or negative.
-const entities=Object.freeze({amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:'\u00a0',hellip:'…',mdash:'—',ndash:'–',lsquo:'‘',rsquo:'’',ldquo:'“',rdquo:'”',copy:'©',reg:'®',trade:'™',times:'×',divide:'÷',minus:'−',le:'≤',ge:'≥',bull:'•',middot:'·',laquo:'«',raquo:'»'});
-function decodeEntities(value){
- return value.replace(/&(?:#[xX][0-9a-fA-F]+|#[0-9]+|[A-Za-z][A-Za-z0-9]*);?/g,entity=>{
-  if(!entity.endsWith(';'))fail('extraction_uncertain');
-  const name=entity.slice(1,-1);if(!name.startsWith('#')){if(!Object.hasOwn(entities,name))fail('extraction_uncertain');return entities[name];}
-  const cp=name[1]?.toLowerCase()==='x'?parseInt(name.slice(2),16):Number(name.slice(1));
-  if(!Number.isInteger(cp)||cp<=0||cp>0x10ffff||(cp>=0xd800&&cp<=0xdfff)||(cp>=0x80&&cp<=0x9f))fail('extraction_uncertain');
-  return String.fromCodePoint(cp);
- });
-}
+import {decodeHtmlEntities as decodeEntities,inlineHidden} from './html-extraction.js';
 
 export async function quoteProofHtmlText(html){
  if(typeof HTMLRewriter==='undefined')fail('html_runtime_unavailable');
@@ -66,14 +55,14 @@ export async function quoteProofHtmlText(html){
  const parser=new HTMLRewriter().on('*',{element(el){
   const tag=el.tagName;
   if(tag==='meta'&&['robots','agenttoolboxdocs'].includes((el.getAttribute('name')??'').toLowerCase())&&/noindex|nosnippet|noai/i.test(el.getAttribute('content')??''))fail('source_disallows_excerpts');
-  const hidden=el.hasAttribute('hidden')||el.getAttribute('aria-hidden')==='true'||/(?:display\s*:\s*none|visibility\s*:\s*hidden)/i.test(el.getAttribute('style')??'');
+  const hidden=inlineHidden(el);
   const ignored=blocked.has(tag)||hidden,voidTag=voidTags.has(tag);
   if(tag==='body')bodyDepth++;
-  if(!excluded&&bodyDepth&&(blocks.has(tag)||ignored))append('\n');
+  if(!excluded&&bodyDepth&&blocks.has(tag)&&!ignored)append('\n');
   if(ignored&&!voidTag)excluded++;
-  let anchor=null;const id=el.getAttribute('id');
+  let anchor=null;const rawId=el.getAttribute('id'),id=rawId===null?null:decodeEntities(rawId);
   if(id){ids.set(id,(ids.get(id)??0)+1);if(id.length<=120&&!excluded&&bodyDepth&&!/[\u0000-\u001f\u007f]/.test(id))anchor={id,start:length,end:length};}
-  if(!voidTag)el.onEndTag(()=>{if(anchor){anchor.end=length;anchors.push(anchor);}if(ignored)excluded--;if(!excluded&&bodyDepth&&(blocks.has(tag)||ignored))append('\n');if(tag==='body')bodyDepth--;});
+  if(!voidTag)el.onEndTag(()=>{if(anchor){anchor.end=length;anchors.push(anchor);}if(ignored)excluded--;if(!excluded&&bodyDepth&&blocks.has(tag)&&!ignored)append('\n');if(tag==='body')bodyDepth--;});
  }}).onDocument({text(chunk){
   // Text node boundaries need not match streaming chunk boundaries.
   if(!nodeText)nodeIncluded=!excluded&&bodyDepth>0;

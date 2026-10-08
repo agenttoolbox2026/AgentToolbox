@@ -90,18 +90,19 @@ export function createCreatorEarningsClient({kind='creator',fetchImpl=globalThis
 
 // The page entrypoint supplies the existing password input. This module neither
 // owns that field nor retains a capability beyond the active request.
-export function bindCreatorEarnings(root,{kind='creator',capabilityInput,client=createCreatorEarningsClient({kind}),lifecycleTarget=globalThis}={}){
+export function bindCreatorEarnings(root,{kind='creator',capabilityInput,client=createCreatorEarningsClient({kind}),lifecycleTarget=globalThis,documentImpl=globalThis.document}={}){
  policyFor(kind);
  const form=root.querySelector('[data-creator-earnings-form]'),tool=root.querySelector('[data-earnings-tool]'),button=root.querySelector('[data-read-earnings]'),status=root.querySelector('[role="status"]'),result=root.querySelector('[data-earnings-result]');
  if(!capabilityInput)throw new Error('Earnings requires the shared capability input.');
  let generation=0,running=false;
  const hide=()=>{result.hidden=true;result.textContent='';};
- const invalidate=()=>{generation++;client.clear();running=false;button.disabled=false;hide();status.textContent='Inputs changed. Read earnings again for the intended account.';};
+ const invalidate=()=>{generation++;client.clear();running=false;button.disabled=false;button.setAttribute?.('aria-busy','false');hide();status.textContent='Inputs changed. Read earnings again for the intended account.';};
  for(const input of [capabilityInput,tool].filter(Boolean))for(const event of ['input','change'])input.addEventListener(event,invalidate);
  lifecycleTarget.addEventListener?.('pagehide',invalidate);
  form.addEventListener('submit',async event=>{
   event.preventDefault();if(running)return;
-  running=true;button.disabled=true;hide();status.textContent='Reading private earnings…';
+  const priorFocus=documentImpl?.activeElement;
+  running=true;button.disabled=true;button.setAttribute?.('aria-busy','true');hide();status.textContent='Reading private earnings…';
   const current=++generation,capability=capabilityInput.value.trim(),toolId=kind==='referral'?null:tool.value.trim();
   const stillCurrent=()=>current===generation&&capabilityInput.value.trim()===capability&&(kind==='referral'||tool.value.trim()===toolId);
   try{
@@ -113,7 +114,7 @@ export function bindCreatorEarnings(root,{kind='creator',capabilityInput,client=
   }catch(error){
    if(stillCurrent()){hide();status.textContent=error instanceof EarningsReadError?error.message:'Earnings could not be read. No balance was assumed.';}
    else if(current===generation)invalidate();
-  }finally{if(current===generation){running=false;button.disabled=false;}}
+  }finally{if(current===generation){running=false;button.disabled=false;button.setAttribute?.('aria-busy','false');if(documentImpl?.activeElement===documentImpl?.body&&priorFocus&&!priorFocus.disabled&&!priorFocus.hidden)priorFocus.focus();}}
  });
  form.noValidate=true;button.hidden=false;
  return {clear:invalidate};

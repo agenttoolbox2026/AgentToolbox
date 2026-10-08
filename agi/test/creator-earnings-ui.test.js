@@ -128,7 +128,8 @@ test('clearing or superseding a read discards a late response even if fetch igno
 });
 
 class Element{
- constructor(){this.value='';this.textContent='';this.hidden=true;this.disabled=false;this.events={};}
+ constructor(){this.value='';this.textContent='';this.hidden=true;this.disabled=false;this.events={};this.attributes={};}
+ setAttribute(name,value){this.attributes[name]=value;}
  addEventListener(event,handler){(this.events[event]??=[]).push(handler);}
  async emit(event,value={}){return Promise.all((this.events[event]??[]).map(handler=>handler(value)));}
 }
@@ -145,6 +146,11 @@ test('successful UI reads display exact money via textContent and a failed refre
  const fixture=setup([json(earnings()),json({error:{message:creatorCapability}},503)]),ui=uiFixture(fixture.client);
  assert.equal(ui.button.hidden,false);await ui.submit();assert.equal(ui.result.hidden,false);assert.match(ui.result.textContent,/Gross sales: 1.000001 USDC/);assert.match(ui.result.textContent,new RegExp(readAt.replaceAll('.','\\.')));
  await ui.submit();assert.equal(ui.result.hidden,true);assert.equal(ui.result.textContent,'');assert.match(ui.status.textContent,/No balance was assumed|no balance was assumed/);assert(!ui.status.textContent.includes(creatorCapability));
+});
+
+test('earnings exposes busy state while reading and clears it after a failed refresh',async()=>{
+ const waiting=deferred(),fixture=setup([()=>waiting.promise]),ui=uiFixture(fixture.client),pending=ui.submit();
+ assert.equal(ui.button.attributes['aria-busy'],'true');assert.match(ui.status.textContent,/Reading private earnings/);waiting.resolve(json({},503));await pending;assert.equal(ui.button.attributes['aria-busy'],'false');assert.equal(ui.button.disabled,false);assert.equal(ui.result.hidden,true);
 });
 
 test('capability or tool edits hide old results immediately and cannot display a stale pending response',async()=>{

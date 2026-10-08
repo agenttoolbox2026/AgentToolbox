@@ -33,7 +33,7 @@ verified 64-character lowercase hex values):
 
 ```json
 {
-  "version": "0.1.0",
+  "version": "0.1.1",
   "input": {"urls": ["https://docs.python.org/3/library/asyncio.html"], "query": "event loop", "max_excerpt_chars": 4000},
   "max_charge_usdc_atomic": "10000",
   "success_contract_sha256": "<verified success digest>",
@@ -122,6 +122,73 @@ fields. Do not hash the whole x402 challenge, the encoded HTTP header, or a
 signature. Reordering object keys does not change either hash; changing an array
 order, rule, schema, bound or exact payment value does. Version this profile
 instead of changing its byte rules in place.
+
+## Predicate language: agenttoolbox-predicate-v1
+
+Evaluate the published `output_schema` first, then all `criteria.rules[].test`
+expressions. A non-array expression object has exactly one recognized operator.
+Unknown operators, additional operator keys, wrong operand counts, missing
+iterator fields, and unexpected iterator fields are invalid expressions, not
+successful checks. The server validates its complete expression trees before
+using them. Scalars are literal null, booleans, strings or finite numbers; literal
+arrays contain those scalars or nested literal arrays.
+
+| Expression | Meaning |
+| --- | --- |
+| `{"path":"sources.0.source_index"}` | Read a dot-separated path from the output; numeric segments access array elements. `$` alone reads the complete output. A locally bound first segment reads that variable instead. Missing paths return undefined. |
+| `{"count":expression}` | Array length or string length in UTF-16 code units, using ECMAScript `.length`. |
+| `{"json_bytes":expression}` | UTF-8 byte length of ECMAScript `JSON.stringify` of the value. |
+| `{"eq":[left,right]}` | ECMAScript strict equality, without coercion. |
+| `{"gt":[left,right]}`, `{"lte":[left,right]}` | ECMAScript greater-than or less-than-or-equal comparison. |
+| `{"subtract":[left,right]}`, `{"add":[left,right]}` | ECMAScript subtraction or addition. Published arithmetic operands are schema-validated numbers. |
+| `{"in":[value,array]}` | ECMAScript array `includes` membership. |
+| `{"and":[expressions...]}`, `{"not":expression}` | All operands truthy, or logical negation. `and` short-circuits and an empty list is true. |
+| `{"if":[condition,when_true,when_false]}` | Evaluate only the branch selected by the condition's truthiness. |
+| `{"every":{"source":expression,"as":"item","test":expression}}` | Bind each array element as `item` and require all tests truthy. An empty array is true. |
+| `{"some":{"source":expression,"as":"item","test":expression}}` | Require at least one array element's test truthy. An empty array is false. |
+| `{"count_where":{"source":expression,"as":"item","test":expression}}` | Count array elements whose tests are truthy. An empty array counts as zero. |
+
+Iterators return false when `source` is not an array. `as` is a nonempty ASCII
+identifier (`[A-Za-z_][A-Za-z0-9_]*`), scoped to the iterator's test. Nested tests
+retain outer bindings. Only `every` accepts the optional `index_as` field: it
+binds the current element's zero-based array ordinal under a distinct identifier
+with the same syntax. It does not read an index claimed by the element. For
+example, the source-order rule is:
+
+```json
+{"every":{"source":{"path":"sources"},"as":"source","index_as":"source_ordinal","test":{"eq":[{"path":"source.source_index"},{"path":"source_ordinal"}]}}}
+```
+
+QuoteProof publishes all output relationships enforced by its runtime Zod
+refinement. The JSON schema supplies field types and bounds; the predicates
+supply these relationships:
+
+- Both summary counts agree with decisive and unknown result counts, and at least
+  one result is decisive.
+- Source indices and quote indices equal their respective array ordinals. Every
+  result references an existing source. Nested `some` expressions bind the
+  source identified by that result, after source-order validation.
+- An absent result requires complete plain-text extraction, occurrence `0`, and
+  no evidence. An unknown result requires occurrence `unknown` and no evidence.
+- Exact, whitespace-normalized and ambiguous matches require source HTTP 200,
+  both source hashes and available extraction. Exact and normalized matches have
+  one evidence item and occurrence `1`; ambiguous matches have two evidence items
+  and occurrence `2_or_more`.
+- Every evidence span has end greater than start and end within its referenced
+  source's extracted-character count. Each non-null context has end minus start
+  equal to its text's UTF-16 length and end within that same source's count.
+
+These predicates preserve the existing runtime acceptance rules; they do not
+establish the truth of a quotation or re-fetch its source. An all-unknown output
+remains nonchargeable, and schema-invalid empty sources or results remain
+nonchargeable.
+
+The `0.1.1` built-in release publishes the added QuoteProof relationships in the
+canonical success document, so its success digest changes. New quotes and
+preparations must use the current contract. Completed exact replay still returns
+its original durable output, pins and receipt before current-contract checks,
+under the existing retention and authorization rules. The failure contract,
+payment terms and charge amounts remain unchanged.
 
 ## Migration and historical records
 

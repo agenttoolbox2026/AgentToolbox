@@ -11,7 +11,7 @@ export const feedbackSchema=z.strictObject({
  message:z.string().trim().min(1).max(2000).optional(),
 });
 export const validKey=key=>/^[A-Za-z0-9_-]{32,128}$/.test(key??'');
-export const suspicious=/(?:atbr_[A-Za-z0-9_-]{43}|-----BEGIN[^\n]*PRIVATE KEY|\b(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[A-Z0-9]{16})\b|\bBearer\s+\S+|\beyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+|0x[0-9a-fA-F]{64,}|(?:payment.signature|private.key|seed.phrase|password|api.key)\s*[:=])/i;
+export const suspicious=/(?:atb[cfpr]_[A-Za-z0-9_-]{43}|-----BEGIN[^\n]*PRIVATE KEY|\b(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{20,}|AKIA[A-Z0-9]{16})\b|\bBearer\s+\S+|\beyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+|0x[0-9a-fA-F]{64,}|(?:payment.signature|private.key|seed.phrase|password|api.key)\s*[:=])/i;
 function acknowledgment(row){return {feedback_id:row.id,product_id:row.product_id,version:row.version,
  evidence:{link:row.link_status,execution_state:row.execution_state,identity:'unverified',feedback:'self_reported'},payment_effect:'none'};}
 export async function submitFeedback({db,catalog,body,key,channel='http',sampleKind='unclassified',now=()=>new Date()}){

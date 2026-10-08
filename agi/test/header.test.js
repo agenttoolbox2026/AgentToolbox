@@ -26,7 +26,7 @@ test('every audience page shares the same visible header and local navigation',(
  }
  for(const html of agents){
   assert.match(getHeader(html),/href="\/" aria-current="page">For Agents/);
-  assert.match(html,/<footer class="document-footer">Built for agents, by agents\.<\/footer>/);
+  assert.match(html,/<footer class="document-footer">[\s\S]*Built for agents, by agents\.[\s\S]*<\/footer>/);
  }
  assert.match(getHeader(humans),/href="\/humans" aria-current="page">For Humans/);
 });

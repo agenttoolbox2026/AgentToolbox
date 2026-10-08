@@ -88,9 +88,9 @@ test('all payout states are explained; paid is rendered only with exact finalize
 
 test('bounded history rejects duplicates, malformed states, oversized pages and unsafe opaque cursors before exposing records',async()=>{
  const f=await prepared(),row=response(f.envelope),page={api_version:'1',requests:[row],next_cursor:'Ab_c-1',payment_effect:'none'};
- f.responses.push(json(earnings()),json(page));assert.equal((await f.client.history(tool,caps.creator)).requests.length,1);assert.match(f.calls.at(-1).path,/\?limit=20$/);
- f.responses.push(json(earnings()),json({...page,next_cursor:null}));await f.client.history(tool,caps.creator,'Ab_c-1');assert.match(f.calls.at(-1).path,/cursor=Ab_c-1$/);
- for(const value of [{...page,requests:[row,row]},{...page,requests:Array(21).fill(row)},{...page,next_cursor:'x'.repeat(513)},{...page,next_cursor:caps.creator},{...page,next_cursor:'https://bad'},{...page,requests:[{...row,state:'paid'}]}]){const g=setup([json(earnings()),json(value)]);await assert.rejects(g.client.history(tool,caps.creator));}
+ f.responses.push(json(page));assert.equal((await f.client.history(tool,caps.creator)).requests.length,1);assert.match(f.calls.at(-1).path,/\?limit=20$/);
+ f.responses.push(json({...page,next_cursor:null}));await f.client.history(tool,caps.creator,'Ab_c-1');assert.match(f.calls.at(-1).path,/cursor=Ab_c-1$/);
+ for(const value of [{...page,requests:[row,row]},{...page,requests:Array(21).fill(row)},{...page,next_cursor:'x'.repeat(513)},{...page,next_cursor:caps.creator},{...page,next_cursor:'https://bad'},{...page,requests:[{...row,state:'paid'}]}]){const g=setup([json(value)]);await assert.rejects(g.client.history(tool,caps.creator));}
  for(const bad of ['a/b','x'.repeat(513),caps.creator]){const g=setup();await assert.rejects(g.client.history(tool,caps.creator,bad));assert.equal(g.calls.length,0);}
 });
 
@@ -105,11 +105,48 @@ test('concurrent send cannot create a second POST or UUID and identity changes d
  const send=g.client.send(caps.creator);g.client.clearRead();await assert.rejects(send,/Inputs changed before sending/);assert.equal(g.calls.length,0);
 });
 
-class Element{constructor(){this.value='';this.textContent='';this.hidden=true;this.disabled=false;this.checked=false;this.events={};}addEventListener(type,fn){(this.events[type]??=[]).push(fn);}async emit(type,value={}){for(const fn of this.events[type]??[])await fn(value);}focus(){}select(){}}
-function uiFixture(client,kind='creator'){
+class Element{constructor(){this.value='';this.textContent='';this.hidden=true;this.disabled=false;this.checked=false;this.events={};this.attributes={};}setAttribute(name,value){this.attributes[name]=value;}addEventListener(type,fn){(this.events[type]??=[]).push(fn);}async emit(type,value={}){for(const fn of this.events[type]??[])await fn(value);}focus(){assert.equal(this.disabled,false,'disabled fields cannot receive keyboard focus');this.focused=true;}select(){assert.equal(this.disabled,false,'manual copy must select an enabled field');this.selected=true;}}
+function uiFixture(client,kind='creator',{clipboardError=false,documentImpl}={}){
  const names=['tool','amount','read','history','prepare','current','prepared','envelope','summary','saved','send','resolve','new','copy','export','import','restore','file','result','history-result','more'],nodes=new Map(names.map(name=>[name,new Element()])),status=new Element(),capabilityInput=new Element(),lifecycleTarget=new Element();if(kind==='referral')nodes.delete('tool');
- const root={querySelector:selector=>selector==='[role="status"]'?status:nodes.get(selector.slice(13,-1))??null,querySelectorAll:()=>[...nodes.values()]};const copied=[];capabilityInput.value=caps[kind];if(kind==='creator')nodes.get('tool').value=tool;nodes.get('amount').value='1.234567';bindPayoutRequests(root,{kind,client,capabilityInput,lifecycleTarget,navigatorImpl:{clipboard:{writeText:async text=>{copied.push(text);}}}});return {get:name=>nodes.get(name),status,capabilityInput,lifecycleTarget,copied};
+ const attributes={},root={setAttribute:(name,value)=>{attributes[name]=value;},querySelector:selector=>selector==='[role="status"]'?status:nodes.get(selector.slice(13,-1))??null,querySelectorAll:()=>[...nodes.values()]};const copied=[];capabilityInput.value=caps[kind];if(kind==='creator')nodes.get('tool').value=tool;nodes.get('amount').value='1.234567';bindPayoutRequests(root,{kind,client,capabilityInput,lifecycleTarget,documentImpl,navigatorImpl:{clipboard:{writeText:async text=>{if(clipboardError)throw Error('Clipboard denied');copied.push(text);}}}});return {get:name=>nodes.get(name),status,capabilityInput,lifecycleTarget,copied,attributes};
 }
+
+test('both private histories remain readable when a complete earnings snapshot is unavailable',async()=>{
+ for(const kind of ['creator','referral']){
+  const original=await prepared({kind}),row=response(original.envelope),calls=[],subject=kind==='creator'?tool:null;
+  const client=createPayoutRequestsClient({kind,cryptoImpl:webcrypto,fetchImpl:async(path,init)=>{calls.push({path,...init});return path.endsWith('/earnings')?json({error:{code:'payout_accounting_unavailable'}},503):json({api_version:'1',requests:[row],next_cursor:null,payment_effect:'none'});}});
+  assert.equal((await client.history(subject,caps[kind])).requests[0].request_id,row.request_id);assert.equal(calls.length,1);assert.equal(calls[0].path,`${original.envelope.path}?limit=20`);assert.equal(calls[0].method,'GET');
+  await assert.rejects(client.prepare('1',subject,caps[kind]),/Read a saved current wallet/);assert.equal(calls.length,1);
+ }
+});
+
+test('direct referral history rejects mixed or retained-account mismatches and accepts an empty scoped page',async()=>{
+ const original=await prepared({kind:'referral'}),row=response(original.envelope),other={...row,request_id:id(40),subject_id:'ref_'+id(41)},page=rows=>({api_version:'1',requests:rows,next_cursor:null,payment_effect:'none'});
+ for(const rows of [[row,other],[{...row,subject_id:'../../private'}],[{...row,beneficiary_kind:'creator'}]]){const f=setup([json(page(rows))],{kind:'referral'});await assert.rejects(f.client.history(null,caps.referral));assert.equal(f.calls.length,1);}
+ const retained=setup([json(page([other]))],{kind:'referral'});await retained.client.restore(original.text,caps.referral);await assert.rejects(retained.client.history(null,caps.referral));assert.equal(retained.client.snapshot().envelope,original.text);
+ const empty=setup([json(page([]))],{kind:'referral'});assert.equal((await empty.client.history(null,caps.referral)).requests.length,0);assert.equal(empty.calls.length,1);
+});
+
+test('payout reads announce progress and clear busy state after success or failure',async()=>{
+ for(const responseValue of [json(wallets()),json({},503)]){
+  const waiting=deferred(),f=setup([()=>waiting.promise,json(earnings())]),view=uiFixture(f.client),pending=view.get('read').emit('click');
+  await new Promise(resolve=>setTimeout(resolve,0));assert.match(view.status.textContent,/Reading current wallet/);assert.equal(view.get('read').attributes['aria-busy'],'true');assert.equal(view.get('read').disabled,true);
+  waiting.resolve(responseValue);await pending;assert.equal(view.get('read').attributes['aria-busy'],'false');assert.equal(view.get('read').disabled,false);
+ }
+});
+
+test('clipboard rejection focuses enabled payout JSON for manual copying without a POST',async()=>{
+ const original=await prepared(),f=setup(),view=uiFixture(f.client,'creator',{clipboardError:true});view.get('import').value=original.text;await view.get('restore').emit('click');
+ await view.get('copy').emit('click');assert.equal(view.get('envelope').disabled,false);assert.equal(view.get('envelope').focused,true);assert.equal(view.get('envelope').selected,true);assert.equal(view.get('envelope').value,original.text);assert.match(view.status.textContent,/Copy the selected exact JSON/);assert.equal(f.calls.length,0);
+});
+
+test('payout read restores lost keyboard focus but preserves focus moved elsewhere during the request',async()=>{
+ for(const moved of [false,true]){
+  const waiting=deferred(),documentImpl={body:{}},f=setup([()=>waiting.promise]),view=uiFixture(f.client,'creator',{documentImpl}),button=view.get('read'),other={};let disabled=false;
+  Object.defineProperty(button,'disabled',{get:()=>disabled,set:value=>{disabled=value;if(value&&documentImpl.activeElement===button)documentImpl.activeElement=documentImpl.body;}});button.focus=()=>{assert.equal(disabled,false);documentImpl.activeElement=button;};documentImpl.activeElement=button;
+  const pending=view.get('read').emit('click');await new Promise(resolve=>setTimeout(resolve,0));if(moved)documentImpl.activeElement=other;waiting.resolve(json({},503));await pending;assert.equal(documentImpl.activeElement,moved?other:button);
+ }
+});
 
 test('UI shows wallet, amount, export and acknowledgement before posting; visible mismatch prevents send',async()=>{
  const f=setup([json(wallets()),json(earnings())]),ui=uiFixture(f.client);await ui.get('read').emit('click');assert.match(ui.get('current').textContent,new RegExp(address));assert.match(ui.get('current').textContent,/9.000000 USDC/);await ui.get('prepare').emit('click');assert.equal(ui.get('prepared').hidden,false);assert.match(ui.get('summary').textContent,/1.234567 USDC/);assert.match(ui.get('summary').textContent,new RegExp(address));

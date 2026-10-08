@@ -2,11 +2,11 @@
   "name": "AgentToolbox",
   "origin": "https://agi.agenttoolbox2026.workers.dev",
   "siteOrigin": "https://agi.agenttoolbox2026.workers.dev",
-  "registryVersion": "2026-10-07.3",
+  "registryVersion": "2026-10-08.1",
   "tools": [
     {
       "id": "docs-pack",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "name": "Docs Pack",
       "status": "active",
       "maturity": "beta",
@@ -446,8 +446,8 @@
           "whitespace": "No insignificant whitespace.",
           "payment_requirements": "Hash the complete PaymentRequirements object in accepts, including extra. Preserve address/string case and array order; do not hash the challenge envelope, header base64 or payment signature."
         },
-        "canonical_json": "{\"criteria\":{\"criteria_version\":\"1\",\"evaluation\":\"Output must pass the published output_schema, then every predicate below. These expressions are also evaluated by the server handler.\",\"failure\":{\"before_settlement\":[\"invalid_input\",\"output_schema_invalid\",\"predicate_false\",\"execution_error\",\"output_bound_exceeded\",\"durable_result_write_failed\"],\"settlement\":\"One attempt only after durable validated output; unknown or unconfirmed settlement withholds output and requires reconciliation.\"},\"rule_language\":\"agenttoolbox-predicate-v1\",\"rules\":[{\"id\":\"sources_present\",\"test\":{\"gt\":[{\"count\":{\"path\":\"sources\"}},0]}},{\"id\":\"all_sources_matched_with_exact_offsets\",\"test\":{\"every\":{\"as\":\"source\",\"source\":{\"path\":\"sources\"},\"test\":{\"and\":[{\"eq\":[{\"path\":\"source.status\"},200]},{\"every\":{\"as\":\"excerpt\",\"source\":{\"path\":\"source.excerpts\"},\"test\":{\"and\":[{\"gt\":[{\"count\":{\"path\":\"excerpt.matched_terms\"}},0]},{\"eq\":[{\"subtract\":[{\"path\":\"excerpt.end_char\"},{\"path\":\"excerpt.start_char\"}]},{\"count\":{\"path\":\"excerpt.text\"}}]}]}}}]}}}},{\"id\":\"requested_excerpt_budget\",\"test\":{\"lte\":[{\"path\":\"excerpt_chars\"},{\"path\":\"max_excerpt_chars\"}]}}],\"scope\":\"Deterministic bounded checks, not usefulness, truth, certification or independent live-payment proof.\"},\"format\":\"agenttoolbox-success-contract-v1\",\"input_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"max_excerpt_chars\":{\"default\":4000,\"maximum\":6000,\"minimum\":1000,\"type\":\"integer\"},\"query\":{\"maxLength\":120,\"minLength\":2,\"type\":\"string\"},\"urls\":{\"items\":{\"maxLength\":512,\"type\":\"string\"},\"maxItems\":5,\"minItems\":1,\"type\":\"array\"}},\"required\":[\"urls\",\"query\",\"max_excerpt_chars\"],\"type\":\"object\"},\"limits\":{\"deadline_seconds\":12,\"formats\":[\"UTF-8 Markdown\",\"UTF-8 plain text\",\"static HTML with readable body/main/article\"],\"max_excerpt_chars\":6000,\"max_output_bytes\":14000,\"max_source_bytes\":262144,\"max_urls\":5,\"redirects_per_source\":2,\"supported_hosts\":[\"developers.cloudflare.com\",\"docs.payai.network\",\"docs.x402.org\",\"docs.python.org\",\"nodejs.org\",\"developer.mozilla.org\",\"docs.github.com\",\"www.typescriptlang.org\"],\"unsupported\":[\"credentials, ports or query strings in URLs\",\"private or unlisted hosts\",\"login, bot challenges, JavaScript rendering, PDFs, crawling\",\"semantic relevance or completeness guarantees\"]},\"output_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"excerpt_chars\":{\"maximum\":6000,\"minimum\":1,\"type\":\"integer\"},\"fetched_at\":{\"type\":\"string\"},\"match_method\":{\"const\":\"case-insensitive literal terms; ranked by distinct term coverage\",\"type\":\"string\"},\"max_excerpt_chars\":{\"maximum\":9007199254740991,\"minimum\":-9007199254740991,\"type\":\"integer\"},\"query\":{\"type\":\"string\"},\"source_content\":{\"const\":\"untrusted_data\",\"type\":\"string\"},\"sources\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"code_blocks_omitted\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"},\"content_type\":{\"type\":\"string\"},\"excerpts\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"anchor\":{\"anyOf\":[{\"maxLength\":512,\"type\":\"string\"},{\"type\":\"null\"}]},\"end_char\":{\"maximum\":9007199254740991,\"minimum\":1,\"type\":\"integer\"},\"heading\":{\"anyOf\":[{\"maxLength\":180,\"type\":\"string\"},{\"type\":\"null\"}]},\"matched_terms\":{\"items\":{\"type\":\"string\"},\"maxItems\":8,\"minItems\":1,\"type\":\"array\"},\"start_char\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"},\"text\":{\"maxLength\":1800,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"text\",\"start_char\",\"end_char\",\"heading\",\"anchor\",\"matched_terms\"],\"type\":\"object\"},\"maxItems\":2,\"minItems\":1,\"type\":\"array\"},\"final_url\":{\"format\":\"uri\",\"type\":\"string\"},\"selection_status\":{\"const\":\"matched\",\"type\":\"string\"},\"source_bytes\":{\"exclusiveMinimum\":0,\"maximum\":262144,\"type\":\"integer\"},\"source_sha256\":{\"pattern\":\"^[a-f0-9]{64}$\",\"type\":\"string\"},\"status\":{\"const\":200,\"type\":\"number\"},\"text_chars\":{\"exclusiveMinimum\":0,\"maximum\":9007199254740991,\"type\":\"integer\"},\"text_sha256\":{\"pattern\":\"^[a-f0-9]{64}$\",\"type\":\"string\"},\"title\":{\"maxLength\":180,\"type\":\"string\"},\"url\":{\"format\":\"uri\",\"type\":\"string\"}},\"required\":[\"url\",\"final_url\",\"status\",\"selection_status\",\"content_type\",\"source_bytes\",\"source_sha256\",\"text_sha256\",\"title\",\"text_chars\",\"code_blocks_omitted\",\"excerpts\"],\"type\":\"object\"},\"maxItems\":5,\"minItems\":1,\"type\":\"array\"}},\"required\":[\"query\",\"fetched_at\",\"source_content\",\"sources\",\"excerpt_chars\",\"max_excerpt_chars\",\"match_method\"],\"type\":\"object\"},\"product_id\":\"docs-pack\",\"product_version\":\"0.1.0\",\"success_criterion\":\"Every requested source returns HTTP 200 and at least one literal query-term match; excerpts respect the requested character budget and preserve complete fenced code blocks. The full output passes its schema and 14,000-byte product bound.\"}",
-        "sha256": "f5e6b7ea58fcf1c599196a84053f668864c611f99b55f0bee3b48aa94bd7ebfc"
+        "canonical_json": "{\"criteria\":{\"criteria_version\":\"1\",\"evaluation\":\"Output must pass the published output_schema, then every predicate below. These expressions are also evaluated by the server handler.\",\"failure\":{\"before_settlement\":[\"invalid_input\",\"output_schema_invalid\",\"predicate_false\",\"execution_error\",\"output_bound_exceeded\",\"durable_result_write_failed\"],\"settlement\":\"One attempt only after durable validated output; unknown or unconfirmed settlement withholds output and requires reconciliation.\"},\"rule_language\":\"agenttoolbox-predicate-v1\",\"rules\":[{\"id\":\"sources_present\",\"test\":{\"gt\":[{\"count\":{\"path\":\"sources\"}},0]}},{\"id\":\"all_sources_matched_with_exact_offsets\",\"test\":{\"every\":{\"as\":\"source\",\"source\":{\"path\":\"sources\"},\"test\":{\"and\":[{\"eq\":[{\"path\":\"source.status\"},200]},{\"every\":{\"as\":\"excerpt\",\"source\":{\"path\":\"source.excerpts\"},\"test\":{\"and\":[{\"gt\":[{\"count\":{\"path\":\"excerpt.matched_terms\"}},0]},{\"eq\":[{\"subtract\":[{\"path\":\"excerpt.end_char\"},{\"path\":\"excerpt.start_char\"}]},{\"count\":{\"path\":\"excerpt.text\"}}]}]}}}]}}}},{\"id\":\"requested_excerpt_budget\",\"test\":{\"lte\":[{\"path\":\"excerpt_chars\"},{\"path\":\"max_excerpt_chars\"}]}}],\"scope\":\"Deterministic bounded checks, not usefulness, truth, certification or independent live-payment proof.\"},\"format\":\"agenttoolbox-success-contract-v1\",\"input_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"max_excerpt_chars\":{\"default\":4000,\"maximum\":6000,\"minimum\":1000,\"type\":\"integer\"},\"query\":{\"maxLength\":120,\"minLength\":2,\"type\":\"string\"},\"urls\":{\"items\":{\"maxLength\":512,\"type\":\"string\"},\"maxItems\":5,\"minItems\":1,\"type\":\"array\"}},\"required\":[\"urls\",\"query\",\"max_excerpt_chars\"],\"type\":\"object\"},\"limits\":{\"deadline_seconds\":12,\"formats\":[\"UTF-8 Markdown\",\"UTF-8 plain text\",\"static HTML with readable body/main/article\"],\"max_excerpt_chars\":6000,\"max_output_bytes\":14000,\"max_source_bytes\":262144,\"max_urls\":5,\"redirects_per_source\":2,\"supported_hosts\":[\"developers.cloudflare.com\",\"docs.payai.network\",\"docs.x402.org\",\"docs.python.org\",\"nodejs.org\",\"developer.mozilla.org\",\"docs.github.com\",\"www.typescriptlang.org\"],\"unsupported\":[\"credentials, ports or query strings in URLs\",\"private or unlisted hosts\",\"login, bot challenges, JavaScript rendering, PDFs, crawling\",\"semantic relevance or completeness guarantees\"]},\"output_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"excerpt_chars\":{\"maximum\":6000,\"minimum\":1,\"type\":\"integer\"},\"fetched_at\":{\"type\":\"string\"},\"match_method\":{\"const\":\"case-insensitive literal terms; ranked by distinct term coverage\",\"type\":\"string\"},\"max_excerpt_chars\":{\"maximum\":9007199254740991,\"minimum\":-9007199254740991,\"type\":\"integer\"},\"query\":{\"type\":\"string\"},\"source_content\":{\"const\":\"untrusted_data\",\"type\":\"string\"},\"sources\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"code_blocks_omitted\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"},\"content_type\":{\"type\":\"string\"},\"excerpts\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"anchor\":{\"anyOf\":[{\"maxLength\":512,\"type\":\"string\"},{\"type\":\"null\"}]},\"end_char\":{\"maximum\":9007199254740991,\"minimum\":1,\"type\":\"integer\"},\"heading\":{\"anyOf\":[{\"maxLength\":180,\"type\":\"string\"},{\"type\":\"null\"}]},\"matched_terms\":{\"items\":{\"type\":\"string\"},\"maxItems\":8,\"minItems\":1,\"type\":\"array\"},\"start_char\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"},\"text\":{\"maxLength\":1800,\"minLength\":1,\"type\":\"string\"}},\"required\":[\"text\",\"start_char\",\"end_char\",\"heading\",\"anchor\",\"matched_terms\"],\"type\":\"object\"},\"maxItems\":2,\"minItems\":1,\"type\":\"array\"},\"final_url\":{\"format\":\"uri\",\"type\":\"string\"},\"selection_status\":{\"const\":\"matched\",\"type\":\"string\"},\"source_bytes\":{\"exclusiveMinimum\":0,\"maximum\":262144,\"type\":\"integer\"},\"source_sha256\":{\"pattern\":\"^[a-f0-9]{64}$\",\"type\":\"string\"},\"status\":{\"const\":200,\"type\":\"number\"},\"text_chars\":{\"exclusiveMinimum\":0,\"maximum\":9007199254740991,\"type\":\"integer\"},\"text_sha256\":{\"pattern\":\"^[a-f0-9]{64}$\",\"type\":\"string\"},\"title\":{\"maxLength\":180,\"type\":\"string\"},\"url\":{\"format\":\"uri\",\"type\":\"string\"}},\"required\":[\"url\",\"final_url\",\"status\",\"selection_status\",\"content_type\",\"source_bytes\",\"source_sha256\",\"text_sha256\",\"title\",\"text_chars\",\"code_blocks_omitted\",\"excerpts\"],\"type\":\"object\"},\"maxItems\":5,\"minItems\":1,\"type\":\"array\"}},\"required\":[\"query\",\"fetched_at\",\"source_content\",\"sources\",\"excerpt_chars\",\"max_excerpt_chars\",\"match_method\"],\"type\":\"object\"},\"product_id\":\"docs-pack\",\"product_version\":\"0.1.1\",\"success_criterion\":\"Every requested source returns HTTP 200 and at least one literal query-term match; excerpts respect the requested character budget and preserve complete fenced code blocks. The full output passes its schema and 14,000-byte product bound.\"}",
+        "sha256": "5ebbc39c57b931cce25c404ab51ce2879cb4bf7e55c9fcb9be2bbc1b7923e142"
       },
       "links": {
         "detail": "https://agi.agenttoolbox2026.workers.dev/v1/products/docs-pack",
@@ -464,7 +464,7 @@
     {
       "id": "quote-proof",
       "name": "QuoteProof",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "status": "active",
       "maturity": "beta",
       "experimental": false,
@@ -525,6 +525,522 @@
                     }
                   }
                 ]
+              }
+            },
+            {
+              "id": "unknown_count_matches_results",
+              "test": {
+                "eq": [
+                  {
+                    "path": "summary.unknown"
+                  },
+                  {
+                    "count_where": {
+                      "source": {
+                        "path": "results"
+                      },
+                      "as": "result",
+                      "test": {
+                        "eq": [
+                          {
+                            "path": "result.status"
+                          },
+                          "unknown"
+                        ]
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": "source_indices_preserve_input_order",
+              "test": {
+                "every": {
+                  "source": {
+                    "path": "sources"
+                  },
+                  "as": "source",
+                  "index_as": "source_ordinal",
+                  "test": {
+                    "eq": [
+                      {
+                        "path": "source.source_index"
+                      },
+                      {
+                        "path": "source_ordinal"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "id": "quote_indices_preserve_input_order",
+              "test": {
+                "every": {
+                  "source": {
+                    "path": "results"
+                  },
+                  "as": "result",
+                  "index_as": "quote_ordinal",
+                  "test": {
+                    "eq": [
+                      {
+                        "path": "result.quote_index"
+                      },
+                      {
+                        "path": "quote_ordinal"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "id": "results_reference_existing_sources",
+              "test": {
+                "every": {
+                  "source": {
+                    "path": "results"
+                  },
+                  "as": "result",
+                  "test": {
+                    "some": {
+                      "source": {
+                        "path": "sources"
+                      },
+                      "as": "source",
+                      "test": {
+                        "and": [
+                          {
+                            "eq": [
+                              {
+                                "path": "source.source_index"
+                              },
+                              {
+                                "path": "result.source_index"
+                              }
+                            ]
+                          },
+                          true
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "absence_requires_complete_plain_text",
+              "test": {
+                "every": {
+                  "source": {
+                    "path": "results"
+                  },
+                  "as": "result",
+                  "test": {
+                    "some": {
+                      "source": {
+                        "path": "sources"
+                      },
+                      "as": "source",
+                      "test": {
+                        "and": [
+                          {
+                            "eq": [
+                              {
+                                "path": "source.source_index"
+                              },
+                              {
+                                "path": "result.source_index"
+                              }
+                            ]
+                          },
+                          {
+                            "if": [
+                              {
+                                "eq": [
+                                  {
+                                    "path": "result.status"
+                                  },
+                                  "absent"
+                                ]
+                              },
+                              {
+                                "and": [
+                                  {
+                                    "eq": [
+                                      {
+                                        "path": "source.extraction"
+                                      },
+                                      "complete_plain_text"
+                                    ]
+                                  },
+                                  {
+                                    "eq": [
+                                      {
+                                        "path": "result.occurrences"
+                                      },
+                                      "0"
+                                    ]
+                                  },
+                                  {
+                                    "eq": [
+                                      {
+                                        "count": {
+                                          "path": "result.evidence"
+                                        }
+                                      },
+                                      0
+                                    ]
+                                  }
+                                ]
+                              },
+                              true
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "unknown_results_have_no_matching_evidence",
+              "test": {
+                "every": {
+                  "source": {
+                    "path": "results"
+                  },
+                  "as": "result",
+                  "test": {
+                    "if": [
+                      {
+                        "eq": [
+                          {
+                            "path": "result.status"
+                          },
+                          "unknown"
+                        ]
+                      },
+                      {
+                        "and": [
+                          {
+                            "eq": [
+                              {
+                                "path": "result.occurrences"
+                              },
+                              "unknown"
+                            ]
+                          },
+                          {
+                            "eq": [
+                              {
+                                "count": {
+                                  "path": "result.evidence"
+                                }
+                              },
+                              0
+                            ]
+                          }
+                        ]
+                      },
+                      true
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "id": "matches_require_complete_source_evidence",
+              "test": {
+                "every": {
+                  "source": {
+                    "path": "results"
+                  },
+                  "as": "result",
+                  "test": {
+                    "some": {
+                      "source": {
+                        "path": "sources"
+                      },
+                      "as": "source",
+                      "test": {
+                        "and": [
+                          {
+                            "eq": [
+                              {
+                                "path": "source.source_index"
+                              },
+                              {
+                                "path": "result.source_index"
+                              }
+                            ]
+                          },
+                          {
+                            "if": [
+                              {
+                                "in": [
+                                  {
+                                    "path": "result.status"
+                                  },
+                                  [
+                                    "exact_match",
+                                    "whitespace_normalized_match",
+                                    "ambiguous"
+                                  ]
+                                ]
+                              },
+                              {
+                                "and": [
+                                  {
+                                    "eq": [
+                                      {
+                                        "path": "source.http_status"
+                                      },
+                                      200
+                                    ]
+                                  },
+                                  {
+                                    "not": {
+                                      "eq": [
+                                        {
+                                          "path": "source.content_sha256"
+                                        },
+                                        null
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "not": {
+                                      "eq": [
+                                        {
+                                          "path": "source.extraction_sha256"
+                                        },
+                                        null
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "not": {
+                                      "eq": [
+                                        {
+                                          "path": "source.extraction"
+                                        },
+                                        "unavailable"
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "eq": [
+                                      {
+                                        "count": {
+                                          "path": "result.evidence"
+                                        }
+                                      },
+                                      {
+                                        "if": [
+                                          {
+                                            "eq": [
+                                              {
+                                                "path": "result.status"
+                                              },
+                                              "ambiguous"
+                                            ]
+                                          },
+                                          2,
+                                          1
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "eq": [
+                                      {
+                                        "path": "result.occurrences"
+                                      },
+                                      {
+                                        "if": [
+                                          {
+                                            "eq": [
+                                              {
+                                                "path": "result.status"
+                                              },
+                                              "ambiguous"
+                                            ]
+                                          },
+                                          "2_or_more",
+                                          "1"
+                                        ]
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              true
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "evidence_offsets_identify_extracted_text",
+              "test": {
+                "every": {
+                  "source": {
+                    "path": "results"
+                  },
+                  "as": "result",
+                  "test": {
+                    "some": {
+                      "source": {
+                        "path": "sources"
+                      },
+                      "as": "source",
+                      "test": {
+                        "and": [
+                          {
+                            "eq": [
+                              {
+                                "path": "source.source_index"
+                              },
+                              {
+                                "path": "result.source_index"
+                              }
+                            ]
+                          },
+                          {
+                            "every": {
+                              "source": {
+                                "path": "result.evidence"
+                              },
+                              "as": "evidence",
+                              "test": {
+                                "and": [
+                                  {
+                                    "gt": [
+                                      {
+                                        "path": "evidence.end_char"
+                                      },
+                                      {
+                                        "path": "evidence.start_char"
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "lte": [
+                                      {
+                                        "path": "evidence.end_char"
+                                      },
+                                      {
+                                        "path": "source.extracted_chars"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "context_offsets_match_text",
+              "test": {
+                "every": {
+                  "source": {
+                    "path": "results"
+                  },
+                  "as": "result",
+                  "test": {
+                    "some": {
+                      "source": {
+                        "path": "sources"
+                      },
+                      "as": "source",
+                      "test": {
+                        "and": [
+                          {
+                            "eq": [
+                              {
+                                "path": "source.source_index"
+                              },
+                              {
+                                "path": "result.source_index"
+                              }
+                            ]
+                          },
+                          {
+                            "every": {
+                              "source": {
+                                "path": "result.evidence"
+                              },
+                              "as": "evidence",
+                              "test": {
+                                "if": [
+                                  {
+                                    "not": {
+                                      "eq": [
+                                        {
+                                          "path": "evidence.context"
+                                        },
+                                        null
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "and": [
+                                      {
+                                        "eq": [
+                                          {
+                                            "subtract": [
+                                              {
+                                                "path": "evidence.context.end_char"
+                                              },
+                                              {
+                                                "path": "evidence.context.start_char"
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "count": {
+                                              "path": "evidence.context.text"
+                                            }
+                                          }
+                                        ]
+                                      },
+                                      {
+                                        "lte": [
+                                          {
+                                            "path": "evidence.context.end_char"
+                                          },
+                                          {
+                                            "path": "source.extracted_chars"
+                                          }
+                                        ]
+                                      }
+                                    ]
+                                  },
+                                  true
+                                ]
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
               }
             }
           ],
@@ -1010,8 +1526,8 @@
           "whitespace": "No insignificant whitespace.",
           "payment_requirements": "Hash the complete PaymentRequirements object in accepts, including extra. Preserve address/string case and array order; do not hash the challenge envelope, header base64 or payment signature."
         },
-        "canonical_json": "{\"criteria\":{\"criteria_version\":\"1\",\"evaluation\":\"Output must pass the published output_schema, then every predicate below. These expressions are also evaluated by the server handler.\",\"failure\":{\"before_settlement\":[\"invalid_input\",\"output_schema_invalid\",\"predicate_false\",\"execution_error\",\"output_bound_exceeded\",\"durable_result_write_failed\"],\"settlement\":\"One attempt only after durable validated output; unknown or unconfirmed settlement withholds output and requires reconciliation.\"},\"rule_language\":\"agenttoolbox-predicate-v1\",\"rules\":[{\"id\":\"decisive_result_required\",\"test\":{\"gt\":[{\"path\":\"summary.decisive\"},0]}},{\"id\":\"decisive_count_matches_results\",\"test\":{\"eq\":[{\"path\":\"summary.decisive\"},{\"count_where\":{\"as\":\"result\",\"source\":{\"path\":\"results\"},\"test\":{\"not\":{\"eq\":[{\"path\":\"result.status\"},\"unknown\"]}}}}]}}],\"scope\":\"Deterministic bounded checks, not usefulness, truth, certification or independent live-payment proof.\"},\"format\":\"agenttoolbox-success-contract-v1\",\"input_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"quotes\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"quote\":{\"maxLength\":512,\"minLength\":1,\"type\":\"string\"},\"source_index\":{\"maximum\":4,\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"source_index\",\"quote\"],\"type\":\"object\"},\"maxItems\":10,\"minItems\":1,\"type\":\"array\"},\"urls\":{\"items\":{\"maxLength\":512,\"type\":\"string\"},\"maxItems\":5,\"minItems\":1,\"type\":\"array\"}},\"required\":[\"urls\",\"quotes\"],\"type\":\"object\"},\"limits\":{\"context_words_per_source\":200,\"deadline_ms\":12000,\"output_bytes\":14000,\"preview\":\"Disabled: a verdict is the paid result.\",\"quotes\":10,\"redirects\":2,\"robots_bytes\":16384,\"source_bytes\":100000,\"supported_hosts\":[\"developers.cloudflare.com\",\"docs.payai.network\",\"docs.x402.org\",\"docs.python.org\",\"nodejs.org\",\"developer.mozilla.org\",\"docs.github.com\",\"www.typescriptlang.org\"],\"urls\":5},\"output_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"normalization\":{\"const\":\"Case-sensitive; collapse Unicode whitespace runs to one ASCII space and trim; no case, punctuation, Unicode composition, or semantic folding. Offsets are UTF-16 code units in the extracted text before whitespace normalization.\",\"type\":\"string\"},\"results\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"evidence\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"anchor_fragment\":{\"anyOf\":[{\"maxLength\":361,\"type\":\"string\"},{\"type\":\"null\"}]},\"context\":{\"anyOf\":[{\"additionalProperties\":false,\"properties\":{\"end_char\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"},\"start_char\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"},\"text\":{\"maxLength\":180,\"type\":\"string\"}},\"required\":[\"text\",\"start_char\",\"end_char\"],\"type\":\"object\"},{\"type\":\"null\"}]},\"end_char\":{\"exclusiveMinimum\":0,\"maximum\":9007199254740991,\"type\":\"integer\"},\"start_char\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"start_char\",\"end_char\",\"anchor_fragment\",\"context\"],\"type\":\"object\"},\"maxItems\":2,\"type\":\"array\"},\"occurrences\":{\"enum\":[\"0\",\"1\",\"2_or_more\",\"unknown\"],\"type\":\"string\"},\"quote_index\":{\"maximum\":9,\"minimum\":0,\"type\":\"integer\"},\"reason\":{\"enum\":[\"complete_text\",\"single_occurrence\",\"repeated_occurrence\",\"html_absence_unverifiable\",\"source_too_large\",\"empty_source\",\"robots_unavailable\",\"source_disallows_access\",\"source_disallows_excerpts\",\"unsupported_redirect\",\"redirect_limit\",\"source_unavailable\",\"unsupported_content_type\",\"unsupported_encoding\",\"extraction_uncertain\",\"html_runtime_unavailable\",\"deadline_exceeded\"],\"type\":\"string\"},\"source_index\":{\"maximum\":4,\"minimum\":0,\"type\":\"integer\"},\"status\":{\"enum\":[\"exact_match\",\"whitespace_normalized_match\",\"absent\",\"ambiguous\",\"unknown\"],\"type\":\"string\"}},\"required\":[\"quote_index\",\"source_index\",\"status\",\"reason\",\"occurrences\",\"evidence\"],\"type\":\"object\"},\"maxItems\":10,\"minItems\":1,\"type\":\"array\"},\"scope\":{\"const\":\"textual_quotation_not_truth\",\"type\":\"string\"},\"source_content\":{\"const\":\"untrusted_data\",\"type\":\"string\"},\"sources\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"content_sha256\":{\"anyOf\":[{\"pattern\":\"^[a-f0-9]{64}$\",\"type\":\"string\"},{\"type\":\"null\"}]},\"content_type\":{\"anyOf\":[{\"maxLength\":80,\"type\":\"string\"},{\"type\":\"null\"}]},\"extracted_chars\":{\"anyOf\":[{\"maximum\":200000,\"minimum\":0,\"type\":\"integer\"},{\"type\":\"null\"}]},\"extraction\":{\"enum\":[\"complete_plain_text\",\"static_html\",\"unavailable\"],\"type\":\"string\"},\"extraction_sha256\":{\"anyOf\":[{\"pattern\":\"^[a-f0-9]{64}$\",\"type\":\"string\"},{\"type\":\"null\"}]},\"fetched_at\":{\"format\":\"date-time\",\"pattern\":\"^(?:(?:\\\\d\\\\d[2468][048]|\\\\d\\\\d[13579][26]|\\\\d\\\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\\\d|30)|(?:02)-(?:0[1-9]|1\\\\d|2[0-8])))T(?:(?:[01]\\\\d|2[0-3]):[0-5]\\\\d:[0-5]\\\\d(?:\\\\.\\\\d+)?(?:Z))$\",\"type\":\"string\"},\"final_url\":{\"format\":\"uri\",\"maxLength\":512,\"type\":\"string\"},\"http_status\":{\"anyOf\":[{\"maximum\":599,\"minimum\":100,\"type\":\"integer\"},{\"type\":\"null\"}]},\"reason\":{\"anyOf\":[{\"enum\":[\"complete_text\",\"single_occurrence\",\"repeated_occurrence\",\"html_absence_unverifiable\",\"source_too_large\",\"empty_source\",\"robots_unavailable\",\"source_disallows_access\",\"source_disallows_excerpts\",\"unsupported_redirect\",\"redirect_limit\",\"source_unavailable\",\"unsupported_content_type\",\"unsupported_encoding\",\"extraction_uncertain\",\"html_runtime_unavailable\",\"deadline_exceeded\"],\"type\":\"string\"},{\"type\":\"null\"}]},\"source_bytes\":{\"anyOf\":[{\"maximum\":100000,\"minimum\":0,\"type\":\"integer\"},{\"type\":\"null\"}]},\"source_index\":{\"maximum\":4,\"minimum\":0,\"type\":\"integer\"},\"url\":{\"format\":\"uri\",\"maxLength\":512,\"type\":\"string\"}},\"required\":[\"source_index\",\"url\",\"final_url\",\"fetched_at\",\"http_status\",\"content_type\",\"source_bytes\",\"content_sha256\",\"extraction_sha256\",\"extraction\",\"extracted_chars\",\"reason\"],\"type\":\"object\"},\"maxItems\":5,\"minItems\":1,\"type\":\"array\"},\"summary\":{\"additionalProperties\":false,\"properties\":{\"decisive\":{\"maximum\":10,\"minimum\":0,\"type\":\"integer\"},\"unknown\":{\"maximum\":10,\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"decisive\",\"unknown\"],\"type\":\"object\"}},\"required\":[\"source_content\",\"scope\",\"normalization\",\"sources\",\"results\",\"summary\"],\"type\":\"object\"},\"product_id\":\"quote-proof\",\"product_version\":\"0.1.0\",\"success_criterion\":\"At least one decisive quotation result with schema-validated evidence; unknown results remain explicit. Textual fidelity only, never claim truth.\"}",
-        "sha256": "aa895e3bd68339bc3dc1916380576374f790ba7b27d860777cacb3dae3776526"
+        "canonical_json": "{\"criteria\":{\"criteria_version\":\"1\",\"evaluation\":\"Output must pass the published output_schema, then every predicate below. These expressions are also evaluated by the server handler.\",\"failure\":{\"before_settlement\":[\"invalid_input\",\"output_schema_invalid\",\"predicate_false\",\"execution_error\",\"output_bound_exceeded\",\"durable_result_write_failed\"],\"settlement\":\"One attempt only after durable validated output; unknown or unconfirmed settlement withholds output and requires reconciliation.\"},\"rule_language\":\"agenttoolbox-predicate-v1\",\"rules\":[{\"id\":\"decisive_result_required\",\"test\":{\"gt\":[{\"path\":\"summary.decisive\"},0]}},{\"id\":\"decisive_count_matches_results\",\"test\":{\"eq\":[{\"path\":\"summary.decisive\"},{\"count_where\":{\"as\":\"result\",\"source\":{\"path\":\"results\"},\"test\":{\"not\":{\"eq\":[{\"path\":\"result.status\"},\"unknown\"]}}}}]}},{\"id\":\"unknown_count_matches_results\",\"test\":{\"eq\":[{\"path\":\"summary.unknown\"},{\"count_where\":{\"as\":\"result\",\"source\":{\"path\":\"results\"},\"test\":{\"eq\":[{\"path\":\"result.status\"},\"unknown\"]}}}]}},{\"id\":\"source_indices_preserve_input_order\",\"test\":{\"every\":{\"as\":\"source\",\"index_as\":\"source_ordinal\",\"source\":{\"path\":\"sources\"},\"test\":{\"eq\":[{\"path\":\"source.source_index\"},{\"path\":\"source_ordinal\"}]}}}},{\"id\":\"quote_indices_preserve_input_order\",\"test\":{\"every\":{\"as\":\"result\",\"index_as\":\"quote_ordinal\",\"source\":{\"path\":\"results\"},\"test\":{\"eq\":[{\"path\":\"result.quote_index\"},{\"path\":\"quote_ordinal\"}]}}}},{\"id\":\"results_reference_existing_sources\",\"test\":{\"every\":{\"as\":\"result\",\"source\":{\"path\":\"results\"},\"test\":{\"some\":{\"as\":\"source\",\"source\":{\"path\":\"sources\"},\"test\":{\"and\":[{\"eq\":[{\"path\":\"source.source_index\"},{\"path\":\"result.source_index\"}]},true]}}}}}},{\"id\":\"absence_requires_complete_plain_text\",\"test\":{\"every\":{\"as\":\"result\",\"source\":{\"path\":\"results\"},\"test\":{\"some\":{\"as\":\"source\",\"source\":{\"path\":\"sources\"},\"test\":{\"and\":[{\"eq\":[{\"path\":\"source.source_index\"},{\"path\":\"result.source_index\"}]},{\"if\":[{\"eq\":[{\"path\":\"result.status\"},\"absent\"]},{\"and\":[{\"eq\":[{\"path\":\"source.extraction\"},\"complete_plain_text\"]},{\"eq\":[{\"path\":\"result.occurrences\"},\"0\"]},{\"eq\":[{\"count\":{\"path\":\"result.evidence\"}},0]}]},true]}]}}}}}},{\"id\":\"unknown_results_have_no_matching_evidence\",\"test\":{\"every\":{\"as\":\"result\",\"source\":{\"path\":\"results\"},\"test\":{\"if\":[{\"eq\":[{\"path\":\"result.status\"},\"unknown\"]},{\"and\":[{\"eq\":[{\"path\":\"result.occurrences\"},\"unknown\"]},{\"eq\":[{\"count\":{\"path\":\"result.evidence\"}},0]}]},true]}}}},{\"id\":\"matches_require_complete_source_evidence\",\"test\":{\"every\":{\"as\":\"result\",\"source\":{\"path\":\"results\"},\"test\":{\"some\":{\"as\":\"source\",\"source\":{\"path\":\"sources\"},\"test\":{\"and\":[{\"eq\":[{\"path\":\"source.source_index\"},{\"path\":\"result.source_index\"}]},{\"if\":[{\"in\":[{\"path\":\"result.status\"},[\"exact_match\",\"whitespace_normalized_match\",\"ambiguous\"]]},{\"and\":[{\"eq\":[{\"path\":\"source.http_status\"},200]},{\"not\":{\"eq\":[{\"path\":\"source.content_sha256\"},null]}},{\"not\":{\"eq\":[{\"path\":\"source.extraction_sha256\"},null]}},{\"not\":{\"eq\":[{\"path\":\"source.extraction\"},\"unavailable\"]}},{\"eq\":[{\"count\":{\"path\":\"result.evidence\"}},{\"if\":[{\"eq\":[{\"path\":\"result.status\"},\"ambiguous\"]},2,1]}]},{\"eq\":[{\"path\":\"result.occurrences\"},{\"if\":[{\"eq\":[{\"path\":\"result.status\"},\"ambiguous\"]},\"2_or_more\",\"1\"]}]}]},true]}]}}}}}},{\"id\":\"evidence_offsets_identify_extracted_text\",\"test\":{\"every\":{\"as\":\"result\",\"source\":{\"path\":\"results\"},\"test\":{\"some\":{\"as\":\"source\",\"source\":{\"path\":\"sources\"},\"test\":{\"and\":[{\"eq\":[{\"path\":\"source.source_index\"},{\"path\":\"result.source_index\"}]},{\"every\":{\"as\":\"evidence\",\"source\":{\"path\":\"result.evidence\"},\"test\":{\"and\":[{\"gt\":[{\"path\":\"evidence.end_char\"},{\"path\":\"evidence.start_char\"}]},{\"lte\":[{\"path\":\"evidence.end_char\"},{\"path\":\"source.extracted_chars\"}]}]}}}]}}}}}},{\"id\":\"context_offsets_match_text\",\"test\":{\"every\":{\"as\":\"result\",\"source\":{\"path\":\"results\"},\"test\":{\"some\":{\"as\":\"source\",\"source\":{\"path\":\"sources\"},\"test\":{\"and\":[{\"eq\":[{\"path\":\"source.source_index\"},{\"path\":\"result.source_index\"}]},{\"every\":{\"as\":\"evidence\",\"source\":{\"path\":\"result.evidence\"},\"test\":{\"if\":[{\"not\":{\"eq\":[{\"path\":\"evidence.context\"},null]}},{\"and\":[{\"eq\":[{\"subtract\":[{\"path\":\"evidence.context.end_char\"},{\"path\":\"evidence.context.start_char\"}]},{\"count\":{\"path\":\"evidence.context.text\"}}]},{\"lte\":[{\"path\":\"evidence.context.end_char\"},{\"path\":\"source.extracted_chars\"}]}]},true]}}}]}}}}}}],\"scope\":\"Deterministic bounded checks, not usefulness, truth, certification or independent live-payment proof.\"},\"format\":\"agenttoolbox-success-contract-v1\",\"input_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"quotes\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"quote\":{\"maxLength\":512,\"minLength\":1,\"type\":\"string\"},\"source_index\":{\"maximum\":4,\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"source_index\",\"quote\"],\"type\":\"object\"},\"maxItems\":10,\"minItems\":1,\"type\":\"array\"},\"urls\":{\"items\":{\"maxLength\":512,\"type\":\"string\"},\"maxItems\":5,\"minItems\":1,\"type\":\"array\"}},\"required\":[\"urls\",\"quotes\"],\"type\":\"object\"},\"limits\":{\"context_words_per_source\":200,\"deadline_ms\":12000,\"output_bytes\":14000,\"preview\":\"Disabled: a verdict is the paid result.\",\"quotes\":10,\"redirects\":2,\"robots_bytes\":16384,\"source_bytes\":100000,\"supported_hosts\":[\"developers.cloudflare.com\",\"docs.payai.network\",\"docs.x402.org\",\"docs.python.org\",\"nodejs.org\",\"developer.mozilla.org\",\"docs.github.com\",\"www.typescriptlang.org\"],\"urls\":5},\"output_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"normalization\":{\"const\":\"Case-sensitive; collapse Unicode whitespace runs to one ASCII space and trim; no case, punctuation, Unicode composition, or semantic folding. Offsets are UTF-16 code units in the extracted text before whitespace normalization.\",\"type\":\"string\"},\"results\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"evidence\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"anchor_fragment\":{\"anyOf\":[{\"maxLength\":361,\"type\":\"string\"},{\"type\":\"null\"}]},\"context\":{\"anyOf\":[{\"additionalProperties\":false,\"properties\":{\"end_char\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"},\"start_char\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"},\"text\":{\"maxLength\":180,\"type\":\"string\"}},\"required\":[\"text\",\"start_char\",\"end_char\"],\"type\":\"object\"},{\"type\":\"null\"}]},\"end_char\":{\"exclusiveMinimum\":0,\"maximum\":9007199254740991,\"type\":\"integer\"},\"start_char\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"start_char\",\"end_char\",\"anchor_fragment\",\"context\"],\"type\":\"object\"},\"maxItems\":2,\"type\":\"array\"},\"occurrences\":{\"enum\":[\"0\",\"1\",\"2_or_more\",\"unknown\"],\"type\":\"string\"},\"quote_index\":{\"maximum\":9,\"minimum\":0,\"type\":\"integer\"},\"reason\":{\"enum\":[\"complete_text\",\"single_occurrence\",\"repeated_occurrence\",\"html_absence_unverifiable\",\"source_too_large\",\"empty_source\",\"robots_unavailable\",\"source_disallows_access\",\"source_disallows_excerpts\",\"unsupported_redirect\",\"redirect_limit\",\"source_unavailable\",\"unsupported_content_type\",\"unsupported_encoding\",\"extraction_uncertain\",\"html_runtime_unavailable\",\"deadline_exceeded\"],\"type\":\"string\"},\"source_index\":{\"maximum\":4,\"minimum\":0,\"type\":\"integer\"},\"status\":{\"enum\":[\"exact_match\",\"whitespace_normalized_match\",\"absent\",\"ambiguous\",\"unknown\"],\"type\":\"string\"}},\"required\":[\"quote_index\",\"source_index\",\"status\",\"reason\",\"occurrences\",\"evidence\"],\"type\":\"object\"},\"maxItems\":10,\"minItems\":1,\"type\":\"array\"},\"scope\":{\"const\":\"textual_quotation_not_truth\",\"type\":\"string\"},\"source_content\":{\"const\":\"untrusted_data\",\"type\":\"string\"},\"sources\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"content_sha256\":{\"anyOf\":[{\"pattern\":\"^[a-f0-9]{64}$\",\"type\":\"string\"},{\"type\":\"null\"}]},\"content_type\":{\"anyOf\":[{\"maxLength\":80,\"type\":\"string\"},{\"type\":\"null\"}]},\"extracted_chars\":{\"anyOf\":[{\"maximum\":200000,\"minimum\":0,\"type\":\"integer\"},{\"type\":\"null\"}]},\"extraction\":{\"enum\":[\"complete_plain_text\",\"static_html\",\"unavailable\"],\"type\":\"string\"},\"extraction_sha256\":{\"anyOf\":[{\"pattern\":\"^[a-f0-9]{64}$\",\"type\":\"string\"},{\"type\":\"null\"}]},\"fetched_at\":{\"format\":\"date-time\",\"pattern\":\"^(?:(?:\\\\d\\\\d[2468][048]|\\\\d\\\\d[13579][26]|\\\\d\\\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\\\d|30)|(?:02)-(?:0[1-9]|1\\\\d|2[0-8])))T(?:(?:[01]\\\\d|2[0-3]):[0-5]\\\\d:[0-5]\\\\d(?:\\\\.\\\\d+)?(?:Z))$\",\"type\":\"string\"},\"final_url\":{\"format\":\"uri\",\"maxLength\":512,\"type\":\"string\"},\"http_status\":{\"anyOf\":[{\"maximum\":599,\"minimum\":100,\"type\":\"integer\"},{\"type\":\"null\"}]},\"reason\":{\"anyOf\":[{\"enum\":[\"complete_text\",\"single_occurrence\",\"repeated_occurrence\",\"html_absence_unverifiable\",\"source_too_large\",\"empty_source\",\"robots_unavailable\",\"source_disallows_access\",\"source_disallows_excerpts\",\"unsupported_redirect\",\"redirect_limit\",\"source_unavailable\",\"unsupported_content_type\",\"unsupported_encoding\",\"extraction_uncertain\",\"html_runtime_unavailable\",\"deadline_exceeded\"],\"type\":\"string\"},{\"type\":\"null\"}]},\"source_bytes\":{\"anyOf\":[{\"maximum\":100000,\"minimum\":0,\"type\":\"integer\"},{\"type\":\"null\"}]},\"source_index\":{\"maximum\":4,\"minimum\":0,\"type\":\"integer\"},\"url\":{\"format\":\"uri\",\"maxLength\":512,\"type\":\"string\"}},\"required\":[\"source_index\",\"url\",\"final_url\",\"fetched_at\",\"http_status\",\"content_type\",\"source_bytes\",\"content_sha256\",\"extraction_sha256\",\"extraction\",\"extracted_chars\",\"reason\"],\"type\":\"object\"},\"maxItems\":5,\"minItems\":1,\"type\":\"array\"},\"summary\":{\"additionalProperties\":false,\"properties\":{\"decisive\":{\"maximum\":10,\"minimum\":0,\"type\":\"integer\"},\"unknown\":{\"maximum\":10,\"minimum\":0,\"type\":\"integer\"}},\"required\":[\"decisive\",\"unknown\"],\"type\":\"object\"}},\"required\":[\"source_content\",\"scope\",\"normalization\",\"sources\",\"results\",\"summary\"],\"type\":\"object\"},\"product_id\":\"quote-proof\",\"product_version\":\"0.1.1\",\"success_criterion\":\"At least one decisive quotation result with schema-validated evidence; unknown results remain explicit. Textual fidelity only, never claim truth.\"}",
+        "sha256": "1800eb994d37b99a0bf1e82398ff236ed006fcb1e44bf62b0501e018f70a3d95"
       },
       "links": {
         "detail": "https://agi.agenttoolbox2026.workers.dev/v1/products/quote-proof",
@@ -1028,7 +1544,7 @@
     {
       "id": "contract-cases",
       "name": "ContractCases",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "status": "active",
       "maturity": "beta",
       "experimental": false,
@@ -1398,7 +1914,7 @@
           },
           "version": {
             "type": "string",
-            "const": "0.1.0"
+            "const": "0.1.1"
           },
           "schema_sha256": {
             "type": "string",
@@ -1666,8 +2182,8 @@
           "whitespace": "No insignificant whitespace.",
           "payment_requirements": "Hash the complete PaymentRequirements object in accepts, including extra. Preserve address/string case and array order; do not hash the challenge envelope, header base64 or payment signature."
         },
-        "canonical_json": "{\"criteria\":{\"criteria_version\":\"1\",\"evaluation\":\"Output must pass the published output_schema, then every predicate below. These expressions are also evaluated by the server handler.\",\"failure\":{\"before_settlement\":[\"invalid_input\",\"output_schema_invalid\",\"predicate_false\",\"execution_error\",\"output_bound_exceeded\",\"durable_result_write_failed\"],\"settlement\":\"One attempt only after durable validated output; unknown or unconfirmed settlement withholds output and requires reconciliation.\"},\"rule_language\":\"agenttoolbox-predicate-v1\",\"rules\":[{\"id\":\"positive_count_matches_cases\",\"test\":{\"eq\":[{\"path\":\"summary.positive_cases\"},{\"count_where\":{\"as\":\"case\",\"source\":{\"path\":\"cases\"},\"test\":{\"eq\":[{\"path\":\"case.kind\"},\"positive_boundary\"]}}}]}},{\"id\":\"negative_count_matches_cases\",\"test\":{\"eq\":[{\"path\":\"summary.negative_cases\"},{\"count_where\":{\"as\":\"case\",\"source\":{\"path\":\"cases\"},\"test\":{\"eq\":[{\"path\":\"case.kind\"},\"negative_mutation\"]}}}]}},{\"id\":\"coverage_gaps_counted\",\"test\":{\"eq\":[{\"path\":\"summary.coverage_gaps\"},{\"add\":[{\"count\":{\"path\":\"coverage_gaps\"}},{\"path\":\"coverage_gaps_omitted\"}]}]}},{\"id\":\"every_case_revalidated_at_intended_location\",\"test\":{\"every\":{\"as\":\"case\",\"source\":{\"path\":\"cases\"},\"test\":{\"if\":[{\"eq\":[{\"path\":\"case.kind\"},\"positive_boundary\"]},{\"and\":[{\"eq\":[{\"path\":\"case.expected_verdict\"},\"valid\"]},{\"eq\":[{\"path\":\"case.validation.valid\"},true]},{\"eq\":[{\"count\":{\"path\":\"case.validation.errors\"}},0]}]},{\"and\":[{\"eq\":[{\"path\":\"case.expected_verdict\"},\"invalid\"]},{\"eq\":[{\"path\":\"case.validation.valid\"},false]},{\"eq\":[{\"count\":{\"path\":\"case.validation.errors\"}},1]},{\"eq\":[{\"path\":\"case.validation.errors.0.schema_pointer\"},{\"path\":\"case.schema_pointer\"}]},{\"eq\":[{\"path\":\"case.validation.errors.0.keyword\"},{\"path\":\"case.keyword\"}]},{\"eq\":[{\"path\":\"case.validation.errors.0.instance_pointer\"},{\"path\":\"case.instance_pointer\"}]}]}]}}}},{\"id\":\"product_output_byte_bound\",\"test\":{\"lte\":[{\"json_bytes\":{\"path\":\"$\"}},14000]}}],\"scope\":\"Deterministic bounded checks, not usefulness, truth, certification or independent live-payment proof.\"},\"format\":\"agenttoolbox-success-contract-v1\",\"input_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"max_cases\":{\"default\":12,\"maximum\":24,\"minimum\":2,\"type\":\"integer\"},\"schema\":{\"additionalProperties\":{},\"description\":\"Explicit $schema=https://json-schema.org/draft/2020-12/schema required. Bounded subset; every schema node needs a single type. No references, patterns, formats or composition.\",\"propertyNames\":{\"type\":\"string\"},\"type\":\"object\"},\"valid_example\":{}},\"required\":[\"schema\",\"valid_example\",\"max_cases\"],\"type\":\"object\"},\"limits\":{\"array_items\":16,\"candidates\":160,\"cases\":24,\"instance_depth\":8,\"instance_nodes\":128,\"number_magnitude\":1000000000,\"output_bytes\":14000,\"properties_per_object\":25,\"schema_bytes\":8192,\"schema_depth\":3,\"schema_nodes\":64,\"seed_bytes\":2048,\"string_length\":128,\"subset\":{\"annotations\":[\"$schema\",\"title\",\"description\"],\"dialect\":\"2020-12 bounded subset\",\"keywords\":[\"type\",\"enum\",\"const\",\"properties\",\"required\",\"additionalProperties\",\"items\",\"minItems\",\"maxItems\",\"minLength\",\"maxLength\",\"minimum\",\"maximum\",\"exclusiveMinimum\",\"exclusiveMaximum\"],\"types\":[\"object\",\"array\",\"string\",\"number\",\"integer\",\"boolean\",\"null\"],\"unsupported\":[\"references\",\"composition\",\"type unions\",\"boolean schemas\",\"pattern\",\"format\",\"multipleOf\",\"unevaluated keywords\",\"remote resources\"]},\"total_properties\":25},\"output_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"cases\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"expected_verdict\":{\"enum\":[\"valid\",\"invalid\"],\"type\":\"string\"},\"id\":{\"maxLength\":12,\"type\":\"string\"},\"instance_pointer\":{\"maxLength\":2048,\"type\":\"string\"},\"keyword\":{\"maxLength\":32,\"type\":\"string\"},\"kind\":{\"enum\":[\"positive_boundary\",\"negative_mutation\"],\"type\":\"string\"},\"schema_pointer\":{\"maxLength\":2048,\"type\":\"string\"},\"validation\":{\"additionalProperties\":false,\"properties\":{\"checked_assertions\":{\"exclusiveMinimum\":0,\"maximum\":9007199254740991,\"type\":\"integer\"},\"errors\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"instance_pointer\":{\"maxLength\":2048,\"type\":\"string\"},\"keyword\":{\"maxLength\":32,\"type\":\"string\"},\"schema_pointer\":{\"maxLength\":2048,\"type\":\"string\"}},\"required\":[\"instance_pointer\",\"schema_pointer\",\"keyword\"],\"type\":\"object\"},\"maxItems\":1,\"type\":\"array\"},\"valid\":{\"type\":\"boolean\"}},\"required\":[\"valid\",\"checked_assertions\",\"errors\"],\"type\":\"object\"},\"value\":{}},\"required\":[\"id\",\"kind\",\"instance_pointer\",\"schema_pointer\",\"keyword\",\"value\",\"expected_verdict\",\"validation\"],\"type\":\"object\"},\"maxItems\":24,\"minItems\":2,\"type\":\"array\"},\"coverage\":{\"const\":\"Selected boundary witnesses only; not exhaustive, not a proof of schema or implementation correctness.\",\"type\":\"string\"},\"coverage_gaps\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"instance_pointer\":{\"type\":\"string\"},\"keyword\":{\"type\":\"string\"},\"reason\":{\"enum\":[\"coupled_constraints\",\"no_isolated_candidate\",\"case_or_byte_budget\",\"optional_property_not_in_example\",\"candidate_budget\"],\"type\":\"string\"},\"schema_pointer\":{\"type\":\"string\"}},\"required\":[\"instance_pointer\",\"schema_pointer\",\"keyword\",\"reason\"],\"type\":\"object\"},\"maxItems\":12,\"type\":\"array\"},\"coverage_gaps_omitted\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"},\"schema_sha256\":{\"pattern\":\"^[a-f0-9]{64}$\",\"type\":\"string\"},\"seed_valid\":{\"const\":true,\"type\":\"boolean\"},\"source_content\":{\"const\":\"untrusted_data\",\"type\":\"string\"},\"summary\":{\"additionalProperties\":false,\"properties\":{\"candidates_checked\":{\"maximum\":160,\"minimum\":1,\"type\":\"integer\"},\"coverage_gaps\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"},\"generation_capped\":{\"type\":\"boolean\"},\"negative_cases\":{\"exclusiveMinimum\":0,\"maximum\":9007199254740991,\"type\":\"integer\"},\"omitted_candidates\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"},\"positive_cases\":{\"exclusiveMinimum\":0,\"maximum\":9007199254740991,\"type\":\"integer\"}},\"required\":[\"positive_cases\",\"negative_cases\",\"candidates_checked\",\"omitted_candidates\",\"generation_capped\",\"coverage_gaps\"],\"type\":\"object\"},\"tool\":{\"const\":\"contract-cases\",\"type\":\"string\"},\"validator\":{\"const\":\"AgentToolbox bounded JSON Schema 2020-12 subset\",\"type\":\"string\"},\"version\":{\"const\":\"0.1.0\",\"type\":\"string\"}},\"required\":[\"tool\",\"version\",\"schema_sha256\",\"seed_valid\",\"validator\",\"source_content\",\"cases\",\"summary\",\"coverage_gaps\",\"coverage_gaps_omitted\",\"coverage\"],\"type\":\"object\"},\"product_id\":\"contract-cases\",\"product_version\":\"0.1.0\",\"success_criterion\":\"At least one valid boundary case and one negative case failing exactly its intended keyword and instance; every case revalidated against the complete accepted schema. Coverage gaps explicit; not certification.\"}",
-        "sha256": "8a506482eeb855e3a974dced2c4d5255b6c78276da34eded1b0f6f7047761c4f"
+        "canonical_json": "{\"criteria\":{\"criteria_version\":\"1\",\"evaluation\":\"Output must pass the published output_schema, then every predicate below. These expressions are also evaluated by the server handler.\",\"failure\":{\"before_settlement\":[\"invalid_input\",\"output_schema_invalid\",\"predicate_false\",\"execution_error\",\"output_bound_exceeded\",\"durable_result_write_failed\"],\"settlement\":\"One attempt only after durable validated output; unknown or unconfirmed settlement withholds output and requires reconciliation.\"},\"rule_language\":\"agenttoolbox-predicate-v1\",\"rules\":[{\"id\":\"positive_count_matches_cases\",\"test\":{\"eq\":[{\"path\":\"summary.positive_cases\"},{\"count_where\":{\"as\":\"case\",\"source\":{\"path\":\"cases\"},\"test\":{\"eq\":[{\"path\":\"case.kind\"},\"positive_boundary\"]}}}]}},{\"id\":\"negative_count_matches_cases\",\"test\":{\"eq\":[{\"path\":\"summary.negative_cases\"},{\"count_where\":{\"as\":\"case\",\"source\":{\"path\":\"cases\"},\"test\":{\"eq\":[{\"path\":\"case.kind\"},\"negative_mutation\"]}}}]}},{\"id\":\"coverage_gaps_counted\",\"test\":{\"eq\":[{\"path\":\"summary.coverage_gaps\"},{\"add\":[{\"count\":{\"path\":\"coverage_gaps\"}},{\"path\":\"coverage_gaps_omitted\"}]}]}},{\"id\":\"every_case_revalidated_at_intended_location\",\"test\":{\"every\":{\"as\":\"case\",\"source\":{\"path\":\"cases\"},\"test\":{\"if\":[{\"eq\":[{\"path\":\"case.kind\"},\"positive_boundary\"]},{\"and\":[{\"eq\":[{\"path\":\"case.expected_verdict\"},\"valid\"]},{\"eq\":[{\"path\":\"case.validation.valid\"},true]},{\"eq\":[{\"count\":{\"path\":\"case.validation.errors\"}},0]}]},{\"and\":[{\"eq\":[{\"path\":\"case.expected_verdict\"},\"invalid\"]},{\"eq\":[{\"path\":\"case.validation.valid\"},false]},{\"eq\":[{\"count\":{\"path\":\"case.validation.errors\"}},1]},{\"eq\":[{\"path\":\"case.validation.errors.0.schema_pointer\"},{\"path\":\"case.schema_pointer\"}]},{\"eq\":[{\"path\":\"case.validation.errors.0.keyword\"},{\"path\":\"case.keyword\"}]},{\"eq\":[{\"path\":\"case.validation.errors.0.instance_pointer\"},{\"path\":\"case.instance_pointer\"}]}]}]}}}},{\"id\":\"product_output_byte_bound\",\"test\":{\"lte\":[{\"json_bytes\":{\"path\":\"$\"}},14000]}}],\"scope\":\"Deterministic bounded checks, not usefulness, truth, certification or independent live-payment proof.\"},\"format\":\"agenttoolbox-success-contract-v1\",\"input_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"max_cases\":{\"default\":12,\"maximum\":24,\"minimum\":2,\"type\":\"integer\"},\"schema\":{\"additionalProperties\":{},\"description\":\"Explicit $schema=https://json-schema.org/draft/2020-12/schema required. Bounded subset; every schema node needs a single type. No references, patterns, formats or composition.\",\"propertyNames\":{\"type\":\"string\"},\"type\":\"object\"},\"valid_example\":{}},\"required\":[\"schema\",\"valid_example\",\"max_cases\"],\"type\":\"object\"},\"limits\":{\"array_items\":16,\"candidates\":160,\"cases\":24,\"instance_depth\":8,\"instance_nodes\":128,\"number_magnitude\":1000000000,\"output_bytes\":14000,\"properties_per_object\":25,\"schema_bytes\":8192,\"schema_depth\":3,\"schema_nodes\":64,\"seed_bytes\":2048,\"string_length\":128,\"subset\":{\"annotations\":[\"$schema\",\"title\",\"description\"],\"dialect\":\"2020-12 bounded subset\",\"keywords\":[\"type\",\"enum\",\"const\",\"properties\",\"required\",\"additionalProperties\",\"items\",\"minItems\",\"maxItems\",\"minLength\",\"maxLength\",\"minimum\",\"maximum\",\"exclusiveMinimum\",\"exclusiveMaximum\"],\"types\":[\"object\",\"array\",\"string\",\"number\",\"integer\",\"boolean\",\"null\"],\"unsupported\":[\"references\",\"composition\",\"type unions\",\"boolean schemas\",\"pattern\",\"format\",\"multipleOf\",\"unevaluated keywords\",\"remote resources\"]},\"total_properties\":25},\"output_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"cases\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"expected_verdict\":{\"enum\":[\"valid\",\"invalid\"],\"type\":\"string\"},\"id\":{\"maxLength\":12,\"type\":\"string\"},\"instance_pointer\":{\"maxLength\":2048,\"type\":\"string\"},\"keyword\":{\"maxLength\":32,\"type\":\"string\"},\"kind\":{\"enum\":[\"positive_boundary\",\"negative_mutation\"],\"type\":\"string\"},\"schema_pointer\":{\"maxLength\":2048,\"type\":\"string\"},\"validation\":{\"additionalProperties\":false,\"properties\":{\"checked_assertions\":{\"exclusiveMinimum\":0,\"maximum\":9007199254740991,\"type\":\"integer\"},\"errors\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"instance_pointer\":{\"maxLength\":2048,\"type\":\"string\"},\"keyword\":{\"maxLength\":32,\"type\":\"string\"},\"schema_pointer\":{\"maxLength\":2048,\"type\":\"string\"}},\"required\":[\"instance_pointer\",\"schema_pointer\",\"keyword\"],\"type\":\"object\"},\"maxItems\":1,\"type\":\"array\"},\"valid\":{\"type\":\"boolean\"}},\"required\":[\"valid\",\"checked_assertions\",\"errors\"],\"type\":\"object\"},\"value\":{}},\"required\":[\"id\",\"kind\",\"instance_pointer\",\"schema_pointer\",\"keyword\",\"value\",\"expected_verdict\",\"validation\"],\"type\":\"object\"},\"maxItems\":24,\"minItems\":2,\"type\":\"array\"},\"coverage\":{\"const\":\"Selected boundary witnesses only; not exhaustive, not a proof of schema or implementation correctness.\",\"type\":\"string\"},\"coverage_gaps\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"instance_pointer\":{\"type\":\"string\"},\"keyword\":{\"type\":\"string\"},\"reason\":{\"enum\":[\"coupled_constraints\",\"no_isolated_candidate\",\"case_or_byte_budget\",\"optional_property_not_in_example\",\"candidate_budget\"],\"type\":\"string\"},\"schema_pointer\":{\"type\":\"string\"}},\"required\":[\"instance_pointer\",\"schema_pointer\",\"keyword\",\"reason\"],\"type\":\"object\"},\"maxItems\":12,\"type\":\"array\"},\"coverage_gaps_omitted\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"},\"schema_sha256\":{\"pattern\":\"^[a-f0-9]{64}$\",\"type\":\"string\"},\"seed_valid\":{\"const\":true,\"type\":\"boolean\"},\"source_content\":{\"const\":\"untrusted_data\",\"type\":\"string\"},\"summary\":{\"additionalProperties\":false,\"properties\":{\"candidates_checked\":{\"maximum\":160,\"minimum\":1,\"type\":\"integer\"},\"coverage_gaps\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"},\"generation_capped\":{\"type\":\"boolean\"},\"negative_cases\":{\"exclusiveMinimum\":0,\"maximum\":9007199254740991,\"type\":\"integer\"},\"omitted_candidates\":{\"maximum\":9007199254740991,\"minimum\":0,\"type\":\"integer\"},\"positive_cases\":{\"exclusiveMinimum\":0,\"maximum\":9007199254740991,\"type\":\"integer\"}},\"required\":[\"positive_cases\",\"negative_cases\",\"candidates_checked\",\"omitted_candidates\",\"generation_capped\",\"coverage_gaps\"],\"type\":\"object\"},\"tool\":{\"const\":\"contract-cases\",\"type\":\"string\"},\"validator\":{\"const\":\"AgentToolbox bounded JSON Schema 2020-12 subset\",\"type\":\"string\"},\"version\":{\"const\":\"0.1.1\",\"type\":\"string\"}},\"required\":[\"tool\",\"version\",\"schema_sha256\",\"seed_valid\",\"validator\",\"source_content\",\"cases\",\"summary\",\"coverage_gaps\",\"coverage_gaps_omitted\",\"coverage\"],\"type\":\"object\"},\"product_id\":\"contract-cases\",\"product_version\":\"0.1.1\",\"success_criterion\":\"At least one valid boundary case and one negative case failing exactly its intended keyword and instance; every case revalidated against the complete accepted schema. Coverage gaps explicit; not certification.\"}",
+        "sha256": "5ca7675acb9e449d501e8e2445fd4a2010a0ab155fd4eb655cb442067020199f"
       },
       "links": {
         "detail": "https://agi.agenttoolbox2026.workers.dev/v1/products/contract-cases",
@@ -1684,7 +2200,7 @@
     {
       "id": "mcp-wirecheck",
       "name": "MCP WireCheck",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "status": "active",
       "maturity": "beta",
       "experimental": false,
@@ -2243,8 +2759,8 @@
           "whitespace": "No insignificant whitespace.",
           "payment_requirements": "Hash the complete PaymentRequirements object in accepts, including extra. Preserve address/string case and array order; do not hash the challenge envelope, header base64 or payment signature."
         },
-        "canonical_json": "{\"criteria\":{\"criteria_version\":\"1\",\"evaluation\":\"Output must pass the published output_schema, then every predicate below. These expressions are also evaluated by the server handler.\",\"failure\":{\"before_settlement\":[\"invalid_input\",\"output_schema_invalid\",\"predicate_false\",\"execution_error\",\"output_bound_exceeded\",\"durable_result_write_failed\"],\"settlement\":\"One attempt only after durable validated output; unknown or unconfirmed settlement withholds output and requires reconciliation.\"},\"rule_language\":\"agenttoolbox-predicate-v1\",\"rules\":[{\"id\":\"decisive_discovery_valid_wire_verdict\",\"test\":{\"some\":{\"as\":\"wire\",\"source\":{\"path\":\"versions\"},\"test\":{\"and\":[{\"eq\":[{\"path\":\"wire.discovery_valid\"},true]},{\"in\":[{\"path\":\"wire.status\"},[\"compatible\",\"incompatible\"]]},{\"in\":[{\"path\":\"wire.reason\"},[\"checked_scope_passed\",\"tools_capability_absent\",\"invalid_initialize_shape\",\"invalid_discovery_shape\",\"invalid_tools_shape\",\"invalid_header_annotation\",\"duplicate_tool_name\",\"invalid_jsonrpc\",\"response_id_mismatch\",\"invalid_notification_ack\",\"invalid_session_header\",\"unexpected_session_change\",\"unexpected_modern_session\",\"unsupported_content_type\",\"invalid_json\"]]}]}}}}],\"scope\":\"Deterministic bounded checks, not usefulness, truth, certification or independent live-payment proof.\"},\"format\":\"agenttoolbox-success-contract-v1\",\"input_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"authority\":{\"const\":\"I own this endpoint or am authorized to request its anonymous read-only MCP discovery.\",\"type\":\"string\"},\"endpoint\":{\"maxLength\":256,\"pattern\":\"^https:\\\\/\\\\/[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\\\.workers\\\\.dev\\\\/mcp\\\\/?$\",\"type\":\"string\"},\"protocol_versions\":{\"default\":[\"2025-11-25\",\"2026-07-28\"],\"items\":{\"enum\":[\"2025-11-25\",\"2026-07-28\"],\"type\":\"string\"},\"maxItems\":2,\"minItems\":1,\"type\":\"array\"}},\"required\":[\"endpoint\",\"protocol_versions\",\"authority\"],\"type\":\"object\"},\"limits\":{\"endpoint_scope\":{\"custom_domains\":false,\"hostname_format\":\"<worker>.<account>.workers.dev\",\"paths\":[\"/mcp\",\"/mcp/\"],\"provider\":\"Cloudflare Workers\",\"redirects\":0},\"max_output_bytes\":14000,\"max_requests\":10,\"max_response_bytes\":65536,\"max_sse_events\":16,\"max_tool_pages\":3,\"max_tools\":100,\"max_total_bytes\":262144,\"max_versions\":2,\"preview\":\"Disabled: wire verdicts are the paid result.\",\"protocol_versions\":[\"2025-11-25\",\"2026-07-28\"],\"redirects\":0,\"request_timeout_ms\":4000,\"total_timeout_ms\":20000},\"output_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"checked_at\":{\"format\":\"date-time\",\"pattern\":\"^(?:(?:\\\\d\\\\d[2468][048]|\\\\d\\\\d[13579][26]|\\\\d\\\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\\\d|30)|(?:02)-(?:0[1-9]|1\\\\d|2[0-8])))T(?:(?:[01]\\\\d|2[0-3]):[0-5]\\\\d:[0-5]\\\\d(?:\\\\.\\\\d+)?(?:Z))$\",\"type\":\"string\"},\"complete\":{\"type\":\"boolean\"},\"endpoint\":{\"maxLength\":256,\"pattern\":\"^https:\\\\/\\\\/[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\\\.workers\\\\.dev\\\\/mcp\\\\/?$\",\"type\":\"string\"},\"preview_supported\":{\"const\":false,\"type\":\"boolean\"},\"request_count\":{\"maximum\":10,\"minimum\":0,\"type\":\"integer\"},\"response_bytes\":{\"maximum\":262144,\"minimum\":0,\"type\":\"integer\"},\"scope\":{\"const\":\"Version-specific discovery and bounded tools/list wire-shape checks; not protocol or security certification\",\"type\":\"string\"},\"source_content\":{\"const\":\"untrusted_data\",\"type\":\"string\"},\"versions\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"discovery_valid\":{\"type\":\"boolean\"},\"effective_version\":{\"anyOf\":[{\"enum\":[\"2025-11-25\",\"2026-07-28\"],\"type\":\"string\"},{\"type\":\"null\"}]},\"failure_location\":{\"anyOf\":[{\"enum\":[\"initialize\",\"notifications/initialized\",\"server/discover\",\"tools/list\"],\"type\":\"string\"},{\"type\":\"null\"}]},\"pagination\":{\"enum\":[\"complete\",\"not_run\",\"limited\"],\"type\":\"string\"},\"reason\":{\"enum\":[\"checked_scope_passed\",\"requested_version_not_negotiated\",\"unsupported_negotiated_version\",\"version_not_supported\",\"method_not_supported\",\"tools_capability_absent\",\"invalid_initialize_shape\",\"invalid_discovery_shape\",\"invalid_tools_shape\",\"invalid_header_annotation\",\"schema_inspection_limit\",\"duplicate_tool_name\",\"invalid_jsonrpc\",\"response_id_mismatch\",\"invalid_notification_ack\",\"invalid_session_header\",\"unexpected_session_change\",\"unexpected_modern_session\",\"unsupported_content_type\",\"invalid_json\",\"redirect_not_followed\",\"authentication_required\",\"access_blocked\",\"http_error\",\"rpc_error\",\"network_error\",\"timeout\",\"response_limit\",\"total_byte_limit\",\"sse_event_limit\",\"sse_incomplete\",\"server_request_not_supported\",\"page_limit\",\"tool_limit\",\"cursor_loop\",\"cursor_limit\",\"request_limit\"],\"type\":\"string\"},\"replay\":{\"additionalProperties\":false,\"properties\":{\"discover\":{\"anyOf\":[{\"maxLength\":1100,\"type\":\"string\"},{\"type\":\"null\"}]},\"initialize\":{\"anyOf\":[{\"maxLength\":1100,\"type\":\"string\"},{\"type\":\"null\"}]},\"initialized\":{\"anyOf\":[{\"maxLength\":800,\"type\":\"string\"},{\"type\":\"null\"}]},\"session_header_required\":{\"type\":\"boolean\"},\"tools_list\":{\"maxLength\":1100,\"type\":\"string\"}},\"required\":[\"initialize\",\"initialized\",\"discover\",\"tools_list\",\"session_header_required\"],\"type\":\"object\"},\"requested_version\":{\"enum\":[\"2025-11-25\",\"2026-07-28\"],\"type\":\"string\"},\"status\":{\"enum\":[\"compatible\",\"incompatible\",\"unsupported\",\"auth_required\",\"blocked\",\"unknown\"],\"type\":\"string\"},\"tool_count\":{\"anyOf\":[{\"maximum\":100,\"minimum\":0,\"type\":\"integer\"},{\"type\":\"null\"}]},\"transcript\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"http_status\":{\"anyOf\":[{\"maximum\":599,\"minimum\":100,\"type\":\"integer\"},{\"type\":\"null\"}]},\"media_type\":{\"enum\":[\"application/json\",\"text/event-stream\",\"other\",\"none\"],\"type\":\"string\"},\"method\":{\"enum\":[\"initialize\",\"notifications/initialized\",\"server/discover\",\"tools/list\"],\"type\":\"string\"},\"response_bytes\":{\"maximum\":65536,\"minimum\":0,\"type\":\"integer\"},\"response_kind\":{\"enum\":[\"result\",\"notification_ack\",\"rpc_error\",\"http_error\",\"invalid\",\"incomplete\"],\"type\":\"string\"},\"rpc_error_code\":{\"anyOf\":[{\"maximum\":9007199254740991,\"minimum\":-9007199254740991,\"type\":\"integer\"},{\"type\":\"null\"}]},\"session_present\":{\"type\":\"boolean\"},\"tool_count\":{\"anyOf\":[{\"maximum\":100,\"minimum\":0,\"type\":\"integer\"},{\"type\":\"null\"}]}},\"required\":[\"method\",\"http_status\",\"media_type\",\"response_kind\",\"response_bytes\",\"rpc_error_code\",\"tool_count\",\"session_present\"],\"type\":\"object\"},\"maxItems\":5,\"type\":\"array\"}},\"required\":[\"requested_version\",\"effective_version\",\"status\",\"reason\",\"discovery_valid\",\"failure_location\",\"tool_count\",\"pagination\",\"transcript\",\"replay\"],\"type\":\"object\"},\"maxItems\":2,\"minItems\":1,\"type\":\"array\"}},\"required\":[\"endpoint\",\"checked_at\",\"source_content\",\"scope\",\"versions\",\"request_count\",\"response_bytes\",\"complete\",\"preview_supported\"],\"type\":\"object\"},\"product_id\":\"mcp-wirecheck\",\"product_version\":\"0.1.0\",\"success_criterion\":\"At least one decisive compatible/incompatible wire-shape verdict. Authentication, blocking, unsupported versions and unknown outcomes alone are nonchargeable. No tools/call; not conformance or security certification.\"}",
-        "sha256": "a288920f0f267437b6d94b210bb307e1e5303385d2c9c5211d6ee1a7266ecbbb"
+        "canonical_json": "{\"criteria\":{\"criteria_version\":\"1\",\"evaluation\":\"Output must pass the published output_schema, then every predicate below. These expressions are also evaluated by the server handler.\",\"failure\":{\"before_settlement\":[\"invalid_input\",\"output_schema_invalid\",\"predicate_false\",\"execution_error\",\"output_bound_exceeded\",\"durable_result_write_failed\"],\"settlement\":\"One attempt only after durable validated output; unknown or unconfirmed settlement withholds output and requires reconciliation.\"},\"rule_language\":\"agenttoolbox-predicate-v1\",\"rules\":[{\"id\":\"decisive_discovery_valid_wire_verdict\",\"test\":{\"some\":{\"as\":\"wire\",\"source\":{\"path\":\"versions\"},\"test\":{\"and\":[{\"eq\":[{\"path\":\"wire.discovery_valid\"},true]},{\"in\":[{\"path\":\"wire.status\"},[\"compatible\",\"incompatible\"]]},{\"in\":[{\"path\":\"wire.reason\"},[\"checked_scope_passed\",\"tools_capability_absent\",\"invalid_initialize_shape\",\"invalid_discovery_shape\",\"invalid_tools_shape\",\"invalid_header_annotation\",\"duplicate_tool_name\",\"invalid_jsonrpc\",\"response_id_mismatch\",\"invalid_notification_ack\",\"invalid_session_header\",\"unexpected_session_change\",\"unexpected_modern_session\",\"unsupported_content_type\",\"invalid_json\"]]}]}}}}],\"scope\":\"Deterministic bounded checks, not usefulness, truth, certification or independent live-payment proof.\"},\"format\":\"agenttoolbox-success-contract-v1\",\"input_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"authority\":{\"const\":\"I own this endpoint or am authorized to request its anonymous read-only MCP discovery.\",\"type\":\"string\"},\"endpoint\":{\"maxLength\":256,\"pattern\":\"^https:\\\\/\\\\/[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\\\.workers\\\\.dev\\\\/mcp\\\\/?$\",\"type\":\"string\"},\"protocol_versions\":{\"default\":[\"2025-11-25\",\"2026-07-28\"],\"items\":{\"enum\":[\"2025-11-25\",\"2026-07-28\"],\"type\":\"string\"},\"maxItems\":2,\"minItems\":1,\"type\":\"array\"}},\"required\":[\"endpoint\",\"protocol_versions\",\"authority\"],\"type\":\"object\"},\"limits\":{\"endpoint_scope\":{\"custom_domains\":false,\"hostname_format\":\"<worker>.<account>.workers.dev\",\"paths\":[\"/mcp\",\"/mcp/\"],\"provider\":\"Cloudflare Workers\",\"redirects\":0},\"max_output_bytes\":14000,\"max_requests\":10,\"max_response_bytes\":65536,\"max_sse_events\":16,\"max_tool_pages\":3,\"max_tools\":100,\"max_total_bytes\":262144,\"max_versions\":2,\"preview\":\"Disabled: wire verdicts are the paid result.\",\"protocol_versions\":[\"2025-11-25\",\"2026-07-28\"],\"redirects\":0,\"request_timeout_ms\":4000,\"total_timeout_ms\":20000},\"output_schema\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"additionalProperties\":false,\"properties\":{\"checked_at\":{\"format\":\"date-time\",\"pattern\":\"^(?:(?:\\\\d\\\\d[2468][048]|\\\\d\\\\d[13579][26]|\\\\d\\\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\\\d|30)|(?:02)-(?:0[1-9]|1\\\\d|2[0-8])))T(?:(?:[01]\\\\d|2[0-3]):[0-5]\\\\d:[0-5]\\\\d(?:\\\\.\\\\d+)?(?:Z))$\",\"type\":\"string\"},\"complete\":{\"type\":\"boolean\"},\"endpoint\":{\"maxLength\":256,\"pattern\":\"^https:\\\\/\\\\/[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\\\.workers\\\\.dev\\\\/mcp\\\\/?$\",\"type\":\"string\"},\"preview_supported\":{\"const\":false,\"type\":\"boolean\"},\"request_count\":{\"maximum\":10,\"minimum\":0,\"type\":\"integer\"},\"response_bytes\":{\"maximum\":262144,\"minimum\":0,\"type\":\"integer\"},\"scope\":{\"const\":\"Version-specific discovery and bounded tools/list wire-shape checks; not protocol or security certification\",\"type\":\"string\"},\"source_content\":{\"const\":\"untrusted_data\",\"type\":\"string\"},\"versions\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"discovery_valid\":{\"type\":\"boolean\"},\"effective_version\":{\"anyOf\":[{\"enum\":[\"2025-11-25\",\"2026-07-28\"],\"type\":\"string\"},{\"type\":\"null\"}]},\"failure_location\":{\"anyOf\":[{\"enum\":[\"initialize\",\"notifications/initialized\",\"server/discover\",\"tools/list\"],\"type\":\"string\"},{\"type\":\"null\"}]},\"pagination\":{\"enum\":[\"complete\",\"not_run\",\"limited\"],\"type\":\"string\"},\"reason\":{\"enum\":[\"checked_scope_passed\",\"requested_version_not_negotiated\",\"unsupported_negotiated_version\",\"version_not_supported\",\"method_not_supported\",\"tools_capability_absent\",\"invalid_initialize_shape\",\"invalid_discovery_shape\",\"invalid_tools_shape\",\"invalid_header_annotation\",\"schema_inspection_limit\",\"duplicate_tool_name\",\"invalid_jsonrpc\",\"response_id_mismatch\",\"invalid_notification_ack\",\"invalid_session_header\",\"unexpected_session_change\",\"unexpected_modern_session\",\"unsupported_content_type\",\"invalid_json\",\"redirect_not_followed\",\"authentication_required\",\"access_blocked\",\"http_error\",\"rpc_error\",\"network_error\",\"timeout\",\"response_limit\",\"total_byte_limit\",\"sse_event_limit\",\"sse_incomplete\",\"server_request_not_supported\",\"page_limit\",\"tool_limit\",\"cursor_loop\",\"cursor_limit\",\"request_limit\"],\"type\":\"string\"},\"replay\":{\"additionalProperties\":false,\"properties\":{\"discover\":{\"anyOf\":[{\"maxLength\":1100,\"type\":\"string\"},{\"type\":\"null\"}]},\"initialize\":{\"anyOf\":[{\"maxLength\":1100,\"type\":\"string\"},{\"type\":\"null\"}]},\"initialized\":{\"anyOf\":[{\"maxLength\":800,\"type\":\"string\"},{\"type\":\"null\"}]},\"session_header_required\":{\"type\":\"boolean\"},\"tools_list\":{\"maxLength\":1100,\"type\":\"string\"}},\"required\":[\"initialize\",\"initialized\",\"discover\",\"tools_list\",\"session_header_required\"],\"type\":\"object\"},\"requested_version\":{\"enum\":[\"2025-11-25\",\"2026-07-28\"],\"type\":\"string\"},\"status\":{\"enum\":[\"compatible\",\"incompatible\",\"unsupported\",\"auth_required\",\"blocked\",\"unknown\"],\"type\":\"string\"},\"tool_count\":{\"anyOf\":[{\"maximum\":100,\"minimum\":0,\"type\":\"integer\"},{\"type\":\"null\"}]},\"transcript\":{\"items\":{\"additionalProperties\":false,\"properties\":{\"http_status\":{\"anyOf\":[{\"maximum\":599,\"minimum\":100,\"type\":\"integer\"},{\"type\":\"null\"}]},\"media_type\":{\"enum\":[\"application/json\",\"text/event-stream\",\"other\",\"none\"],\"type\":\"string\"},\"method\":{\"enum\":[\"initialize\",\"notifications/initialized\",\"server/discover\",\"tools/list\"],\"type\":\"string\"},\"response_bytes\":{\"maximum\":65536,\"minimum\":0,\"type\":\"integer\"},\"response_kind\":{\"enum\":[\"result\",\"notification_ack\",\"rpc_error\",\"http_error\",\"invalid\",\"incomplete\"],\"type\":\"string\"},\"rpc_error_code\":{\"anyOf\":[{\"maximum\":9007199254740991,\"minimum\":-9007199254740991,\"type\":\"integer\"},{\"type\":\"null\"}]},\"session_present\":{\"type\":\"boolean\"},\"tool_count\":{\"anyOf\":[{\"maximum\":100,\"minimum\":0,\"type\":\"integer\"},{\"type\":\"null\"}]}},\"required\":[\"method\",\"http_status\",\"media_type\",\"response_kind\",\"response_bytes\",\"rpc_error_code\",\"tool_count\",\"session_present\"],\"type\":\"object\"},\"maxItems\":5,\"type\":\"array\"}},\"required\":[\"requested_version\",\"effective_version\",\"status\",\"reason\",\"discovery_valid\",\"failure_location\",\"tool_count\",\"pagination\",\"transcript\",\"replay\"],\"type\":\"object\"},\"maxItems\":2,\"minItems\":1,\"type\":\"array\"}},\"required\":[\"endpoint\",\"checked_at\",\"source_content\",\"scope\",\"versions\",\"request_count\",\"response_bytes\",\"complete\",\"preview_supported\"],\"type\":\"object\"},\"product_id\":\"mcp-wirecheck\",\"product_version\":\"0.1.1\",\"success_criterion\":\"At least one decisive compatible/incompatible wire-shape verdict. Authentication, blocking, unsupported versions and unknown outcomes alone are nonchargeable. No tools/call; not conformance or security certification.\"}",
+        "sha256": "30ab26f759c8ee6aa841255b95df087a70644b0ec6ed19e1f328f4b78e87f062"
       },
       "links": {
         "detail": "https://agi.agenttoolbox2026.workers.dev/v1/products/mcp-wirecheck",

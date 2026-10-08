@@ -1,14 +1,16 @@
 import {z} from 'zod';
+import {FIRST_PARTY_VERSION} from './product-versions.js';
 import {BASE_NETWORK} from './payment-config.js';
 import {criteriaFor} from './criteria.js';
 import {PREPARATION_LIMITS} from './preparation-limits.js';
+import {matchesProductSearch,searchTerms} from './search.js';
 const docsPackMinimum='10000';
 import {DOC_HOSTS,docsPackInput,docsPackOutput} from './docs-pack.js';
 import {QUOTE_PROOF_HOSTS,QUOTE_PROOF_LIMITS,quoteProofInput,quoteProofOutput} from './quote-proof.js';
 import {CONTRACT_CASES_LIMITS,CONTRACT_CASES_SUBSET,contractCasesInput,contractCasesOutput} from './contract-cases.js';
 import {MCP_WIRE_ENDPOINTS,MCP_WIRE_ENDPOINT_SCOPE,MCP_WIRE_VERSIONS,MCP_WIRE_LIMITS,MCP_WIRE_AUTHORITY,mcpWireCheckInput,mcpWireCheckOutput} from './mcp-wirecheck.js';
 const newTool=(id,name,summary,input,output,example,limits,criterion,preview)=>Object.freeze({
- id,name,version:'0.1.0',status:'active',maturity:'beta',experimental:false,summary,problem:summary,tags:[id,'beta'],
+ id,name,version:FIRST_PARTY_VERSION,status:'active',maturity:'beta',experimental:false,summary,problem:summary,tags:[id,'beta'],
  provider:{id:'agenttoolbox',name:'AgentToolbox',type:'first_party'},examples_url:'/v1/products/'+id+'/examples',
  outcome:{description:summary,success_criterion:criterion,criteria:criteriaFor(id),evidence:'server_validated',verified:true},
  pricing:{model:'buyer_chosen_per_success',payment_protocol:'x402-v2-exact',currency:'USDC',network:BASE_NETWORK,minimum_amount_atomic:'10000',decimals:6,business_maximum:null,payments_enabled:true,price_status:'beta; willingness to pay unproven',live_payment_verified:false},
@@ -20,10 +22,10 @@ const newTool=(id,name,summary,input,output,example,limits,criterion,preview)=>O
  failure_policy:'Invalid input, failed criterion or unavailable decisive evidence never settles. Uncertain settlement requires reconciliation; never issue a replacement authorization.',
 });
 export const API_VERSION = '1';
-export const REGISTRY_VERSION = '2026-10-07.3';
+export const REGISTRY_VERSION = '2026-10-08.1';
 export const products = Object.freeze([
   Object.freeze({
-    id:'docs-pack',version:'0.1.0',name:'Docs Pack',status:'active',maturity:'beta',experimental:false,
+    id:'docs-pack',version:FIRST_PARTY_VERSION,name:'Docs Pack',status:'active',maturity:'beta',experimental:false,
     summary:'Get query-matched excerpts from up to 5 documentation pages.',
     provider:{id:'agenttoolbox',name:'AgentToolbox',type:'first_party'},examples_url:'/v1/products/docs-pack/examples',
     problem:'Inspect several documentation pages without putting all their contents into context.',
@@ -65,9 +67,9 @@ export const products = Object.freeze([
 ]);
 export function findProduct(id, catalog = products) { return catalog.find(p => p.id === id); }
 export function searchProducts({ q = '', status = 'active' } = {}, catalog = products) {
-  const query = q.trim().toLocaleLowerCase();
+  const terms = searchTerms(q);
   return catalog.filter(p => (status === 'all' || p.status === status) &&
-    (!query || [p.name,p.id,p.summary,p.problem,...p.tags].join(' ').toLocaleLowerCase().includes(query)));
+    matchesProductSearch(p,terms));
 }
 export function summary(p) {
   return { id:p.id, version:p.version, name:p.name, status:p.status, maturity:p.maturity??null, summary:p.summary,
